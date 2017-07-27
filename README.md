@@ -1,4 +1,5 @@
 [![DeepScan Grade](https://deepscan.io/api/projects/230/branches/408/badge/grade.svg)](https://deepscan.io/dashboard/#view=project&pid=230&bid=408)
+
 # Calypso
 
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovateapp.com/)
