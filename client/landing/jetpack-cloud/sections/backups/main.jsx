@@ -5,6 +5,7 @@ import { connect } from 'react-redux';
 import React, { Component } from 'react';
 import momentDate from 'moment';
 import { localize } from 'i18n-calypso';
+import { includes } from 'lodash';
 
 /**
  * Internal dependencies
@@ -12,6 +13,7 @@ import { localize } from 'i18n-calypso';
 import DocumentHead from 'components/data/document-head';
 import { updateFilter } from 'state/activity-log/actions';
 import {
+	isActivityBackup,
 	getBackupAttemptsForDate,
 	getDailyBackupDeltas,
 	getEventsInDailyBackup,
@@ -108,7 +110,7 @@ class BackupsPage extends Component {
 				// Looking for the last backup on the date
 				if (
 					! backupsOnSelectedDate.lastBackup &&
-					backupStatusNames.includes( log.activityName )
+					includes( backupStatusNames, log.activityName )
 				) {
 					backupsOnSelectedDate.lastBackup = log;
 				} else {
@@ -143,28 +145,27 @@ class BackupsPage extends Component {
 		const {
 			allowRestore,
 			doesRewindNeedCredentials,
-			hasRealtimeBackups,
+			siteCapabilities,
 			logs,
 			moment,
 			siteId,
 			siteSlug,
 			isLoadingBackups,
 			oldestDateAvailable,
+			lastDateAvailable,
 			timezone,
 			translate,
 			gmtOffset,
 		} = this.props;
 
 		const backupsOnSelectedDate = this.getBackupLogsFor( this.getSelectedDate() );
-
 		const selectedDateString = this.TO_REMOVE_getSelectedDateString();
-
 		const today = applySiteOffset( moment(), { timezone, gmtOffset } );
-
 		const backupAttempts = getBackupAttemptsForDate( logs, selectedDateString );
 		const deltas = getDailyBackupDeltas( logs, selectedDateString );
 		const realtimeEvents = getEventsInDailyBackup( logs, selectedDateString );
 		const metaDiff = getMetaDiffForDailyBackup( logs, selectedDateString );
+		const hasRealtimeBackups = includes( siteCapabilities, 'backup-realtime' );
 
 		return (
 			<Main>
@@ -192,8 +193,11 @@ class BackupsPage extends Component {
 							allowRestore={ allowRestore }
 							siteSlug={ siteSlug }
 							backup={ backupsOnSelectedDate.lastBackup }
+							lastDateAvailable={ lastDateAvailable }
+							selectedDate={ this.getSelectedDate() }
 							timezone={ timezone }
 							gmtOffset={ gmtOffset }
+							onDateChange={ this.onDateChange }
 						/>
 						{ doesRewindNeedCredentials && (
 							<MissingCredentialsWarning settingsLink={ `/settings/${ siteSlug }` } />
@@ -217,7 +221,7 @@ class BackupsPage extends Component {
 	}
 
 	renderBackupSearch() {
-		const { logs, translate } = this.props;
+		const { logs, siteSlug, translate } = this.props;
 
 		// Filter out anything that is not restorable
 		const restorablePoints = logs.filter( event => !! event.activityIsRewindable );
@@ -232,7 +236,7 @@ class BackupsPage extends Component {
 						'This is the complete event history for your site. Filter by date range and/ or activity type.'
 					) }
 				</div>
-				<ActivityCardList logs={ restorablePoints } pageSize={ 10 } />
+				<ActivityCardList logs={ restorablePoints } pageSize={ 10 } siteSlug={ siteSlug } />
 			</div>
 		);
 	}
@@ -261,6 +265,7 @@ const createIndexedLog = ( logs, timezone, gmtOffset ) => {
 		timezone,
 		gmtOffset,
 	} );
+	let lastDateAvailable = null;
 
 	if ( 'success' === logs.state ) {
 		logs.data.forEach( log => {
@@ -276,10 +281,15 @@ const createIndexedLog = ( logs, timezone, gmtOffset ) => {
 			if ( ! ( index in indexedLog ) ) {
 				//The first time we create the index for this date
 				indexedLog[ index ] = [];
+			}
 
-				//Check if the backup date is the oldest
+			// Check for the oldest and the last backup dates
+			if ( isActivityBackup( log ) ) {
 				if ( backupDate < oldestDateAvailable ) {
 					oldestDateAvailable = backupDate;
+				}
+				if ( backupDate > lastDateAvailable ) {
+					lastDateAvailable = backupDate;
 				}
 			}
 
@@ -290,6 +300,7 @@ const createIndexedLog = ( logs, timezone, gmtOffset ) => {
 	return {
 		indexedLog,
 		oldestDateAvailable,
+		lastDateAvailable,
 	};
 };
 
@@ -307,7 +318,11 @@ const mapStateToProps = state => {
 	const allowRestore =
 		'active' === rewind.state && ! ( 'queued' === restoreStatus || 'running' === restoreStatus );
 
-	const { indexedLog, oldestDateAvailable } = createIndexedLog( logs, timezone, gmtOffset );
+	const { indexedLog, oldestDateAvailable, lastDateAvailable } = createIndexedLog(
+		logs,
+		timezone,
+		gmtOffset
+	);
 
 	const isLoadingBackups = ! ( logs.state === 'success' );
 
@@ -315,7 +330,7 @@ const mapStateToProps = state => {
 		allowRestore,
 		doesRewindNeedCredentials,
 		filter,
-		hasRealtimeBackups: siteCapabilities.includes( 'backup-realtime' ),
+		siteCapabilities,
 		logs: logs?.data ?? [],
 		rewind,
 		siteId,
@@ -324,6 +339,7 @@ const mapStateToProps = state => {
 		gmtOffset,
 		indexedLog,
 		oldestDateAvailable,
+		lastDateAvailable,
 		isLoadingBackups,
 	};
 };
