@@ -11,7 +11,6 @@ import debugFactory from 'debug';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	WPCheckout,
-	WPCheckoutErrorBoundary,
 	useWpcomStore,
 	useShoppingCart,
 	FormFieldAnnotation,
@@ -227,7 +226,7 @@ export default function CompositeCheckout( {
 	const itemsForCheckout = ( items.length ? [ ...items, tax, couponItem ] : [] ).filter( Boolean );
 	debug( 'items for checkout', itemsForCheckout );
 
-	useRedirectIfCartEmpty( items, `/plans/${ siteSlug || ''}`, isLoadingCart );
+	useRedirectIfCartEmpty( items, `/plans/${ siteSlug || '' }`, isLoadingCart );
 
 	const { storedCards, isLoading: isLoadingStoredCards } = useStoredCards(
 		getStoredCards || wpcomGetStoredCards
@@ -289,18 +288,16 @@ export default function CompositeCheckout( {
 	) => {
 		const getIsFieldDisabled = () => isDisabled;
 		return (
-			<WPCheckoutErrorBoundary>
-				<ContactDetailsFormFields
-					countriesList={ countriesList }
-					contactDetails={ contactDetails }
-					contactDetailsErrors={
-						shouldShowContactDetailsValidationErrors ? contactDetailsErrors : {}
-					}
-					onContactDetailsChange={ updateDomainContactFields }
-					shouldForceRenderOnPropChange={ true }
-					getIsFieldDisabled={ getIsFieldDisabled }
-				/>
-			</WPCheckoutErrorBoundary>
+			<ContactDetailsFormFields
+				countriesList={ countriesList }
+				contactDetails={ contactDetails }
+				contactDetailsErrors={
+					shouldShowContactDetailsValidationErrors ? contactDetailsErrors : {}
+				}
+				onContactDetailsChange={ updateDomainContactFields }
+				shouldForceRenderOnPropChange={ true }
+				getIsFieldDisabled={ getIsFieldDisabled }
+			/>
 		);
 	};
 
