@@ -5,7 +5,7 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { numberFormat, translate } from 'i18n-calypso';
 import { isEmpty } from 'lodash';
-import { Button } from '@automattic/components';
+import { Button, Card } from '@automattic/components';
 
 /**
  * Internal dependencies
@@ -32,9 +32,19 @@ interface Props {
 		URL: string;
 	};
 	threats: Array< Threat >;
+	error: boolean;
 }
 
-const ScanThreats = ( { site, threats }: Props ) => {
+// @todo: once we have designs for the "error+threats found" case, we should update this component
+const ScanError = () => (
+	<Card highlight="error">
+		Something went wrong with the most recent Scan. Please, get in touch with support to get more
+		information. <br />
+		Despite this error, we can inform you we have found threats in your site.
+	</Card>
+);
+
+const ScanThreats = ( { error, site, threats }: Props ) => {
 	const [ fixingThreats, setFixingThreats ] = React.useState< Array< Threat > >( [] );
 	const [ selectedThreat, setSelectedThreat ] = React.useState< Threat >( threats[ 0 ] );
 	const [ showThreatDialog, setShowThreatDialog ] = React.useState( false );
@@ -44,6 +54,9 @@ const ScanThreats = ( { site, threats }: Props ) => {
 		( state ) => ! isEmpty( getJetpackCredentials( state, site.ID, 'main' ) )
 	);
 	const dispatch = useDispatch();
+
+	const allFixableThreats = threats.filter( ( threat ) => threat.fixable );
+	const hasFixableThreats = !! allFixableThreats.length;
 
 	const openFixAllThreatsDialog = React.useCallback( () => {
 		dispatch(
@@ -89,17 +102,17 @@ const ScanThreats = ( { site, threats }: Props ) => {
 		const actionCreator = actionToPerform === 'fix' ? fixThreatAlert : ignoreThreatAlert;
 		closeDialog();
 		setFixingThreats( ( stateThreats ) => [ ...stateThreats, selectedThreat ] );
-		dispatch( actionCreator( site.ID, selectedThreat.id ) );
+		dispatch( actionCreator( site.ID, selectedThreat.id, true ) );
 	}, [ actionToPerform, closeDialog, dispatch, selectedThreat, site ] );
 
 	const confirmFixAllThreats = React.useCallback( () => {
 		dispatch(
 			recordTracksEvent( `calypso_scan_all_threats_fix`, {
 				site_id: site.ID,
-				threats_number: threats.length,
+				threats_number: allFixableThreats.length,
 			} )
 		);
-		threats.forEach( ( threat ) => {
+		allFixableThreats.forEach( ( threat ) => {
 			dispatch( fixThreatAlert( site.ID, threat.id ) );
 		} );
 		setShowFixAllThreatsDialog( false );
@@ -110,6 +123,7 @@ const ScanThreats = ( { site, threats }: Props ) => {
 		<>
 			<SecurityIcon icon="error" />
 			<h1 className="scan-threats scan__header">{ translate( 'Your site may be at risk' ) }</h1>
+			{ error && <ScanError /> }
 			<p>
 				{ translate(
 					'The scan found {{strong}}%(threatCount)s{{/strong}} potential threat with {{strong}}%(siteName)s{{/strong}}.',
@@ -130,7 +144,13 @@ const ScanThreats = ( { site, threats }: Props ) => {
 					'Please review them below and take action. We are {{a}}here to help{{/a}} if you need us.',
 					{
 						components: {
-							a: <a href={ contactSupportUrl( site.URL ) } />,
+							a: (
+								<a
+									href={ contactSupportUrl( site.URL ) }
+									rel="noopener noreferrer"
+									target="_blank"
+								/>
+							),
 						},
 						comment: 'The {{a}} tag is a link that goes to a contact support page.',
 					}
@@ -138,21 +158,16 @@ const ScanThreats = ( { site, threats }: Props ) => {
 			</p>
 			<div className="scan-threats__threats">
 				<div className="scan-threats__buttons">
-					<Button
-						primary
-						className="scan-threats__fix-all-threats-button"
-						onClick={ openFixAllThreatsDialog }
-						disabled={ fixingThreats.length === threats.length }
-					>
-						{ translate( 'Fix all' ) }
-					</Button>
-					<Button
-						className="scan-threats__options-button"
-						onClick={ openFixAllThreatsDialog }
-						disabled={ fixingThreats.length === threats.length }
-					>
-						...
-					</Button>
+					{ hasFixableThreats && (
+						<Button
+							primary
+							className="scan-threats__fix-all-threats-button"
+							onClick={ openFixAllThreatsDialog }
+							disabled={ fixingThreats.length === threats.length }
+						>
+							{ translate( 'Fix all' ) }
+						</Button>
+					) }
 				</div>
 				{ threats.map( ( threat ) => (
 					<ThreatItem
@@ -161,6 +176,7 @@ const ScanThreats = ( { site, threats }: Props ) => {
 						onFixThreat={ () => openDialog( 'fix', threat ) }
 						onIgnoreThreat={ () => openDialog( 'ignore', threat ) }
 						isFixing={ !! fixingThreats.find( ( t ) => t.id === threat.id ) }
+						contactSupportUrl={ contactSupportUrl( site.URL ) }
 					/>
 				) ) }
 			</div>
@@ -176,7 +192,7 @@ const ScanThreats = ( { site, threats }: Props ) => {
 				/>
 			) }
 			<FixAllThreatsDialog
-				threats={ threats }
+				threats={ allFixableThreats }
 				showDialog={ showFixAllThreatsDialog }
 				siteId={ site.ID }
 				onCloseDialog={ () => setShowFixAllThreatsDialog( false ) }
