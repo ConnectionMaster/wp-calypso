@@ -25,6 +25,7 @@ import { PAID_DOMAINS_TO_SHOW } from '../../constants';
 import { getNewRailcarId, RecordTrainTracksEventProps } from '../../lib/analytics';
 import { useTrackModal } from '../../hooks/use-track-modal';
 import DomainCategories from '../domain-categories';
+import CloseButton from '../close-button';
 
 /**
  * Style dependencies
@@ -50,6 +51,8 @@ export interface Props {
 	 */
 	onClose: () => void;
 
+	onMoreOptions?: () => void;
+
 	recordAnalytics?: ( event: RecordTrainTracksEventProps ) => void;
 
 	/**
@@ -58,6 +61,8 @@ export interface Props {
 	queryParameters?: Partial< DomainSuggestions.DomainSuggestionQuery >;
 
 	currentDomain?: DomainSuggestion;
+
+	quantity?: number;
 }
 
 const DomainPicker: FunctionComponent< Props > = ( {
@@ -65,6 +70,8 @@ const DomainPicker: FunctionComponent< Props > = ( {
 	showDomainCategories,
 	onDomainSelect,
 	onClose,
+	onMoreOptions,
+	quantity = PAID_DOMAINS_TO_SHOW,
 	currentDomain,
 	recordAnalytics,
 } ) => {
@@ -78,12 +85,9 @@ const DomainPicker: FunctionComponent< Props > = ( {
 	const { setDomainSearch, setDomainCategory } = useDispatch( STORE_KEY );
 	const [ currentSelection, setCurrentSelection ] = useState( currentDomain );
 
-	const allSuggestions = useDomainSuggestions( { locale: i18nLocale } );
+	const allSuggestions = useDomainSuggestions( { locale: i18nLocale, quantity } );
 	const freeSuggestions = getFreeDomainSuggestions( allSuggestions );
-	const paidSuggestions = getPaidDomainSuggestions( allSuggestions )?.slice(
-		0,
-		PAID_DOMAINS_TO_SHOW
-	);
+	const paidSuggestions = getPaidDomainSuggestions( allSuggestions )?.slice( 0, quantity );
 	const recommendedSuggestion = getRecommendedDomainSuggestion( paidSuggestions );
 	const hasSuggestions = freeSuggestions?.length || paidSuggestions?.length;
 
@@ -148,12 +152,17 @@ const DomainPicker: FunctionComponent< Props > = ( {
 						<div className="domain-picker__header-group">
 							<div className="domain-picker__header-title">{ __( 'Choose a domain' ) }</div>
 							{ showDomainConnectButton ? (
-								<p>TODO: Show domain connect text.</p>
+								<p>{ __( 'Free for the first year with any paid plan.' ) }</p>
 							) : (
-								<p>{ __( 'Free for the first year with any paid plan or connect a domain.' ) }</p>
+								<p>{ __( 'Free for the first year with any paid plan.' ) }</p>
 							) }
 						</div>
 						<ConfirmButton />
+						<CloseButton
+							className="domain-picker__close-button"
+							onClick={ onClose }
+							tabIndex={ -1 }
+						/>
 					</div>
 					<div className="domain-picker__search">
 						<SearchIcon />
@@ -189,9 +198,7 @@ const DomainPicker: FunctionComponent< Props > = ( {
 									<SuggestionNone />
 								) ) }
 							{ ! paidSuggestions &&
-								times( PAID_DOMAINS_TO_SHOW - 1, ( i ) => (
-									<SuggestionItemPlaceholder key={ i } />
-								) ) }
+								times( quantity - 1, ( i ) => <SuggestionItemPlaceholder key={ i } /> ) }
 							{ paidSuggestions &&
 								( paidSuggestions?.length ? (
 									paidSuggestions.map( ( suggestion, i ) => (
@@ -214,6 +221,9 @@ const DomainPicker: FunctionComponent< Props > = ( {
 				</PanelRow>
 				<PanelRow className="domain-picker__panel-row-footer">
 					<div className="domain-picker__footer">
+						<Button className="domain-picker__more-button" isTertiary onClick={ onMoreOptions }>
+							{ __( 'More Options' ) }
+						</Button>
 						<ConfirmButton />
 					</div>
 				</PanelRow>
