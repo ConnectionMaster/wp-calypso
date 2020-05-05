@@ -225,7 +225,7 @@ function load_blog_posts_block() {
 		return;
 	}
 
-	require_once __DIR__ . '/blog-posts-block/index.php';
+	require_once __DIR__ . '/newspack-blocks/index.php';
 }
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_blog_posts_block' );
 
@@ -251,3 +251,17 @@ function load_block_patterns() {
 	Block_Patterns::get_instance();
 }
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_block_patterns' );
+
+/**
+ * Load Premium Content Block
+ */
+function load_premium_content() {
+	/**
+	 * Disabled until we're ready to disable the premium content plugin in mp-plugins/earn
+	 */
+	if ( function_exists( '\A8C\FSE\Earn\PremiumContent\premium_content_block_init' ) ) {
+		return;
+	}
+	require_once __DIR__ . '/premium-content/premium-content.php';
+}
+add_action( 'plugins_loaded', __NAMESPACE__ . '\load_premium_content' );
