@@ -5,6 +5,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Button, ProgressBar } from '@automattic/components';
 import { translate } from 'i18n-calypso';
+import { flowRight as compose } from 'lodash';
 
 /**
  * Internal dependencies
@@ -15,7 +16,7 @@ import SecurityIcon from 'landing/jetpack-cloud/components/security-icon';
 import ScanPlaceholder from 'landing/jetpack-cloud/components/scan-placeholder';
 import StatsFooter from 'landing/jetpack-cloud/components/stats-footer';
 import ScanThreats from 'landing/jetpack-cloud/components/scan-threats';
-import { Scan } from 'landing/jetpack-cloud/sections/scan/types';
+import { Scan, Site } from 'landing/jetpack-cloud/sections/scan/types';
 import { isEnabled } from 'config';
 import Gridicon from 'components/gridicon';
 import Main from 'components/main';
@@ -30,6 +31,10 @@ import { withLocalizedMoment } from 'components/localized-moment';
 import contactSupportUrl from 'landing/jetpack-cloud/lib/contact-support-url';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { triggerScanRun } from 'landing/jetpack-cloud/lib/trigger-scan-run';
+import {
+	withApplySiteOffset,
+	applySiteOffsetType,
+} from 'landing/jetpack-cloud/components/site-offset';
 
 /**
  * Style dependencies
@@ -37,14 +42,19 @@ import { triggerScanRun } from 'landing/jetpack-cloud/lib/trigger-scan-run';
 import './style.scss';
 
 interface Props {
-	site: object | null;
+	site: Site | null;
 	siteId: number | null;
 	siteSlug: string | null;
-	siteUrl: string | null;
-	scanState: Scan | null;
+	siteUrl?: string;
+	scanState?: Scan;
 	scanProgress?: number;
-	isInitialScan: boolean;
-	moment: Function;
+	isInitialScan?: boolean;
+	timezone: string | null;
+	gmtOffset: number | null;
+	moment: {
+		utc: Function;
+	};
+	applySiteOffset: applySiteOffsetType;
 	dispatchRecordTracksEvent: Function;
 	dispatchScanRun: Function;
 }
@@ -65,7 +75,7 @@ class ScanPage extends Component< Props > {
 		);
 	}
 
-	renderHeader( text ) {
+	renderHeader( text: i18nCalypso.TranslateResult ) {
 		return <h1 className="scan__header">{ text }</h1>;
 	}
 
@@ -112,10 +122,12 @@ class ScanPage extends Component< Props > {
 	}
 
 	renderScanOkay() {
-		const { scanState, siteId, siteSlug, moment, dispatchScanRun } = this.props;
-		const lastScanTimestamp = scanState?.mostRecent?.timestamp
-			? scanState?.mostRecent?.timestamp.getTime()
-			: '';
+		const { scanState, siteId, siteSlug, moment, dispatchScanRun, applySiteOffset } = this.props;
+		const lastScanTimestamp = scanState?.mostRecent?.timestamp;
+		let lastScanSiteTime = '';
+		if ( lastScanTimestamp && applySiteOffset ) {
+			lastScanSiteTime = applySiteOffset( moment.utc( lastScanTimestamp ) )?.fromNow();
+		}
 
 		return (
 			<>
@@ -129,7 +141,7 @@ class ScanPage extends Component< Props > {
 							'{{br/}}' +
 							'Run a manual scan now or wait for Jetpack to scan your site later today.',
 						{
-							args: [ moment( lastScanTimestamp ).fromNow() ],
+							args: [ lastScanSiteTime ],
 							components: {
 								strong: <strong />,
 								br: <br />,
@@ -199,7 +211,7 @@ class ScanPage extends Component< Props > {
 
 	renderScanState() {
 		const { site, scanState } = this.props;
-		if ( ! scanState ) {
+		if ( ! scanState || ! site ) {
 			return <ScanPlaceholder />;
 		}
 
@@ -226,25 +238,22 @@ class ScanPage extends Component< Props > {
 		}
 
 		if ( threatsFound ) {
-			return (
-				<ScanThreats
-					className="scan__threats"
-					threats={ threats }
-					error={ errorFound }
-					site={ site }
-				/>
-			);
+			return <ScanThreats threats={ threats } error={ errorFound } site={ site } />;
 		}
 
 		return this.renderScanOkay();
 	}
 
 	render() {
+		const { siteId } = this.props;
+		if ( ! siteId ) {
+			return;
+		}
 		return (
 			<Main className="scan__main">
 				<DocumentHead title="Scanner" />
 				<SidebarNavigation />
-				<QueryJetpackScan siteId={ this.props.siteId } />
+				<QueryJetpackScan siteId={ siteId } />
 				<PageViewTracker path="/scan/:site" title="Scanner" />
 				<div className="scan__content">{ this.renderScanState() }</div>
 				<StatsFooter
@@ -252,7 +261,7 @@ class ScanPage extends Component< Props > {
 					noticeText={ translate(
 						'Failing to plan is planning to fail. Regular backups ensure that should ' +
 							'the worst happen, you are prepared. Jetpack Backup has you covered.'
-					) }
+					).toString() }
 					noticeLink="https://jetpack.com/upgrade/backup"
 				/>
 			</Main>
@@ -262,12 +271,19 @@ class ScanPage extends Component< Props > {
 
 export default connect(
 	( state ) => {
-		const site = getSelectedSite( state );
+		const site = getSelectedSite( state ) as Site;
 		const siteId = getSelectedSiteId( state );
-		const siteUrl = getSiteUrl( state, siteId );
 		const siteSlug = getSelectedSiteSlug( state );
-		const scanState = getSiteScanState( state, siteId );
-		const scanProgress = getSiteScanProgress( state, siteId );
+		if ( ! siteId ) {
+			return {
+				site,
+				siteId,
+				siteSlug,
+			};
+		}
+		const siteUrl = getSiteUrl( state, siteId ) ?? undefined;
+		const scanState = ( getSiteScanState( state, siteId ) as Scan ) ?? undefined;
+		const scanProgress = getSiteScanProgress( state, siteId ) ?? undefined;
 		const isInitialScan = getSiteScanIsInitial( state, siteId );
 
 		return {
@@ -284,4 +300,4 @@ export default connect(
 		dispatchRecordTracksEvent: recordTracksEvent,
 		dispatchScanRun: triggerScanRun,
 	}
-)( withLocalizedMoment( ScanPage ) );
+)( compose( withLocalizedMoment, withApplySiteOffset )( ScanPage ) );
