@@ -7,7 +7,6 @@ import { useViewportMatch } from '@wordpress/compose';
 import { useI18n } from '@automattic/react-i18n';
 import { Icon } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
-import classnames from 'classnames';
 import { useHistory } from 'react-router-dom';
 
 /**
@@ -28,41 +27,6 @@ import {
 } from '../../utils/domain-suggestions';
 import { PAID_DOMAINS_TO_SHOW } from '../../constants';
 import { usePath, useCurrentStep, Step } from '../../path';
-import wp from '../../../../lib/wp';
-import { recordOnboardingComplete } from '../../lib/analytics';
-
-const wpcom = wp.undocumented();
-
-interface Cart {
-	blog_id: number;
-	cart_key: number;
-	coupon: string;
-	coupon_discounts: unknown[];
-	coupon_discounts_integer: unknown[];
-	is_coupon_applied: boolean;
-	has_bundle_credit: boolean;
-	next_domain_is_free: boolean;
-	next_domain_condition: string;
-	products: unknown[];
-	total_cost: number;
-	currency: string;
-	total_cost_display: string;
-	total_cost_integer: number;
-	temporary: boolean;
-	tax: unknown;
-	sub_total: number;
-	sub_total_display: string;
-	sub_total_integer: number;
-	total_tax: number;
-	total_tax_display: string;
-	total_tax_integer: number;
-	credits: number;
-	credits_display: string;
-	credits_integer: number;
-	allowed_payment_methods: unknown[];
-	create_new_blog: boolean;
-	messages: Record< 'errors' | 'success', unknown >;
-}
 
 const Header: React.FunctionComponent = () => {
 	const { __, i18nLocale } = useI18n();
@@ -73,14 +37,10 @@ const Header: React.FunctionComponent = () => {
 	const newSite = useSelect( ( select ) => select( SITE_STORE ).getNewSite() );
 
 	const { domain, siteTitle } = useSelect( ( select ) => select( ONBOARD_STORE ).getState() );
-	const hasPaidDomain = useSelect( ( select ) => select( ONBOARD_STORE ).hasPaidDomain() );
-	const isRedirecting = useSelect( ( select ) => select( ONBOARD_STORE ).getIsRedirecting() );
 
 	const makePath = usePath();
 
-	const { createSite, resetOnboardStore, setDomain, setIsRedirecting } = useDispatch(
-		ONBOARD_STORE
-	);
+	const { createSite, setDomain } = useDispatch( ONBOARD_STORE );
 
 	const allSuggestions = useDomainSuggestions( { searchOverride: siteTitle, locale: i18nLocale } );
 	const paidSuggestions = getPaidDomainSuggestions( allSuggestions )?.slice(
@@ -97,6 +57,13 @@ const Header: React.FunctionComponent = () => {
 	}, [ siteTitle, setDomain ] );
 
 	const [ showSignupDialog, setShowSignupDialog ] = React.useState( false );
+	const [ previousRecommendedDomain, setPreviousRecommendedDomain ] = React.useState( '' );
+	if (
+		recommendedDomainSuggestion &&
+		previousRecommendedDomain !== recommendedDomainSuggestion.domain_name
+	) {
+		setPreviousRecommendedDomain( recommendedDomainSuggestion.domain_name );
+	}
 
 	const {
 		location: { pathname, search },
@@ -122,21 +89,27 @@ const Header: React.FunctionComponent = () => {
 
 	const isMobile = useViewportMatch( 'mobile', '<' );
 
+	const getDomainElementContent = () => {
+		if ( recommendedDomainSuggestion || previousRecommendedDomain !== '' ) {
+			/* translators: domain name is available, eg: "yourname.com is available" */
+			return sprintf(
+				__( '%s is available' ),
+				recommendedDomainSuggestion
+					? recommendedDomainSuggestion.domain_name
+					: previousRecommendedDomain
+			);
+		}
+
+		return 'example.wordpress.com';
+	};
+
 	/* eslint-disable wpcalypso/jsx-classname-namespace */
 	const domainElement = domain ? (
 		domain.domain_name
 	) : (
-		<span
-			className={ classnames( 'gutenboarding__header-domain-picker-button-domain', {
-				placeholder: ! recommendedDomainSuggestion,
-			} ) }
-		>
+		<span className="gutenboarding__header-domain-picker-button-domain">
 			{ isMobile && __( 'Domain available' ) }
-			{ ! isMobile &&
-				( recommendedDomainSuggestion
-					? /* translators: domain name is available, eg: "yourname.com is available" */
-					  sprintf( __( '%s is available' ), recommendedDomainSuggestion.domain_name )
-					: 'example.wordpress.com' ) }
+			{ ! isMobile && getDomainElementContent() }
 		</span>
 	);
 
@@ -156,55 +129,6 @@ const Header: React.FunctionComponent = () => {
 			handleCreateSite( newUser.username, newUser.bearerToken );
 		}
 	}, [ newSite, newUser, handleCreateSite ] );
-
-	React.useEffect( () => {
-		// isRedirecting check this is needed to make sure we don't overwrite the first window.location.replace() call
-		if ( newSite && ! isRedirecting ) {
-			setIsRedirecting( true );
-			if ( hasPaidDomain ) {
-				// I'd rather not make my own product, but this works.
-				// lib/cart-items helpers did not perform well.
-				const domainProduct = {
-					meta: domain?.domain_name,
-					product_id: domain?.product_id,
-					extra: {
-						privacy_available: domain?.supports_privacy,
-						privacy: domain?.supports_privacy,
-						source: 'gutenboarding',
-					},
-				};
-
-				const go = async () => {
-					const cart: Cart = await wpcom.getCart( newSite.site_slug );
-					await wpcom.setCart( newSite.blogid, {
-						...cart,
-						products: [ ...cart.products, domainProduct ],
-					} );
-					resetOnboardStore();
-					window.location.replace( `/start/prelaunch?siteSlug=${ newSite.blogid }` );
-				};
-				go();
-				return;
-			}
-
-			recordOnboardingComplete( {
-				isNewSite: !! newSite,
-				isNewUser: !! newUser,
-				blogId: newSite.blogid,
-			} );
-			resetOnboardStore();
-
-			window.location.replace( `/block-editor/page/${ newSite.site_slug }/home` );
-		}
-	}, [
-		domain,
-		hasPaidDomain,
-		isRedirecting,
-		newSite,
-		newUser,
-		resetOnboardStore,
-		setIsRedirecting,
-	] );
 
 	return (
 		<div
@@ -229,15 +153,24 @@ const Header: React.FunctionComponent = () => {
 						// We display the DomainPickerButton as soon as we have a domain suggestion,
 						// unless we're still at the IntentGathering step. In that case, we only
 						// show it comes from a site title (but hide it if it comes from a vertical).
-						domainElement && ( siteTitle || currentStep !== 'IntentGathering' ) && (
-							<DomainPickerButton
-								className="gutenboarding__header-domain-picker-button"
-								currentDomain={ domain }
-								onDomainSelect={ setDomain }
-							>
-								{ domainElement }
-							</DomainPickerButton>
-						)
+						domainElement &&
+							( siteTitle || previousRecommendedDomain || currentStep !== 'IntentGathering' ) && (
+								<DomainPickerButton
+									className="gutenboarding__header-domain-picker-button"
+									currentDomain={ domain }
+									onDomainSelect={ setDomain }
+									hasContent={
+										!! domain || !! recommendedDomainSuggestion || previousRecommendedDomain !== ''
+									}
+									hasPlaceholder={
+										!! siteTitle &&
+										! recommendedDomainSuggestion &&
+										previousRecommendedDomain !== ''
+									}
+								>
+									{ domainElement }
+								</DomainPickerButton>
+							)
 					}
 				</div>
 				<div className="gutenboarding__header-section-item gutenboarding__header-section-item--right">

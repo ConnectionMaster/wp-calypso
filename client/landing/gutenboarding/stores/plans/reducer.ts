@@ -1,7 +1,13 @@
 /**
- * Internal dependencies
+ * External dependencies
  */
 import * as plans from '../../../../lib/plans/constants';
+
+/**
+ * Internal dependencies
+ */
+import { freePlan } from './constants';
+import type { PlanAction } from './actions';
 
 export const supportedPlanSlugs = [
 	plans.PLAN_FREE,
@@ -11,20 +17,30 @@ export const supportedPlanSlugs = [
 	plans.PLAN_ECOMMERCE,
 ];
 
-import { PlanAction } from './types';
-
 const DEFAUlT_STATE: {
 	selectedPlanSlug: string | undefined;
 	supportedPlanSlugs: Array< string >;
+	prices: Record< string, string >;
 } = {
 	supportedPlanSlugs,
 	selectedPlanSlug: undefined,
+	prices: {},
 };
 
 const reducer = function ( state = DEFAUlT_STATE, action: PlanAction ) {
 	switch ( action.type ) {
 		case 'SET_PLAN':
-			return { ...state, selectedPlanSlug: action.slug };
+			return {
+				...state,
+				selectedPlanSlug: action.slug !== freePlan ? action.slug : DEFAUlT_STATE.selectedPlanSlug,
+			};
+		case 'SET_PRICES':
+			return {
+				...state,
+				prices: action.prices,
+			};
+		case 'RESET_PLAN':
+			return DEFAUlT_STATE;
 		default:
 			return state;
 	}
