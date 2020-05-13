@@ -106,29 +106,11 @@ export default {
 		defaultVariation: 'variantShowUpdates',
 		allowExistingUsers: true,
 	},
-	ATPrivacy: {
-		datestamp: '20200331',
-		variations: {
-			variant: 100,
-			control: 0,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: false,
-	},
 	domainStepPlanStepSwap: {
 		datestamp: '20200415',
 		variations: {
 			variantShowSwapped: 0,
 			control: 100,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: true,
-	},
-	showActiveTicketsNotice: {
-		datestamp: '20200430',
-		variations: {
-			showNotice: 50,
-			control: 50,
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: true,
