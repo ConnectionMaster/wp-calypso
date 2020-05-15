@@ -35,7 +35,6 @@ import Main from 'components/main';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
 import getActivityLogFilter from 'state/selectors/get-activity-log-filter';
 import ActivityCardList from 'landing/jetpack-cloud/components/activity-card-list';
-import MissingCredentialsWarning from '../../components/missing-credentials';
 import getSiteUrl from 'state/sites/selectors/get-site-url';
 import getDoesRewindNeedCredentials from 'state/selectors/get-does-rewind-need-credentials.js';
 import getSiteGmtOffset from 'state/selectors/get-site-gmt-offset';
@@ -157,10 +156,11 @@ class BackupsPage extends Component {
 		const deltas = getDailyBackupDeltas( logs, selectedDateString );
 		const metaDiff = getMetaDiffForDailyBackup( logs, selectedDateString );
 		const hasRealtimeBackups = includes( siteCapabilities, 'backup-realtime' );
+		const isToday = today.isSame( this.getSelectedDate(), 'day' );
 
 		return (
 			<Main>
-				<DocumentHead title={ translate( 'Latest Backups' ) } />
+				<DocumentHead title={ translate( 'Latest backups' ) } />
 				<SidebarNavigation />
 				<PageViewTracker path="/backups/:site" title="Backups" />
 
@@ -198,11 +198,9 @@ class BackupsPage extends Component {
 										onDateChange: this.onDateChange,
 										deltas,
 										metaDiff,
+										doesRewindNeedCredentials,
 									} }
 								/>
-								{ doesRewindNeedCredentials && (
-									<MissingCredentialsWarning settingsLink={ `/settings/${ siteSlug }` } />
-								) }
 							</>
 						) }
 					</div>
@@ -212,10 +210,12 @@ class BackupsPage extends Component {
 							{ ...{
 								deltas,
 								realtimeBackups,
+								doesRewindNeedCredentials,
 								allowRestore,
 								moment,
 								siteSlug,
 								metaDiff,
+								isToday,
 							} }
 						/>
 					) }
@@ -225,7 +225,7 @@ class BackupsPage extends Component {
 	}
 
 	renderBackupSearch() {
-		const { logs, siteSlug, translate } = this.props;
+		const { doesRewindNeedCredentials, logs, siteSlug, translate } = this.props;
 
 		// Filter out anything that is not restorable
 		const restorablePoints = logs.filter( ( event ) => !! event.activityIsRewindable );
@@ -240,7 +240,12 @@ class BackupsPage extends Component {
 						'This is the complete event history for your site. Filter by date range and/ or activity type.'
 					) }
 				</div>
-				<ActivityCardList logs={ restorablePoints } pageSize={ 10 } siteSlug={ siteSlug } />
+				<ActivityCardList
+					logs={ restorablePoints }
+					pageSize={ 10 }
+					siteSlug={ siteSlug }
+					doesRewindNeedCredentials={ doesRewindNeedCredentials }
+				/>
 			</div>
 		);
 	}

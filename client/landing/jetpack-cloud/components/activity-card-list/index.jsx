@@ -79,11 +79,11 @@ class ActivityCardList extends Component {
 	renderLogs( actualPage ) {
 		const {
 			allowRestore,
-			hasRealtimeBackups,
 			logs,
 			moment,
 			pageSize,
 			showDateSeparators,
+			doesRewindNeedCredentials,
 			siteSlug,
 		} = this.props;
 
@@ -110,10 +110,7 @@ class ActivityCardList extends Component {
 							<ActivityCard
 								{ ...{
 									key: activity.activityId,
-									showContentLink: isActivityBackup( activity )
-										? dateLogs.length > 1 || hasMore
-										: undefined,
-									showActions: hasRealtimeBackups || isActivityBackup( activity ),
+									doesRewindNeedCredentials,
 									moment,
 									activity,
 									allowRestore,
@@ -214,12 +211,10 @@ const mapStateToProps = ( state ) => {
 		'active' === rewind.state &&
 		! ( 'queued' === restoreStatus || 'running' === restoreStatus ) &&
 		includes( siteCapabilities, 'restore' );
-	const hasRealtimeBackups = siteCapabilities && includes( siteCapabilities, 'backup-realtime' );
 
 	return {
 		allowRestore,
 		filter,
-		hasRealtimeBackups,
 		rewind,
 		siteId,
 		siteSlug,
