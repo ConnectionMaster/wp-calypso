@@ -1,6 +1,30 @@
 const availableDesigns: Readonly< AvailableDesigns > = {
 	featured: [
 		{
+			title: 'Edison',
+			slug: 'edison',
+			template: 'edison',
+			theme: 'stratford',
+			src: 'https://public-api.wordpress.com/rest/v1/template/demo/stratford/edison/',
+			fonts: {
+				headings: 'Chivo',
+				base: 'Open Sans',
+			},
+			categories: [ 'featured', 'blog' ],
+		},
+		{
+			title: 'Cassel',
+			slug: 'cassel',
+			template: 'cassel',
+			theme: 'mayland',
+			src: 'https://public-api.wordpress.com/rest/v1/template/demo/mayland/cassel/',
+			fonts: {
+				headings: 'Playfair Display',
+				base: 'Fira Sans',
+			},
+			categories: [ 'featured', 'blog' ],
+		},
+		{
 			title: 'Vesta',
 			slug: 'vesta',
 			template: 'vesta',
@@ -9,18 +33,6 @@ const availableDesigns: Readonly< AvailableDesigns > = {
 			fonts: {
 				headings: 'Cabin',
 				base: 'Raleway',
-			},
-			categories: [ 'featured', 'portfolio' ],
-		},
-		{
-			title: 'Reynolds',
-			slug: 'reynolds',
-			template: 'reynolds',
-			theme: 'rockfield',
-			src: 'https://public-api.wordpress.com/rest/v1/template/demo/rockfield/reynolds/',
-			fonts: {
-				headings: 'Playfair Display',
-				base: 'Fira Sans',
 			},
 			categories: [ 'featured', 'portfolio' ],
 		},
@@ -49,40 +61,16 @@ const availableDesigns: Readonly< AvailableDesigns > = {
 			categories: [ 'featured', 'portfolio' ],
 		},
 		{
-			title: 'Bowen',
-			slug: 'bowen',
-			template: 'bowen',
-			theme: 'coutoire',
-			src: 'https://public-api.wordpress.com/rest/v1/template/demo/coutoire/bowen/',
+			title: 'Reynolds',
+			slug: 'reynolds',
+			template: 'reynolds',
+			theme: 'rockfield',
+			src: 'https://public-api.wordpress.com/rest/v1/template/demo/rockfield/reynolds/',
 			fonts: {
 				headings: 'Playfair Display',
 				base: 'Fira Sans',
 			},
-			categories: [ 'featured', 'blog' ],
-		},
-		{
-			title: 'Edison',
-			slug: 'edison',
-			template: 'edison',
-			theme: 'stratford',
-			src: 'https://public-api.wordpress.com/rest/v1/template/demo/stratford/edison/',
-			fonts: {
-				headings: 'Chivo',
-				base: 'Open Sans',
-			},
-			categories: [ 'featured', 'blog' ],
-		},
-		{
-			title: 'Cassel',
-			slug: 'cassel',
-			template: 'cassel',
-			theme: 'mayland',
-			src: 'https://public-api.wordpress.com/rest/v1/template/demo/mayland/cassel/',
-			fonts: {
-				headings: 'Playfair Display',
-				base: 'Fira Sans',
-			},
-			categories: [ 'featured', 'blog' ],
+			categories: [ 'featured', 'portfolio' ],
 		},
 		{
 			title: 'Overton',
@@ -119,6 +107,18 @@ const availableDesigns: Readonly< AvailableDesigns > = {
 				base: 'Fira Sans',
 			},
 			categories: [ 'featured', 'charity', 'non-profit' ],
+		},
+		{
+			title: 'Bowen',
+			slug: 'bowen',
+			template: 'bowen',
+			theme: 'coutoire',
+			src: 'https://public-api.wordpress.com/rest/v1/template/demo/coutoire/bowen/',
+			fonts: {
+				headings: 'Playfair Display',
+				base: 'Fira Sans',
+			},
+			categories: [ 'featured', 'blog' ],
 		},
 	],
 };
