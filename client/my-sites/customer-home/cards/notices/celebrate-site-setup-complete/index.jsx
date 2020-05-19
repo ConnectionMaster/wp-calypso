@@ -9,13 +9,24 @@ import React from 'react';
  */
 import CelebrateNotice from '../celebrate-notice';
 
-const CelebrateSiteSetupComplete = ( { displayChecklist } ) => {
+/**
+ * Image dependencies
+ */
+import checklistIllustration from 'assets/images/customer-home/illustration--checklist-complete.svg';
+
+const CelebrateSiteSetupComplete = () => {
 	const translate = useTranslate();
 	return (
 		<CelebrateNotice
-			dismissalPreferenceName="home-notice-site-setup-complete"
-			displayChecklist={ displayChecklist }
-			message={ translate( "You've completed each item in your checklist." ) }
+			actionText={ translate( "Show me what's next" ) }
+			description={ translate(
+				"You finished your site setup. We'll guide you on the next steps to start growing your site."
+			) }
+			noticeId="site-setup-complete"
+			title={ translate( 'Site setup complete!' ) }
+			illustration={ checklistIllustration }
+			showSkip={ true }
+			skipText={ translate( 'Dismiss' ) }
 		/>
 	);
 };

@@ -62,11 +62,22 @@ import { useStripe } from 'lib/stripe';
 import CheckoutTerms from '../checkout/checkout-terms.jsx';
 import useShowStripeLoadingErrors from './use-show-stripe-loading-errors';
 import useCreatePaymentMethods from './use-create-payment-methods';
-import { applePayProcessor, stripeCardProcessor } from './payment-method-processors';
+import {
+	applePayProcessor,
+	stripeCardProcessor,
+	fullCreditsProcessor,
+} from './payment-method-processors';
 import { useGetThankYouUrl } from './use-get-thank-you-url';
 import createAnalyticsEventHandler from './record-analytics';
-import createContactValidationCallback from './contact-validation';
+import createContactValidationCallback, {
+	createGSuiteContactValidationCallback,
+} from './contact-validation';
 import { fillInSingleCartItemAttributes } from 'lib/cart-values';
+import {
+	hasGoogleApps,
+	hasDomainRegistration,
+	hasTransferProduct,
+} from 'lib/cart-values/cart-items';
 
 const debug = debugFactory( 'calypso:composite-checkout' );
 
@@ -81,6 +92,8 @@ const wpcomSetCart = ( ...args ) => wpcom.setCart( ...args );
 const wpcomGetStoredCards = ( ...args ) => wpcom.getStoredCards( ...args );
 const wpcomValidateDomainContactInformation = ( ...args ) =>
 	wpcom.validateDomainContactInformation( ...args );
+const wpcomValidateGSuiteContactInformation = ( ...args ) =>
+	wpcom.validateGoogleAppsContactInformation( ...args );
 
 export default function CompositeCheckout( {
 	siteSlug,
@@ -291,7 +304,12 @@ export default function CompositeCheckout( {
 		validateDomainContact: validateDomainContactDetails || wpcomValidateDomainContactInformation,
 		recordEvent,
 		showErrorMessage: showErrorMessageBriefly,
-		translate,
+	} );
+
+	const gSuiteContactValidationCallback = createGSuiteContactValidationCallback( {
+		validateGSuiteContact: wpcomValidateGSuiteContactInformation,
+		recordEvent,
+		showErrorMessage: showErrorMessageBriefly,
 	} );
 
 	const renderDomainContactFields = (
@@ -302,12 +320,17 @@ export default function CompositeCheckout( {
 		shouldShowContactDetailsValidationErrors,
 		isDisabled
 	) => {
+		const needsOnlyGoogleAppsDetails =
+			hasGoogleApps( responseCart ) &&
+			! hasDomainRegistration( responseCart ) &&
+			! hasTransferProduct( responseCart );
 		const getIsFieldDisabled = () => isDisabled;
 		const tlds = getAllTlds( domainNames );
 
 		return (
 			<React.Fragment>
 				<ManagedContactDetailsFormFields
+					needsOnlyGoogleAppsDetails={ needsOnlyGoogleAppsDetails }
 					contactDetails={ contactDetails }
 					contactDetailsErrors={
 						shouldShowContactDetailsValidationErrors ? contactDetailsErrors : {}
@@ -384,7 +407,11 @@ export default function CompositeCheckout( {
 	);
 
 	const paymentProcessors = useMemo(
-		() => ( { 'apple-pay': applePayProcessor, card: stripeCardProcessor } ),
+		() => ( {
+			'apple-pay': applePayProcessor,
+			card: stripeCardProcessor,
+			'full-credits': fullCreditsProcessor,
+		} ),
 		[]
 	);
 
@@ -425,6 +452,7 @@ export default function CompositeCheckout( {
 					variantSelectOverride={ variantSelectOverride }
 					getItemVariants={ getItemVariants }
 					domainContactValidationCallback={ domainContactValidationCallback }
+					gSuiteContactValidationCallback={ gSuiteContactValidationCallback }
 					responseCart={ responseCart }
 					addItemToCart={ addItemWithEssentialProperties }
 					subtotal={ subtotal }

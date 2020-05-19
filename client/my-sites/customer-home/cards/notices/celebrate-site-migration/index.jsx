@@ -9,14 +9,24 @@ import React from 'react';
  */
 import CelebrateNotice from '../celebrate-notice';
 
-const CelebrateSiteMigration = ( { checklistMode, displayChecklist } ) => {
+/**
+ * Image dependencies
+ */
+import migrationIllustration from 'assets/images/customer-home/illustration--import-complete.svg';
+
+const CelebrateSiteMigration = () => {
 	const translate = useTranslate();
 	return (
 		<CelebrateNotice
-			checklistMode={ checklistMode }
-			dismissalPreferenceName="home-notice-site-migrated"
-			displayChecklist={ displayChecklist }
-			message={ translate( 'Your site has been imported!' ) }
+			actionText={ translate( "Show me what's next" ) }
+			description={ translate(
+				"You finished importing your site. We'll guide you on the next steps to start growing your site."
+			) }
+			noticeId="site-migrated"
+			title={ translate( 'Your site has been imported!' ) }
+			illustration={ migrationIllustration }
+			showSkip={ true }
+			skipText={ translate( 'Dismiss' ) }
 		/>
 	);
 };

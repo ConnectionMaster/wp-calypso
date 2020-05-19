@@ -10,24 +10,27 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import { applySiteOffset } from 'lib/site/timezone';
 import {
 	backupDownloadPath,
 	backupRestorePath,
 	settingsPath,
 } from 'landing/jetpack-cloud/sections/backups/paths';
-import ExternalLink from 'components/external-link';
-import { getSelectedSiteId } from 'state/ui/selectors';
-import getDoesRewindNeedCredentials from 'state/selectors/get-does-rewind-need-credentials';
-import QueryRewindState from 'components/data/query-rewind-state';
 import { Card } from '@automattic/components';
+import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
+import { withApplySiteOffset } from 'landing/jetpack-cloud/components/site-offset';
+import { withLocalizedMoment } from 'components/localized-moment';
 import ActivityActor from 'my-sites/activity/activity-log-item/activity-actor';
 import ActivityDescription from './activity-description';
 import ActivityMedia from 'my-sites/activity/activity-log-item/activity-media';
 import Button from 'components/forms/form-button';
+import ExternalLink from 'components/external-link';
+import getAllowRestore from 'state/selectors/get-allow-restore';
+import getDoesRewindNeedCredentials from 'state/selectors/get-does-rewind-need-credentials';
 import Gridicon from 'components/gridicon';
 import PopoverMenu from 'components/popover/menu';
+import QueryRewindState from 'components/data/query-rewind-state';
 import StreamsMediaPreview from './activity-card-streams-media-preview';
+import { isSuccessfulRealtimeBackup } from 'landing/jetpack-cloud/sections/backups/utils';
 
 /**
  * Style dependencies
@@ -38,11 +41,19 @@ import missingCredentialsIcon from 'landing/jetpack-cloud/components/daily-backu
 
 class ActivityCard extends Component {
 	static propTypes = {
+		activity: PropTypes.object.isRequired,
+		allowRestore: PropTypes.bool.isRequired,
+		applySiteOffset: PropTypes.func,
+		className: PropTypes.string,
+		doesRewindNeedCredentials: PropTypes.bool.isRequired,
+		moment: PropTypes.func.isRequired,
+		siteId: PropTypes.number,
+		siteSlug: PropTypes.string.isRequired,
 		summarize: PropTypes.bool,
+		translate: PropTypes.func.isRequired,
 	};
 
 	static defaultProps = {
-		doesRewindNeedCredentials: false,
 		summarize: false,
 	};
 
@@ -76,7 +87,7 @@ class ActivityCard extends Component {
 	};
 
 	renderStreams( streams = [] ) {
-		const { allowRestore, moment, siteSlug, translate } = this.props;
+		const { applySiteOffset, allowRestore, moment, siteSlug, siteId, translate } = this.props;
 
 		return streams.map( ( item, index ) => {
 			const activityMedia = item.activityMedia;
@@ -99,10 +110,12 @@ class ActivityCard extends Component {
 				<ActivityCard
 					activity={ item }
 					allowRestore={ allowRestore }
-					compact
+					applySiteOffset={ applySiteOffset }
 					key={ item.activityId }
 					moment={ moment }
 					siteSlug={ siteSlug }
+					siteId={ siteId }
+					summarize
 					translate={ translate }
 				/>
 			);
@@ -219,22 +232,24 @@ class ActivityCard extends Component {
 	renderBottomToolbar = () => this.renderToolbar( false );
 
 	renderToolbar( isTopToolbar = true ) {
-		const {
-			activity: { activityIsRewindable, streams },
-		} = this.props;
+		const { activity } = this.props;
 
-		return ! ( streams || activityIsRewindable ) ? null : (
+		// Check if the activities in the stream are rewindables
+		const isRewindable = isSuccessfulRealtimeBackup( activity );
+		const streams = activity.streams;
+
+		return ! ( streams || isRewindable ) ? null : (
 			<Fragment key={ `activity-card__toolbar-${ isTopToolbar ? 'top' : 'bottom' }` }>
 				<div
 					// force the actions to stay in the left if we aren't showing the content link
 					className={
-						! streams && activityIsRewindable
+						! streams && isRewindable
 							? 'activity-card__activity-actions-reverse'
 							: 'activity-card__activity-actions'
 					}
 				>
 					{ streams && this.renderExpandContentControl() }
-					{ activityIsRewindable && this.renderActionButton( isTopToolbar ) }
+					{ isRewindable && this.renderActionButton( isTopToolbar ) }
 				</div>
 			</Fragment>
 		);
@@ -265,20 +280,11 @@ class ActivityCard extends Component {
 	}
 
 	render() {
-		const {
-			activity,
-			allowRestore,
-			className,
-			gmtOffset,
-			siteId,
-			summarize,
-			timezone,
-		} = this.props;
+		const { activity, allowRestore, applySiteOffset, className, siteId, summarize } = this.props;
 
-		const backupTimeDisplay = applySiteOffset( activity.activityTs, {
-			timezone,
-			gmtOffset,
-		} ).format( 'LT' );
+		const backupTimeDisplay = applySiteOffset
+			? applySiteOffset( activity.activityTs ).format( 'LT' )
+			: '';
 
 		const showActivityContent = this.state.showContent;
 
@@ -317,11 +323,16 @@ class ActivityCard extends Component {
 
 const mapStateToProps = ( state ) => {
 	const siteId = getSelectedSiteId( state );
+	const siteSlug = getSelectedSiteSlug( state );
 
 	return {
-		siteId,
+		allowRestore: getAllowRestore( state, siteId ),
 		doesRewindNeedCredentials: getDoesRewindNeedCredentials( state, siteId ),
+		siteId,
+		siteSlug,
 	};
 };
 
-export default connect( mapStateToProps )( localize( ActivityCard ) );
+export default connect( mapStateToProps )(
+	withLocalizedMoment( withApplySiteOffset( localize( ActivityCard ) ) )
+);
