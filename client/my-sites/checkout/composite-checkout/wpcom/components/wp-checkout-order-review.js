@@ -48,6 +48,7 @@ export default function WPCheckoutOrderReview( {
 					variantSelectOverride={ variantSelectOverride }
 					getItemVariants={ getItemVariants }
 					onChangePlanLength={ onChangePlanLength }
+					couponStatus={ couponStatus }
 				/>
 			</WPOrderReviewSection>
 
@@ -81,7 +82,6 @@ const DomainURL = styled.div`
 `;
 
 const CouponField = styled( Coupon )`
-	margin: 20px 30px 20px 0;
-	padding-bottom: 20px;
+	margin: 20px 30px 0 0;
 	border-bottom: 1px solid ${( props ) => props.theme.colors.borderColorLight};
 `;

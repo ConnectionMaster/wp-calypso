@@ -68,7 +68,7 @@ class ScanPage extends Component< Props > {
 					{ translate(
 						"Welcome to Jetpack Scan! We're scoping out your site, setting up to do a full scan. " +
 							"We'll let you know if we spot any issues that might impact a scan, " +
-							'then start your first full scan will start.'
+							'then your first full scan will start.'
 					) }
 				</p>
 			</>
@@ -91,7 +91,7 @@ class ScanPage extends Component< Props > {
 				href={ contactSupportUrl( siteUrl, scanStateType ) }
 				className="scan__button"
 				onClick={ () =>
-					dispatchRecordTracksEvent( 'calypso_scan_error_contact_support', {
+					dispatchRecordTracksEvent( 'calypso_jetpack_scan_error_contact', {
 						scan_state: scanStateType,
 						site_id: siteId,
 					} )
