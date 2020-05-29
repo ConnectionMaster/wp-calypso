@@ -129,7 +129,7 @@ export function createStripePaymentMethodStore() {
 
 export function createStripeMethod( { store, stripe, stripeConfiguration } ) {
 	return {
-		id: 'stripe-card',
+		id: 'card',
 		label: <CreditCardLabel />,
 		activeContent: (
 			<StripeCreditCardFields stripe={ stripe } stripeConfiguration={ stripeConfiguration } />
@@ -281,7 +281,7 @@ const StripeFields = styled.div`
 const CreditCardFieldsWrapper = styled.div`
 	padding: 16px;
 	position: relative;
-	display: ${( props ) => ( props.isLoaded ? 'block' : 'none') };
+	display: ${ ( props ) => ( props.isLoaded ? 'block' : 'none' ) };
 	position: relative;
 
 	:after {
@@ -289,7 +289,7 @@ const CreditCardFieldsWrapper = styled.div`
 		width: calc( 100% - 6px );
 		height: 1px;
 		content: '';
-		background: ${( props ) => props.theme.colors.borderColorLight};
+		background: ${ ( props ) => props.theme.colors.borderColorLight };
 		position: absolute;
 		top: 0;
 		left: 3px;
@@ -325,9 +325,9 @@ const Label = styled.label`
 const LabelText = styled.span`
 	display: block;
 	font-size: 14px;
-	font-weight: ${( props ) => props.theme.weights.bold};
+	font-weight: ${ ( props ) => props.theme.weights.bold };
 	margin-bottom: 8px;
-	color: ${( props ) => props.theme.colors.textColor};
+	color: ${ ( props ) => props.theme.colors.textColor };
 `;
 
 const StripeFieldWrapper = styled.span`
@@ -340,17 +340,18 @@ const StripeFieldWrapper = styled.span`
 		font-size: 16px;
 		box-sizing: border-box;
 		border: 1px solid
-			${( props ) => ( props.hasError ? props.theme.colors.error : props.theme.colors.borderColor) };
+			${ ( props ) =>
+				props.hasError ? props.theme.colors.error : props.theme.colors.borderColor };
 		padding: 12px 10px;
 		line-height: 1.2;
 	}
 
 	.StripeElement--focus {
-		outline: ${( props ) => props.theme.colors.outline} solid 2px;
+		outline: ${ ( props ) => props.theme.colors.outline } solid 2px;
 	}
 
 	.StripeElement--focus.StripeElement--invalid {
-		outline: ${( props ) => props.theme.colors.error} solid 2px;
+		outline: ${ ( props ) => props.theme.colors.error } solid 2px;
 	}
 `;
 
@@ -358,9 +359,9 @@ const StripeErrorMessage = styled.span`
 	font-size: 14px;
 	margin-top: 8px;
 	font-style: italic;
-	color: ${( props ) => props.theme.colors.error};
+	color: ${ ( props ) => props.theme.colors.error };
 	display: block;
-	font-weight: ${( props ) => props.theme.weights.normal};
+	font-weight: ${ ( props ) => props.theme.weights.normal };
 `;
 
 function LoadingFields() {
@@ -377,52 +378,19 @@ function StripePayButton( { disabled, store, stripe, stripeConfiguration } ) {
 	const [ items, total ] = useLineItems();
 	const { showErrorMessage, showInfoMessage } = useMessages();
 	const cardholderName = useSelect( ( select ) => select( 'stripe' ).getCardholderName() );
-	const { formStatus, setFormReady, setFormComplete, setFormSubmitting } = useFormStatus();
+	const { formStatus } = useFormStatus();
 	const {
 		transactionStatus,
 		transactionLastResponse,
-		transactionError,
 		resetTransaction,
 		setTransactionComplete,
 		setTransactionAuthorizing,
 		setTransactionRedirecting,
 		setTransactionError,
+		setTransactionPending,
 	} = useTransactionStatus();
 	const submitTransaction = usePaymentProcessor( 'card' );
 	const onEvent = useEvents();
-
-	useEffect( () => {
-		if ( transactionStatus === 'error' ) {
-			debug( 'showing error', transactionError );
-			showErrorMessage(
-				transactionError || localize( 'An error occurred during the transaction' )
-			);
-			onEvent( { type: 'STRIPE_TRANSACTION_ERROR', payload: transactionError || '' } );
-			resetTransaction();
-			setFormReady();
-		}
-		if ( transactionStatus === 'complete' ) {
-			debug( 'marking complete' );
-			setFormComplete();
-		}
-		if ( transactionStatus === 'redirecting' ) {
-			debug( 'redirecting' );
-			showInfoMessage( localize( 'Redirecting...' ) );
-			// TODO: make this redirect able to be mocked
-			window.location = transactionLastResponse.redirect_url;
-		}
-	}, [
-		onEvent,
-		resetTransaction,
-		setFormReady,
-		setFormComplete,
-		showErrorMessage,
-		showInfoMessage,
-		transactionStatus,
-		transactionError,
-		transactionLastResponse,
-		localize,
-	] );
 
 	useEffect( () => {
 		let isSubscribed = true;
@@ -448,7 +416,6 @@ function StripePayButton( { disabled, store, stripe, stripeConfiguration } ) {
 		onEvent,
 		setTransactionComplete,
 		resetTransaction,
-		setFormReady,
 		showInfoMessage,
 		showErrorMessage,
 		transactionStatus,
@@ -464,7 +431,7 @@ function StripePayButton( { disabled, store, stripe, stripeConfiguration } ) {
 			onClick={ () => {
 				if ( isCreditCardFormValid( store ) ) {
 					debug( 'submitting stripe payment' );
-					setFormSubmitting();
+					setTransactionPending();
 					onEvent( { type: 'STRIPE_TRANSACTION_BEGIN' } );
 					submitTransaction( {
 						stripe,
@@ -481,7 +448,7 @@ function StripePayButton( { disabled, store, stripe, stripeConfiguration } ) {
 							}
 							if ( stripeResponse?.redirect_url ) {
 								debug( 'stripe transaction requires redirect' );
-								setTransactionRedirecting( stripeResponse );
+								setTransactionRedirecting( stripeResponse.redirect_url );
 								return;
 							}
 							debug( 'stripe transaction is successful' );

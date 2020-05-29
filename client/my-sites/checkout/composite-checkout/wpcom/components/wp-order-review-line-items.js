@@ -53,6 +53,31 @@ function WPLineItem( {
 	const shouldShowVariantSelector = item.wpcom_meta && ! item.wpcom_meta.extra?.purchaseId;
 	const isGSuite = !! item.wpcom_meta?.extra?.google_apps_users?.length;
 
+	let sublabelAndIntervalPriceBreakdown = '';
+	if ( 'plan' === item.type && item.wpcom_meta?.months_per_bill_period ) {
+		sublabelAndIntervalPriceBreakdown = translate(
+			'%(sublabel)s: %(monthlyPrice)s per month × %(monthsPerBillPeriod)s',
+			{
+				args: {
+					sublabel: item.sublabel,
+					monthlyPrice: item.wpcom_meta.item_original_monthly_cost_display,
+					monthsPerBillPeriod: item.wpcom_meta.months_per_bill_period,
+				},
+				comment: 'product type and monthly breakdown of total cost, separated by a colon',
+			}
+		);
+	} else if ( 'plan' !== item.type || ! shouldShowVariantSelector ) {
+		sublabelAndIntervalPriceBreakdown = translate( '%(sublabel)s: %(interval)s', {
+			args: {
+				sublabel: item.sublabel,
+				interval: translate( 'billed annually' ),
+			},
+			comment: 'product type and billing interval, separated by a colon',
+		} );
+	} else {
+		sublabelAndIntervalPriceBreakdown = item.sublabel;
+	}
+
 	return (
 		<div className={ joinClasses( [ className, 'checkout-line-item' ] ) }>
 			<LineItemTitle id={ itemSpanId }>{ item.label }</LineItemTitle>
@@ -61,15 +86,7 @@ function WPLineItem( {
 			</span>
 			{ item.sublabel && (
 				<LineItemMeta singleLine={ true }>
-					{ 'plan' !== item.type || ! shouldShowVariantSelector
-						? translate( '%(sublabel)s: %(interval)s', {
-								args: {
-									sublabel: item.sublabel,
-									interval: translate( 'billed annually' ),
-								},
-								comment: 'product type and billing interval, separated by a colon',
-						  } )
-						: item.sublabel }
+					{ sublabelAndIntervalPriceBreakdown }
 					{ item.wpcom_meta?.is_bundled && item.amount.value === 0 && (
 						<DiscountCalloutUI>{ translate( 'First year free' ) }</DiscountCalloutUI>
 					) }
@@ -155,7 +172,7 @@ WPLineItem.propTypes = {
 	} ),
 	getItemVariants: PropTypes.func,
 	onChangePlanLength: PropTypes.func,
-	couponStatus: PropTypes.bool,
+	couponStatus: PropTypes.string,
 };
 
 function LineItemPrice( { item } ) {
@@ -176,26 +193,27 @@ export const LineItemUI = styled( WPLineItem )`
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: space-between;
-	font-weight: ${( { theme, total } ) => ( total ? theme.weights.bold : theme.weights.normal) };
-	color: ${( { theme, total } ) => ( total ? theme.colors.textColorDark : theme.colors.textColor) };
-	font-size: ${( { total } ) => ( total ? '1.2em' : '1.1em') };
-	padding: ${( { total, isSummaryVisible, tax, subtotal } ) =>
-		isSummaryVisible || total || subtotal || tax ? '10px 0' : '20px 0'};
-	border-bottom: ${( { theme, total, isSummaryVisible } ) =>
-		isSummaryVisible || total ? 0 : '1px solid ' + theme.colors.borderColorLight};
+	font-weight: ${ ( { theme, total } ) => ( total ? theme.weights.bold : theme.weights.normal ) };
+	color: ${ ( { theme, total } ) =>
+		total ? theme.colors.textColorDark : theme.colors.textColor };
+	font-size: ${ ( { total } ) => ( total ? '1.2em' : '1.1em' ) };
+	padding: ${ ( { total, isSummaryVisible, tax, subtotal } ) =>
+		isSummaryVisible || total || subtotal || tax ? '10px 0' : '20px 0' };
+	border-bottom: ${ ( { theme, total, isSummaryVisible } ) =>
+		isSummaryVisible || total ? 0 : '1px solid ' + theme.colors.borderColorLight };
 	position: relative;
 `;
 
 const LineItemMeta = styled.div`
-	color: ${( props ) => props.theme.colors.textColorLight};
-	display: ${( { singleLine } ) => ( singleLine ? 'flex' : 'block') };
+	color: ${ ( props ) => props.theme.colors.textColorLight };
+	display: ${ ( { singleLine } ) => ( singleLine ? 'flex' : 'block' ) };
 	font-size: 14px;
 	justify-content: space-between;
 	width: 100%;
 `;
 
 const DiscountCalloutUI = styled.div`
-	color: ${( props ) => props.theme.colors.success};
+	color: ${ ( props ) => props.theme.colors.success };
 	text-align: right;
 `;
 
@@ -215,7 +233,7 @@ const DeleteButton = styled( Button )`
 	top: 7px;
 
 	:hover rect {
-		fill: ${( props ) => props.theme.colors.error};
+		fill: ${ ( props ) => props.theme.colors.error };
 	}
 `;
 
@@ -316,11 +334,11 @@ WPOrderReviewLineItems.propTypes = {
 	),
 	getItemVariants: PropTypes.func,
 	onChangePlanLength: PropTypes.func,
-	couponStatus: PropTypes.bool,
+	couponStatus: PropTypes.string,
 };
 
 const WPOrderReviewList = styled.ul`
-	border-top: 1px solid ${( props ) => props.theme.colors.borderColorLight};
+	border-top: 1px solid ${ ( props ) => props.theme.colors.borderColorLight };
 	box-sizing: border-box;
 	margin: 20px 30px 20px 0;
 `;

@@ -6,6 +6,7 @@
  * External dependencies
  */
 import * as React from 'react';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { render, fireEvent } from '@testing-library/react';
 
 const testSuggestion = {
@@ -161,6 +162,7 @@ describe( 'traintracks events', () => {
 		[
 			{ prop: 'railcarId', value1: 'id1', value2: 'id2' },
 			{ prop: 'isRecommended', value1: true, value2: false },
+			{ prop: 'categorySlug', value1: null, value2: 'test_category' },
 			{ prop: 'uiPosition', value1: 1, value2: 2 },
 			{
 				prop: 'suggestion',

@@ -90,7 +90,7 @@ class DailyBackupStatus extends Component {
 			hasRealtimeBackups,
 			siteSlug,
 			deltas,
-			metaDiff,
+			// metaDiff,
 			translate,
 		} = this.props;
 		const displayDate = this.getDisplayDate( backup.activityTs );
@@ -123,7 +123,8 @@ class DailyBackupStatus extends Component {
 					dispatchRecordTracksEvent={ dispatchRecordTracksEvent }
 				/>
 				{ showBackupDetails && this.renderBackupDetails( backup ) }
-				{ ! hasRealtimeBackups && <BackupChanges { ...{ deltas, metaDiff } } /> }
+				{ /*{ ! hasRealtimeBackups && <BackupChanges { ...{ deltas, metaDiff } } /> }*/ }
+				{ ! hasRealtimeBackups && <BackupChanges { ...{ deltas } } /> }
 			</>
 		);
 	}
@@ -436,21 +437,24 @@ const ActionButtons = ( {
 						<img src={ missingCredentialsIcon } alt="" role="presentation" />
 						<div>{ translate( 'Restore points have not been enabled for your account' ) }</div>
 					</div>
+
 					<div className="daily-backup-status__credentials-warning-bottom">
-						{ translate(
-							'A backup of your data has been made, but you must enter your server credentials to enable one-click restores. {{a}}Find your server credentials{{/a}}',
-							{
-								components: {
-									a: (
-										<ExternalLink
-											icon
-											href="https://jetpack.com/support/ssh-sftp-and-ftp-credentials/"
-											onClick={ () => {} }
-										/>
-									),
-								},
-							}
-						) }
+						<div className="daily-backup-status__credentials-warning-text">
+							{ translate(
+								'A backup of your data has been made, but you must enter your server credentials to enable one-click restores. {{a}}Find your server credentials{{/a}}',
+								{
+									components: {
+										a: (
+											<ExternalLink
+												icon
+												href="https://jetpack.com/support/ssh-sftp-and-ftp-credentials/"
+												onClick={ () => {} }
+											/>
+										),
+									},
+								}
+							) }
+						</div>
 						<Button
 							className="daily-backup-status__activate-restores-button"
 							href={ settingsPath( siteSlug ) }

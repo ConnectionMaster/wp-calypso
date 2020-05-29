@@ -17,6 +17,7 @@ import {
 	getInlineHelpCurrentlySelectedLink,
 	getSelectedResultIndex,
 	isRequestingInlineHelpSearchResultsForQuery,
+	getInlineHelpCurrentlySelectedResult,
 } from 'state/inline-help/selectors';
 import {
 	requestInlineHelpSearchResults,
@@ -62,7 +63,7 @@ class InlineHelpSearchCard extends Component {
 				break;
 			case 'Enter': {
 				const hasSelection = this.props.selectedResultIndex >= 0;
-				hasSelection && this.props.openResult( event );
+				hasSelection && this.props.openResult( event, this.props.selectedResult );
 				break;
 			}
 		}
@@ -71,8 +72,14 @@ class InlineHelpSearchCard extends Component {
 	onSearch = ( searchQuery ) => {
 		debug( 'search query received: ', searchQuery );
 		this.props.recordTracksEvent( 'calypso_inlinehelp_search', { search_query: searchQuery } );
+
+		// Make a search
 		this.props.requestInlineHelpSearchResults( searchQuery );
 	};
+
+	componentDidMount() {
+		this.props.requestInlineHelpSearchResults();
+	}
 
 	render() {
 		return (
@@ -92,6 +99,7 @@ const mapStateToProps = ( state, ownProps ) => ( {
 	isSearching: isRequestingInlineHelpSearchResultsForQuery( state, ownProps.query ),
 	selectedLink: getInlineHelpCurrentlySelectedLink( state ),
 	selectedResultIndex: getSelectedResultIndex( state ),
+	selectedResult: getInlineHelpCurrentlySelectedResult( state ),
 } );
 const mapDispatchToProps = {
 	recordTracksEvent,
