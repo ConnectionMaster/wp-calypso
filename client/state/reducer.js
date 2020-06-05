@@ -6,11 +6,6 @@
 }]*/
 
 /**
- * External dependencies
- */
-import { reducer as form } from 'redux-form';
-
-/**
  * Internal dependencies
  */
 import config from 'config';
@@ -31,7 +26,6 @@ import atomicTransfer from './atomic-transfer/reducer';
 import billingTransactions from './billing-transactions/reducer';
 import checklist from './checklist/reducer';
 import connectedApplications from './connected-applications/reducer';
-import countries from './countries/reducer';
 import countryStates from './country-states/reducer';
 import currentUser from './current-user/reducer';
 import { reducer as dataRequests } from './data-layer/wpcom-http/utils';
@@ -74,9 +68,7 @@ import plans from './plans/reducer';
 import plugins from './plugins/reducer';
 import postFormats from './post-formats/reducer';
 import postTypes from './post-types/reducer';
-import preferences from './preferences/reducer';
 import productsList from './products-list/reducer';
-import purchases from './purchases/reducer';
 import pushNotifications from './push-notifications/reducer';
 import receipts from './receipts/reducer';
 import rewind from './rewind/reducer';
@@ -115,7 +107,6 @@ const reducers = {
 	billingTransactions,
 	checklist,
 	connectedApplications,
-	countries,
 	countryStates,
 	currentUser,
 	dataRequests,
@@ -124,7 +115,6 @@ const reducers = {
 	embeds,
 	experiments,
 	exporter,
-	form,
 	googleMyBusiness,
 	gsuiteUsers,
 	gutenbergOptInOut,
@@ -159,9 +149,7 @@ const reducers = {
 	plugins,
 	postFormats,
 	postTypes,
-	preferences,
 	productsList,
-	purchases,
 	pushNotifications,
 	receipts,
 	rewind,

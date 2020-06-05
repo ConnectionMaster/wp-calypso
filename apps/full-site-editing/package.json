@@ -1,6 +1,6 @@
 {
 	"name": "@automattic/full-site-editing",
-	"version": "1.6.0",
+	"version": "1.8.0",
 	"description": "Plugin for full site editing with the block editor.",
 	"sideEffects": true,
 	"repository": {
@@ -108,6 +108,6 @@
 		"classnames": "^2.2.6",
 		"lodash": "*",
 		"moment": "*",
-		"newspack-blocks": "github:Automattic/newspack-blocks#v1.6.0"
+		"newspack-blocks": "github:Automattic/newspack-blocks#v1.7.0"
 	}
 }
