@@ -26,7 +26,6 @@ import atomicTransfer from './atomic-transfer/reducer';
 import billingTransactions from './billing-transactions/reducer';
 import checklist from './checklist/reducer';
 import connectedApplications from './connected-applications/reducer';
-import countryStates from './country-states/reducer';
 import currentUser from './current-user/reducer';
 import { reducer as dataRequests } from './data-layer/wpcom-http/utils';
 import documentHead from './document-head/reducer';
@@ -83,7 +82,6 @@ import siteSettings from './site-settings/reducer';
 import sites from './sites/reducer';
 import storedCards from './stored-cards/reducer';
 import support from './support/reducer';
-import terms from './terms/reducer';
 import timezones from './timezones/reducer';
 import ui from './ui/reducer';
 import userDevices from './user-devices/reducer';
@@ -107,7 +105,6 @@ const reducers = {
 	billingTransactions,
 	checklist,
 	connectedApplications,
-	countryStates,
 	currentUser,
 	dataRequests,
 	documentHead,
@@ -164,7 +161,6 @@ const reducers = {
 	sites,
 	storedCards,
 	support,
-	terms,
 	timezones,
 	ui,
 	userDevices,

@@ -127,7 +127,7 @@ export default {
 		allowExistingUsers: true,
 	},
 	newSiteGutenbergOnboarding: {
-		datestamp: '20200520',
+		datestamp: '20200605',
 		variations: {
 			gutenberg: 10,
 			control: 90,
@@ -156,5 +156,15 @@ export default {
 		defaultVariation: RUM_DATA_COLLECTION.AB_VARIATION_OFF,
 		localeTargets: 'any',
 		allowExistingUsers: true,
+	},
+	whiteGloveUpsell: {
+		datestamp: '20200608',
+		variations: {
+			variantShowOffer: 0,
+			control: 100,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: false,
+		countryCodeTargets: [ 'US' ],
 	},
 };
