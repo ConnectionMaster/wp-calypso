@@ -16,10 +16,10 @@ import {
 	showUpsellIfNoScanHistory,
 	scan,
 	scanHistory,
-} from 'landing/jetpack-cloud/sections/scan/controller';
+} from 'my-sites/scan/controller';
 
 export default function () {
-	if ( config.isEnabled( 'jetpack-cloud/scan' ) ) {
+	if ( config.isEnabled( 'jetpack-cloud' ) || config.isEnabled( 'jetpack/features-section' ) ) {
 		page( '/scan', siteSelection, sites, navigation, makeLayout, clientRender );
 		page(
 			'/scan/:site',
@@ -32,17 +32,28 @@ export default function () {
 			clientRender
 		);
 
-		if ( config.isEnabled( 'jetpack-cloud/scan-history' ) ) {
-			page(
-				'/scan/history/:site/:filter?',
-				siteSelection,
-				navigation,
-				scanHistory,
-				wrapInSiteOffsetProvider,
-				showUpsellIfNoScanHistory,
-				makeLayout,
-				clientRender
-			);
-		}
+		page(
+			'/scan/history/:site/:filter?',
+			siteSelection,
+			navigation,
+			scanHistory,
+			wrapInSiteOffsetProvider,
+			showUpsellIfNoScanHistory,
+			makeLayout,
+			clientRender
+		);
+
+		page(
+			'/scan/:site/:filter?',
+			siteSelection,
+			navigation,
+			scan,
+			wrapInSiteOffsetProvider,
+			showUpsellIfNoScan,
+			makeLayout,
+			clientRender
+		);
+	} else {
+		page( '/scan*', () => page.redirect( '/' ) );
 	}
 }

@@ -10,11 +10,8 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import {
-	backupDownloadPath,
-	backupRestorePath,
-	settingsPath,
-} from 'landing/jetpack-cloud/sections/backups/paths';
+import { backupDownloadPath, backupRestorePath } from 'my-sites/backup/paths';
+import { settingsPath } from 'lib/jetpack/paths';
 import { Card } from '@automattic/components';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import { withApplySiteOffset } from 'components/jetpack/site-offset';
@@ -30,7 +27,7 @@ import Gridicon from 'components/gridicon';
 import PopoverMenu from 'components/popover/menu';
 import QueryRewindState from 'components/data/query-rewind-state';
 import StreamsMediaPreview from './activity-card-streams-media-preview';
-import { isSuccessfulRealtimeBackup } from 'landing/jetpack-cloud/sections/backups/utils';
+import { isSuccessfulRealtimeBackup } from 'lib/jetpack/backup-utils';
 import { recordTracksEvent } from 'state/analytics/actions';
 
 /**

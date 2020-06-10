@@ -6,6 +6,8 @@ import { connect } from 'react-redux';
 import { Button, ProgressBar } from '@automattic/components';
 import { translate } from 'i18n-calypso';
 import { flowRight as compose } from 'lodash';
+import config, { isEnabled } from 'config';
+import classNames from 'classnames';
 
 /**
  * Internal dependencies
@@ -15,8 +17,7 @@ import QueryJetpackScan from 'components/data/query-jetpack-scan';
 import SecurityIcon from 'components/jetpack/security-icon';
 import ScanPlaceholder from 'components/jetpack/scan-placeholder';
 import ScanThreats from 'components/jetpack/scan-threats';
-import { Scan, Site } from 'landing/jetpack-cloud/sections/scan/types';
-import { isEnabled } from 'config';
+import { Scan, Site } from 'my-sites/scan/types';
 import Gridicon from 'components/gridicon';
 import Main from 'components/main';
 import SidebarNavigation from 'my-sites/sidebar-navigation';
@@ -31,6 +32,7 @@ import contactSupportUrl from 'lib/jetpack/contact-support-url';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { triggerScanRun } from 'lib/jetpack/trigger-scan-run';
 import { withApplySiteOffset, applySiteOffsetType } from 'components/jetpack/site-offset';
+import ThreatHistoryList from 'components/jetpack/threat-history-list';
 
 /**
  * Style dependencies
@@ -134,7 +136,7 @@ class ScanPage extends Component< Props > {
 						}
 					) }
 				</p>
-				{ isEnabled( 'jetpack-cloud/on-demand-scan' ) && (
+				{ isEnabled( 'jetpack/on-demand-scan' ) && (
 					<Button primary className="scan__button" onClick={ () => dispatchScanRun( siteId ) }>
 						{ translate( 'Scan now' ) }
 					</Button>
@@ -187,7 +189,7 @@ class ScanPage extends Component< Props > {
 					) }
 				</p>
 				{ this.renderContactSupportButton() }
-				{ isEnabled( 'jetpack-cloud/on-demand-scan' ) && (
+				{ isEnabled( 'jetpack/on-demand-scan' ) && (
 					<Button
 						className="scan__button scan__retry-bottom"
 						onClick={ () => dispatchScanRun( siteId ) }
@@ -229,18 +231,40 @@ class ScanPage extends Component< Props > {
 		return this.renderScanOkay();
 	}
 
+	maybeRenderHistory() {
+		const { filter } = this.props;
+
+		const isJetpackCom = !! config( 'env_id' ).includes( 'jetpack-cloud' );
+
+		return (
+			! isJetpackCom && (
+				<div className="scan__history">
+					{ this.renderHeader( 'History' ) }
+					<ThreatHistoryList { ...{ filter } } />
+				</div>
+			)
+		);
+	}
+
 	render() {
 		const { siteId } = this.props;
 		if ( ! siteId ) {
 			return;
 		}
+		const isJetpackCom = !! config( 'env_id' ).includes( 'jetpack-cloud' );
 		return (
-			<Main className="scan__main">
+			<Main
+				classNames={ classNames( {
+					scan__main: true,
+					is_jetpackcom: isJetpackCom,
+				} ) }
+			>
 				<DocumentHead title="Scanner" />
 				<SidebarNavigation />
 				<QueryJetpackScan siteId={ siteId } />
 				<PageViewTracker path="/scan/:site" title="Scanner" />
 				<div className="scan__content">{ this.renderScanState() }</div>
+				{ this.maybeRenderHistory() }
 			</Main>
 		);
 	}

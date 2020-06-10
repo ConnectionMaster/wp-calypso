@@ -3,27 +3,23 @@
  */
 import React from 'react';
 import { connect, useDispatch } from 'react-redux';
-import { translate } from 'i18n-calypso';
 import page from 'page';
 
 /**
  * Internal dependencies
  */
-import DocumentHead from 'components/data/document-head';
 import QueryJetpackScanHistory from 'components/data/query-jetpack-scan-history';
 import ThreatDialog from 'components/jetpack/threat-dialog';
 import ThreatItem from 'components/jetpack/threat-item';
-import PageViewTracker from 'lib/analytics/page-view-tracker';
 import SimplifiedSegmentedControl from 'components/segmented-control/simplified';
 import { recordTracksEvent } from 'state/analytics/actions';
 import { getSelectedSiteSlug, getSelectedSite } from 'state/ui/selectors';
-import Main from 'components/main';
-import SidebarNavigation from 'my-sites/sidebar-navigation';
 import isRequestingJetpackScanHistory from 'state/selectors/is-requesting-jetpack-scan-history';
 import getSiteScanHistory from 'state/selectors/get-site-scan-history';
 import contactSupportUrl from 'lib/jetpack/contact-support-url';
 import { withLocalizedMoment } from 'components/localized-moment';
 import { useThreats } from 'lib/jetpack/use-threats';
+import config from 'config';
 
 /**
  * Style dependencies
@@ -38,17 +34,17 @@ const filterOptions = [
 
 const ThreatStatusFilter = ( { isPlaceholder, onSelect } ) => {
 	return isPlaceholder ? (
-		<div className="history__filters is-placeholder"></div>
+		<div className="threat-history-list__filters is-placeholder"></div>
 	) : (
 		<SimplifiedSegmentedControl
-			className="history__filters"
+			className="threat-history-list__filters"
 			options={ filterOptions }
 			onSelect={ onSelect }
 		/>
 	);
 };
 
-const ScanHistoryPage = ( {
+const ThreatHistoryList = ( {
 	siteId,
 	siteName,
 	siteSlug,
@@ -59,6 +55,7 @@ const ScanHistoryPage = ( {
 } ) => {
 	const { selectedThreat, setSelectedThreat, updateThreat, updatingThreats } = useThreats( siteId );
 	const [ showThreatDialog, setShowThreatDialog ] = React.useState( false );
+	const isJetpackCom = !! config( 'env_id' ).includes( 'jetpack-cloud' );
 	const dispatch = useDispatch();
 	const handleOnFilterChange = React.useCallback(
 		( filterEntry ) => {
@@ -70,7 +67,11 @@ const ScanHistoryPage = ( {
 				site_id: siteId,
 				filter: filterValue,
 			} );
-			page.show( `/scan/history/${ siteSlug }/${ filterValue }` );
+			if ( isJetpackCom ) {
+				page.show( `/scan/history/${ siteSlug }/${ filterValue }` );
+			} else {
+				page.show( `/scan/${ siteSlug }/${ filterValue }` );
+			}
 		},
 		[ dispatchRecordTracksEvent, siteId, siteSlug ]
 	);
@@ -115,26 +116,17 @@ const ScanHistoryPage = ( {
 	}, [ currentFilter, threats ] );
 
 	return (
-		<Main className="history">
-			<DocumentHead title={ translate( 'History' ) } />
-			<SidebarNavigation />
+		<div className="threat-history-list">
 			<QueryJetpackScanHistory siteId={ siteId } />
-			<PageViewTracker path="/scan/history/:site" title="Scan History" />
-			<h1 className="history__header">{ translate( 'History' ) }</h1>
-			<p className="history__description">
-				{ translate(
-					'The scanning history contains a record of all previously active threats on your site.'
-				) }
-			</p>
 			{ threats.length > 0 && (
-				<div className="history__filters-wrapper">
+				<div className="threat-history-list__filters-wrapper">
 					<ThreatStatusFilter
 						isPlaceholder={ isRequestingHistory }
 						onSelect={ handleOnFilterChange }
 					/>
 				</div>
 			) }
-			<div className="history__entries">
+			<div className="threat-history-list__entries">
 				{ filteredEntries.map( ( threat ) => (
 					<ThreatItem
 						key={ threat.id }
@@ -157,7 +149,7 @@ const ScanHistoryPage = ( {
 					/>
 				) }
 			</div>
-		</Main>
+		</div>
 	);
 };
 
@@ -188,4 +180,4 @@ export default connect(
 		};
 	},
 	{ dispatchRecordTracksEvent: recordTracksEvent }
-)( withLocalizedMoment( ScanHistoryPage ) );
+)( withLocalizedMoment( ThreatHistoryList ) );
