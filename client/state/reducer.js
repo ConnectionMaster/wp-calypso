@@ -8,7 +8,6 @@
 /**
  * Internal dependencies
  */
-import config from 'config';
 import { combineReducers } from 'state/utils';
 import { reducer as httpData } from 'state/data-layer/http-data';
 
@@ -16,7 +15,6 @@ import { reducer as httpData } from 'state/data-layer/http-data';
  * Reducers
  */
 import accountRecovery from './account-recovery/reducer';
-import activePromotions from './active-promotions/reducer';
 import activityLog from './activity-log/reducer';
 import applicationPasswords from './application-passwords/reducer';
 import atomicTransfer from './atomic-transfer/reducer';
@@ -48,10 +46,8 @@ import jetpackProductInstall from './jetpack-product-install/reducer';
 import jetpackRemoteInstall from './jetpack-remote-install/reducer';
 import jetpackSync from './jetpack-sync/reducer';
 import jitm from './jitm/reducer';
-import legal from './legal/reducer';
 import media from './media/reducer';
 import memberships from './memberships/reducer';
-import mailchimp from './mailchimp/reducer';
 import mySites from './my-sites/reducer';
 import notices from './notices/reducer';
 import notificationSettings from './notification-settings/reducer';
@@ -91,7 +87,6 @@ import wordads from './wordads/reducer';
 // Please do not add to this list. See #39261 and p4TIVU-9lM-p2 for more details.
 const reducers = {
 	accountRecovery,
-	activePromotions,
 	activityLog,
 	applicationPasswords,
 	atomicTransfer,
@@ -124,7 +119,6 @@ const reducers = {
 	jetpackRemoteInstall,
 	jetpackSync,
 	jitm,
-	legal,
 	media,
 	memberships,
 	mySites,
@@ -161,9 +155,5 @@ const reducers = {
 	users,
 	wordads,
 };
-
-if ( config.isEnabled( 'mailchimp' ) ) {
-	reducers.mailchimp = mailchimp;
-}
 
 export default combineReducers( reducers );
