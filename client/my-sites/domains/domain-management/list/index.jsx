@@ -195,6 +195,7 @@ export class List extends React.Component {
 				<SidebarNavigation />
 				{ ! this.props.renderAllSites && (
 					<FormattedHeader
+						brandFont
 						className="domain-management__page-heading"
 						headerText={ this.props.translate( 'Domains' ) }
 						align="left"
@@ -440,7 +441,7 @@ export class List extends React.Component {
 
 		return [
 			...domainListItems,
-			<CompactCard href={ domainManagementRoot() }>
+			<CompactCard key="manage-all-domains" href={ domainManagementRoot() }>
 				{ translate( 'Manage all your domains' ) }
 			</CompactCard>,
 		];

@@ -38,7 +38,7 @@ export const getDesignImageUrl = ( design: Design ) => {
  */
 export function prefetchDesignThumbs() {
 	if ( typeof window !== 'undefined' ) {
-		availableDesigns.featured.forEach( ( design: Design ) => {
+		getAvailableDesigns().featured.forEach( ( design: Design ) => {
 			const href = getDesignImageUrl( design );
 			const link = document.createElement( 'link' );
 			link.rel = 'prefetch';
@@ -49,4 +49,29 @@ export function prefetchDesignThumbs() {
 	}
 }
 
-export default availableDesigns;
+export function getAvailableDesigns(
+	includeEdgeDesigns: boolean = isEnabled( 'gutenboarding/edge-templates' ),
+	useFseDesigns: boolean = isEnabled( 'gutenboarding/site-editor' )
+) {
+	let designs = availableDesigns;
+
+	if ( ! includeEdgeDesigns ) {
+		designs = {
+			...designs,
+			featured: designs.featured.filter( ( design ) => ! design.is_alpha ),
+		};
+	}
+
+	// If we are in the FSE flow, only show FSE designs. In normal flows, remove
+	// the FSE designs.
+	designs = {
+		...designs,
+		featured: designs.featured.filter( ( design ) =>
+			useFseDesigns ? design.is_fse : ! design.is_fse
+		),
+	};
+
+	return designs;
+}
+
+export default getAvailableDesigns();
