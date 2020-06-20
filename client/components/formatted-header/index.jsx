@@ -47,11 +47,13 @@ function FormattedHeader( {
 }
 
 FormattedHeader.propTypes = {
+	brandFont: PropTypes.bool,
 	headerText: PropTypes.node,
 	subHeaderText: PropTypes.node,
 	compactOnMobile: PropTypes.bool,
 	isSecondary: PropTypes.bool,
 	align: PropTypes.string,
+	brandFont: PropTypes.bool,
 };
 
 export default FormattedHeader;
