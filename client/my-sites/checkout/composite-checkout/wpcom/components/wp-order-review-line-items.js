@@ -20,6 +20,7 @@ import joinClasses from './join-classes';
 import { useHasDomainsInCart } from '../hooks/has-domains';
 import { ItemVariationPicker } from './item-variation-picker';
 import { isBusinessPlan } from 'lib/plans';
+import { isGSuiteProductSlug } from 'lib/gsuite';
 
 export function WPOrderReviewSection( { children, className } ) {
 	return <div className={ joinClasses( [ className, 'order-review-section' ] ) }>{ children }</div>;
@@ -53,18 +54,7 @@ function WPLineItem( {
 	const isRenewal = item.wpcom_meta?.extra?.purchaseId;
 	// Show the variation picker when this is not a renewal
 	const shouldShowVariantSelector = getItemVariants && item.wpcom_meta && ! isRenewal;
-	const isGSuite = !! item.wpcom_meta?.extra?.google_apps_users?.length;
-
-	let gsuiteDiscountCallout = null;
-	if (
-		isGSuite &&
-		item.amount.value < item.wpcom_meta?.item_original_subtotal_integer &&
-		item.wpcom_meta?.is_sale_coupon_applied
-	) {
-		gsuiteDiscountCallout = (
-			<DiscountCalloutUI>{ translate( 'Discount for first year' ) }</DiscountCalloutUI>
-		);
-	}
+	const isGSuite = isGSuiteProductSlug( item.wpcom_meta?.product_slug );
 
 	const productSlug = item.wpcom_meta?.product_slug;
 	const isBusinessPlanProduct = productSlug && isBusinessPlan( productSlug );
@@ -92,12 +82,7 @@ function WPLineItem( {
 					<DomainDiscountCallout item={ item } />
 				</LineItemMeta>
 			) }
-			{ isGSuite && (
-				<GSuiteUsersList
-					users={ item.wpcom_meta.extra.google_apps_users }
-					gsuiteDiscountCallout={ gsuiteDiscountCallout }
-				/>
-			) }
+			{ isGSuite && <GSuiteUsersList item={ item } /> }
 			{ hasDeleteButton && formStatus === 'ready' && (
 				<>
 					<DeleteButton
@@ -215,6 +200,10 @@ const LineItemMeta = styled.div`
 const DiscountCalloutUI = styled.div`
 	color: ${ ( props ) => props.theme.colors.success };
 	text-align: right;
+
+	.rtl & {
+		text-align: left;
+	}
 `;
 
 const LineItemTitle = styled.div`
@@ -226,6 +215,11 @@ const LineItemTitle = styled.div`
 const LineItemPriceUI = styled.span`
 	margin-left: 12px;
 	font-size: ${ ( { isSummary } ) => ( isSummary ? '14px' : '16px' ) };
+
+	.rtl & {
+		margin-right: 12px;
+		margin-left: 0;
+	}
 `;
 
 const DeleteButton = styled( Button )`
@@ -240,6 +234,11 @@ const DeleteButton = styled( Button )`
 
 	svg {
 		opacity: 1;
+	}
+
+	.rtl & {
+		right: auto;
+		left: -50px;
 	}
 `;
 
@@ -351,6 +350,10 @@ const WPOrderReviewList = styled.ul`
 	box-sizing: border-box;
 	margin: 20px 30px 20px 0;
 
+	.rtl & {
+		margin: 20px 0 20px 30px;
+	}
+
 	.is-summary & {
 		border-top: 0;
 		margin: 0;
@@ -364,14 +367,15 @@ const WPOrderReviewListItem = styled.li`
 	list-style: none;
 `;
 
-function GSuiteUsersList( { users, gsuiteDiscountCallout } ) {
+function GSuiteUsersList( { item } ) {
+	const users = item.wpcom_meta?.extra?.google_apps_users ?? [];
 	return (
 		<>
 			{ users.map( ( user, index ) => {
 				return (
 					<LineItemMeta key={ user.email }>
 						<div key={ user.email }>{ user.email }</div>
-						{ index === 0 && gsuiteDiscountCallout }
+						{ index === 0 && <GSuiteDiscountCallout item={ item } /> }
 					</LineItemMeta>
 				);
 			} ) }
@@ -432,7 +436,7 @@ function LineItemSublabelAndPrice( { item } ) {
 	const translate = useTranslate();
 	const isDomainRegistration = item.wpcom_meta?.is_domain_registration;
 	const isDomainMap = item.type === 'domain_map';
-	const isGSuite = !! item.wpcom_meta?.extra?.google_apps_users?.length;
+	const isGSuite = isGSuiteProductSlug( item.wpcom_meta?.product_slug );
 
 	if ( item.type === 'plan' && item.wpcom_meta?.months_per_bill_period ) {
 		return translate( '%(sublabel)s: %(monthlyPrice)s per month × %(monthsPerBillPeriod)s', {
@@ -473,5 +477,18 @@ function DomainDiscountCallout( { item } ) {
 		return <DiscountCalloutUI>{ translate( 'Free with your plan' ) }</DiscountCalloutUI>;
 	}
 
+	return null;
+}
+
+function GSuiteDiscountCallout( { item } ) {
+	const translate = useTranslate();
+	const isGSuite = isGSuiteProductSlug( item.wpcom_meta?.product_slug );
+	if (
+		isGSuite &&
+		item.amount.value < item.wpcom_meta?.item_original_subtotal_integer &&
+		item.wpcom_meta?.is_sale_coupon_applied
+	) {
+		return <DiscountCalloutUI>{ translate( 'Discount for first year' ) }</DiscountCalloutUI>;
+	}
 	return null;
 }
