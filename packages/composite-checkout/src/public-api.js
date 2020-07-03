@@ -3,7 +3,9 @@
  */
 import Button from './components/button';
 import CheckoutErrorBoundary from './components/checkout-error-boundary';
-import { CheckoutProvider, useEvents, useMessages } from './components/checkout-provider';
+import { CheckoutProvider } from './components/checkout-provider';
+import useMessages from './components/use-messages';
+import useEvents from './components/use-events';
 import {
 	Checkout,
 	CheckoutStep,
@@ -41,6 +43,7 @@ import { createIdealPaymentMethodStore, createIdealMethod } from './lib/payment-
 import { createSofortPaymentMethodStore, createSofortMethod } from './lib/payment-methods/sofort';
 import { createAlipayPaymentMethodStore, createAlipayMethod } from './lib/payment-methods/alipay';
 import { createP24PaymentMethodStore, createP24Method } from './lib/payment-methods/p24';
+import { createEpsPaymentMethodStore, createEpsMethod } from './lib/payment-methods/eps';
 import {
 	createGiropayPaymentMethodStore,
 	createGiropayMethod,
@@ -91,6 +94,8 @@ export {
 	createAlipayMethod,
 	createAlipayPaymentMethodStore,
 	createApplePayMethod,
+	createEpsMethod,
+	createEpsPaymentMethodStore,
 	createExistingCardMethod,
 	createFreePaymentMethod,
 	createFullCreditsMethod,
@@ -98,12 +103,12 @@ export {
 	createGiropayPaymentMethodStore,
 	createIdealMethod,
 	createIdealPaymentMethodStore,
-	createSofortMethod,
-	createSofortPaymentMethodStore,
 	createP24Method,
 	createP24PaymentMethodStore,
 	createPayPalMethod,
 	createRegistry,
+	createSofortMethod,
+	createSofortPaymentMethodStore,
 	createStripeMethod,
 	createStripePaymentMethodStore,
 	defaultRegistry,
