@@ -31,7 +31,7 @@ import './style.scss';
 type DomainSuggestion = DomainSuggestions.DomainSuggestion;
 
 export interface Props {
-	header: React.ReactElement;
+	header?: React.ReactElement;
 
 	showDomainCategories?: boolean;
 
@@ -47,6 +47,9 @@ export interface Props {
 
 	/** Domain suggestions to show when the picker is expanded */
 	quantityExpanded?: number;
+
+	/** Called when the user leaves the search box */
+	onDomainSearchBlur: ( value: string ) => void;
 
 	currentDomain?: string;
 
@@ -69,6 +72,7 @@ const DomainPicker: FunctionComponent< Props > = ( {
 	onDomainSelect,
 	quantity = PAID_DOMAINS_TO_SHOW,
 	quantityExpanded = PAID_DOMAINS_TO_SHOW_EXPANDED,
+	onDomainSearchBlur,
 	analyticsFlowId,
 	analyticsUiAlgo,
 	initialDomainSearch = '',
@@ -99,6 +103,12 @@ const DomainPicker: FunctionComponent< Props > = ( {
 		0,
 		isExpanded ? quantityExpanded : quantity
 	);
+
+	const onDomainSearchBlurValue = ( event: React.FormEvent< HTMLInputElement > ) => {
+		if ( onDomainSearchBlur ) {
+			onDomainSearchBlur( event.currentTarget.value );
+		}
+	};
 
 	// Reset expansion state after every search
 	useEffect( () => {
@@ -144,7 +154,7 @@ const DomainPicker: FunctionComponent< Props > = ( {
 
 	return (
 		<div className="domain-picker">
-			{ header }
+			{ header && header }
 			<div className="domain-picker__search">
 				<div className="domain-picker__search-icon">
 					<Icon icon={ search } />
@@ -156,6 +166,7 @@ const DomainPicker: FunctionComponent< Props > = ( {
 					label={ label }
 					placeholder={ label }
 					onChange={ handleInputChange }
+					onBlur={ onDomainSearchBlurValue }
 					value={ domainSearch }
 				/>
 			</div>
