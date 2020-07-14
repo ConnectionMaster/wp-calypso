@@ -6,14 +6,20 @@ import { useSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { PLANS_STORE } from '../stores';
+import { LAUNCH_STORE, PLANS_STORE } from '../stores';
 
 export function useSelectedPlan() {
-	// TODO: Switch to paid plan when use switch to paid domain.
-	const currentPlan = useSelect( ( select ) => {
-		return select( PLANS_STORE ).getSelectedPlan();
+	const { domain, plan } = useSelect( ( select ) => select( LAUNCH_STORE ).getState() );
+
+	const defaultPaidPlan = useSelect( ( select ) => {
+		return select( PLANS_STORE ).getDefaultPaidPlan();
 	} );
 
-	// FIX: PlansGrid currentPlan params expecting undefined while `getSelectedPlan()` is returning null.
-	return currentPlan || undefined;
+	if ( domain && ! domain?.is_free && ! plan ) {
+		return defaultPaidPlan;
+	}
+
+	// TODO: Switch to paid plan when use switch to paid domain.
+
+	return plan;
 }

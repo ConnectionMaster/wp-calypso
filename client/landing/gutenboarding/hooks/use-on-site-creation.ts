@@ -9,11 +9,10 @@ import wp from '../../../lib/wp';
  * Internal dependencies
  */
 import { STORE_KEY as ONBOARD_STORE } from '../stores/onboard';
-import { PLANS_STORE } from '../stores/plans';
 import { USER_STORE } from '../stores/user';
 import { SITE_STORE } from '../stores/site';
 import { recordOnboardingComplete } from '../lib/analytics';
-import { useSelectedPlan, useIsSelectedPlanEcommerce } from './use-selected-plan';
+import { useSelectedPlan, useShouldSiteBePublic } from './use-selected-plan';
 
 const wpcom = wp.undocumented();
 
@@ -62,11 +61,10 @@ export default function useOnSiteCreation() {
 	const newSite = useSelect( ( select ) => select( SITE_STORE ).getNewSite() );
 	const newUser = useSelect( ( select ) => select( USER_STORE ).getNewUser() );
 	const selectedPlan = useSelectedPlan();
-	const isEcommercePlan = useIsSelectedPlanEcommerce();
+	const shouldSiteBePublic = useShouldSiteBePublic();
 	const design = useSelect( ( select ) => select( ONBOARD_STORE ).getSelectedDesign() );
 
 	const { resetOnboardStore, setIsRedirecting, setSelectedSite } = useDispatch( ONBOARD_STORE );
-	const { resetPlan } = useDispatch( PLANS_STORE );
 	const flowCompleteTrackingParams = {
 		isNewSite: !! newSite,
 		isNewUser: !! newUser,
@@ -102,7 +100,6 @@ export default function useOnSiteCreation() {
 						...cart,
 						products: [ ...cart.products, planProduct, domainProduct ],
 					} );
-					resetPlan();
 					resetOnboardStore();
 					setSelectedSite( newSite.blogid );
 
@@ -110,7 +107,7 @@ export default function useOnSiteCreation() {
 						? `site-editor%2F${ newSite.site_slug }`
 						: `block-editor%2Fpage%2F${ newSite.site_slug }%2Fhome`;
 
-					const redirectionUrl = isEcommercePlan
+					const redirectionUrl = shouldSiteBePublic
 						? `/checkout/${ newSite.site_slug }?preLaunch=1&isGutenboardingCreate=1`
 						: `/checkout/${ newSite.site_slug }?preLaunch=1&isGutenboardingCreate=1&redirect_to=%2F${ editorUrl }`;
 					window.location.href = redirectionUrl;
@@ -124,7 +121,6 @@ export default function useOnSiteCreation() {
 			}
 
 			recordOnboardingComplete( flowCompleteTrackingParams );
-			resetPlan();
 			resetOnboardStore();
 			setSelectedSite( newSite.blogid );
 
@@ -140,11 +136,10 @@ export default function useOnSiteCreation() {
 		newSite,
 		newUser,
 		resetOnboardStore,
-		resetPlan,
 		setIsRedirecting,
 		setSelectedSite,
 		flowCompleteTrackingParams,
-		isEcommercePlan,
+		shouldSiteBePublic,
 		design,
 	] );
 }

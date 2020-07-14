@@ -8,6 +8,7 @@ import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
 import Gridicon from 'components/gridicon';
+import { withMobileBreakpoint } from '@automattic/viewport-react';
 
 /**
  * Internal Dependencies
@@ -68,6 +69,14 @@ class InlineHelpPopover extends Component {
 	openResultView = ( event ) => {
 		event.preventDefault();
 		this.openSecondaryView( VIEW_RICH_RESULT );
+	};
+
+	setAdminSection = () => {
+		const { isBreakpointActive: isMobile, onClose } = this.props;
+		if ( ! isMobile ) {
+			return;
+		}
+		onClose();
 	};
 
 	moreHelpClicked = () => {
@@ -140,12 +149,10 @@ class InlineHelpPopover extends Component {
 			<Fragment>
 				<QuerySupportTypes />
 				<div className="inline-help__search">
-					<InlineHelpSearchCard
-						openResult={ this.openResultView }
-						query={ this.props.searchQuery }
-					/>
+					<InlineHelpSearchCard onSelect={ this.openResultView } query={ this.props.searchQuery } />
 					<InlineHelpSearchResults
-						openResult={ this.openResultView }
+						onSelect={ this.openResultView }
+						onAdminSectionSelect={ this.setAdminSection }
 						searchQuery={ this.props.searchQuery }
 					/>
 				</div>
@@ -326,4 +333,4 @@ const mapDispatchToProps = {
 export default compose(
 	localize,
 	connect( mapStateToProps, mapDispatchToProps )
-)( InlineHelpPopover );
+)( withMobileBreakpoint( InlineHelpPopover ) );
