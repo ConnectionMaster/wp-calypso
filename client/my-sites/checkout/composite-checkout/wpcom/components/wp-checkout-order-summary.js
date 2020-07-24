@@ -8,7 +8,6 @@ import { keyframes } from '@emotion/core';
 import {
 	CheckoutCheckIcon,
 	CheckoutSummaryCard,
-	renderDisplayValueMarkdown,
 	useEvents,
 	useFormStatus,
 	useLineItemsOfType,
@@ -45,7 +44,10 @@ export default function WPCheckoutOrderSummary() {
 	const isCartUpdating = 'validating' === formStatus;
 
 	return (
-		<CheckoutSummaryCardUI className={ isCartUpdating ? 'is-loading' : '' }>
+		<CheckoutSummaryCardUI
+			className={ isCartUpdating ? 'is-loading' : '' }
+			data-e2e-cart-is-loading={ isCartUpdating }
+		>
 			<CheckoutSummaryFeatures>
 				<CheckoutSummaryFeaturesTitle>
 					{ translate( 'Included with your purchase' ) }
@@ -61,19 +63,19 @@ export default function WPCheckoutOrderSummary() {
 				{ coupons.map( ( coupon ) => (
 					<CheckoutSummaryLineItem key={ 'checkout-summary-line-item-' + coupon.id }>
 						<span>{ coupon.label }</span>
-						<span>{ renderDisplayValueMarkdown( coupon.amount.displayValue ) }</span>
+						<span>{ coupon.amount.displayValue }</span>
 					</CheckoutSummaryLineItem>
 				) ) }
 				{ taxes.map( ( tax ) => (
 					<CheckoutSummaryLineItem key={ 'checkout-summary-line-item-' + tax.id }>
 						<span>{ tax.label }</span>
-						<span>{ renderDisplayValueMarkdown( tax.amount.displayValue ) }</span>
+						<span>{ tax.amount.displayValue }</span>
 					</CheckoutSummaryLineItem>
 				) ) }
 				<CheckoutSummaryTotal>
 					<span>{ translate( 'Total' ) }</span>
 					<span className="wp-checkout-order-summary__total-price">
-						{ renderDisplayValueMarkdown( total.amount.displayValue ) }
+						{ total.amount.displayValue }
 					</span>
 				</CheckoutSummaryTotal>
 			</CheckoutSummaryAmountWrapper>
