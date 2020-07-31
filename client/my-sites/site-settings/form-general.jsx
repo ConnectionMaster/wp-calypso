@@ -282,6 +282,7 @@ export class SiteSettingsFormGeneral extends Component {
 		const {
 			fields,
 			isRequestingSettings,
+			isWPForTeamsSite,
 			eventTracker,
 			siteIsJetpack,
 			siteIsAtomic,
@@ -294,7 +295,7 @@ export class SiteSettingsFormGeneral extends Component {
 
 		return (
 			<FormFieldset>
-				{ ! isNonAtomicJetpackSite && (
+				{ ! isNonAtomicJetpackSite && ! isWPForTeamsSite && (
 					<>
 						<FormLabel className="site-settings__visibility-label is-coming-soon">
 							<FormRadio
@@ -358,7 +359,12 @@ export class SiteSettingsFormGeneral extends Component {
 						disabled={ isRequestingSettings }
 						onClick={ eventTracker( 'Clicked Site Visibility Radio Button' ) }
 					/>
-					<span>{ translate( 'Do not allow search engines to index my site' ) }</span>
+					<span>{ translate( 'Discourage search engines from indexing this site' ) }</span>
+					<FormSettingExplanation isIndented>
+						{ translate(
+							'This option does not block access to your site — it is up to search engines to honor your request.'
+						) }
+					</FormSettingExplanation>
 				</FormLabel>
 				{ ! isNonAtomicJetpackSite && (
 					<>
