@@ -8,18 +8,21 @@ import { format as formatUrl, parse as parseUrl } from 'url'; // eslint-disable-
  * Internal dependencies
  */
 import {
+	getPostalCode,
 	getDomainDetails,
 	createStripePaymentMethodToken,
 	wpcomTransaction,
 	wpcomPayPalExpress,
 	submitApplePayPayment,
 	submitStripeCardTransaction,
+	submitEbanxCardTransaction,
 	submitStripeRedirectTransaction,
 	submitFreePurchaseTransaction,
 	submitCreditsTransaction,
 	submitExistingCardPayment,
 	submitPayPalExpressRequest,
 } from './payment-method-helpers';
+import { createEbanxToken } from 'lib/store-transactions';
 
 const { select, dispatch } = defaultRegistry;
 
@@ -60,7 +63,7 @@ export function genericRedirectProcessor(
 			successUrl,
 			cancelUrl,
 			country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value,
-			postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value,
+			postalCode: getPostalCode(),
 			subdivisionCode: select( 'wpcom' )?.getContactInfo?.()?.state?.value,
 			siteId: select( 'wpcom' )?.getSiteId?.(),
 			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
@@ -81,8 +84,8 @@ export function applePayProcessor( submitData, { includeDomainDetails, includeGS
 			...submitData,
 			siteId: select( 'wpcom' )?.getSiteId?.(),
 			country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value,
-			postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value,
 			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
+			postalCode: getPostalCode(),
 		},
 		wpcomTransaction
 	);
@@ -101,13 +104,13 @@ export async function stripeCardProcessor(
 	const paymentMethodToken = await createStripePaymentMethodToken( {
 		...submitData,
 		country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value,
-		postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value,
+		postalCode: getPostalCode(),
 	} );
 	const pending = submitStripeCardTransaction(
 		{
 			...submitData,
 			country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value,
-			postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value,
+			postalCode: getPostalCode(),
 			subdivisionCode: select( 'wpcom' )?.getContactInfo?.()?.state?.value,
 			siteId: select( 'wpcom' )?.getSiteId?.(),
 			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
@@ -123,6 +126,51 @@ export async function stripeCardProcessor(
 	return pending;
 }
 
+export async function ebanxCardProcessor(
+	submitData,
+	{ includeDomainDetails, includeGSuiteDetails }
+) {
+	const paymentMethodToken = await createEbanxToken( 'new_purchase', {
+		country: submitData.countryCode,
+		name: submitData.name,
+		number: submitData.number,
+		cvv: submitData.cvv,
+		'expiration-date': submitData[ 'expiration-date' ],
+	} );
+	const pending = submitEbanxCardTransaction(
+		{
+			...submitData,
+			siteId: select( 'wpcom' )?.getSiteId?.(),
+			deviceId: paymentMethodToken?.deviceId,
+			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
+			paymentMethodToken,
+		},
+		wpcomTransaction
+	);
+	pending.then( ( result ) => {
+		// TODO: do this automatically when calling setTransactionComplete
+		dispatch( 'wpcom' ).setTransactionResponse( result );
+	} );
+	return pending;
+}
+
+export async function multiPartnerCardProcessor(
+	submitData,
+	{ includeDomainDetails, includeGSuiteDetails }
+) {
+	const paymentPartner = submitData.paymentPartner;
+
+	if ( paymentPartner === 'stripe' ) {
+		return stripeCardProcessor( submitData, { includeDomainDetails, includeGSuiteDetails } );
+	}
+
+	if ( paymentPartner === 'ebanx' ) {
+		return ebanxCardProcessor( submitData, { includeDomainDetails, includeGSuiteDetails } );
+	}
+
+	throw new RangeError( 'Unrecognized card payment partner: "' + paymentPartner + '"' );
+}
+
 export async function existingCardProcessor(
 	submitData,
 	{ includeDomainDetails, includeGSuiteDetails }
@@ -131,7 +179,7 @@ export async function existingCardProcessor(
 		{
 			...submitData,
 			country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value,
-			postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value,
+			postalCode: getPostalCode(),
 			subdivisionCode: select( 'wpcom' )?.getContactInfo?.()?.state?.value,
 			siteId: select( 'wpcom' )?.getSiteId?.(),
 			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
@@ -217,7 +265,7 @@ export async function payPalProcessor(
 			siteId: select( 'wpcom' )?.getSiteId?.() ?? '',
 			couponId: couponItem?.wpcom_meta?.couponCode,
 			country: select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value ?? '',
-			postalCode: select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value ?? '',
+			postalCode: getPostalCode(),
 			subdivisionCode: select( 'wpcom' )?.getContactInfo?.()?.state?.value ?? '',
 			domainDetails: getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ),
 		},

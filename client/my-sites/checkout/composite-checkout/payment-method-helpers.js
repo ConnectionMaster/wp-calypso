@@ -14,10 +14,7 @@ import {
 	createTransactionEndpointRequestPayloadFromLineItems,
 	createPayPalExpressEndpointRequestPayloadFromLineItems,
 } from './types';
-import {
-	translateCheckoutPaymentMethodToWpcomPaymentMethod,
-	prepareDomainContactDetails,
-} from 'my-sites/checkout/composite-checkout/wpcom';
+import { translateCheckoutPaymentMethodToWpcomPaymentMethod } from 'my-sites/checkout/composite-checkout/wpcom';
 import {
 	hasGoogleApps,
 	hasDomainRegistration,
@@ -25,6 +22,8 @@ import {
 	hasTransferProduct,
 } from 'lib/cart-values/cart-items';
 import { createStripePaymentMethod } from 'lib/stripe';
+import { prepareDomainContactDetailsForTransaction } from 'my-sites/checkout/composite-checkout/wpcom/types/wpcom-store-state';
+import { tryToGuessPostalCodeFormat } from 'lib/postal-code';
 
 const debug = debugFactory( 'calypso:composite-checkout:payment-method-helpers' );
 const { select } = defaultRegistry;
@@ -98,7 +97,7 @@ export async function submitPayPalExpressRequest( transactionData, submit ) {
 
 export function getDomainDetails( { includeDomainDetails, includeGSuiteDetails } ) {
 	const managedContactDetails = select( 'wpcom' )?.getContactInfo?.() ?? {};
-	const domainDetails = prepareDomainContactDetails( managedContactDetails );
+	const domainDetails = prepareDomainContactDetailsForTransaction( managedContactDetails );
 	return includeDomainDetails || includeGSuiteDetails ? domainDetails : null;
 }
 
@@ -114,6 +113,16 @@ export async function submitStripeCardTransaction( transactionData, submit ) {
 		paymentPartnerProcessorId: transactionData.stripeConfiguration.processor_id,
 	} );
 	debug( 'sending stripe transaction', formattedTransactionData );
+	return submit( formattedTransactionData );
+}
+
+export async function submitEbanxCardTransaction( transactionData, submit ) {
+	const formattedTransactionData = createTransactionEndpointRequestPayloadFromLineItems( {
+		...transactionData,
+		paymentMethodToken: transactionData.paymentMethodToken.token,
+		paymentMethodType: 'WPCOM_Billing_Ebanx',
+	} );
+	debug( 'sending ebanx transaction', formattedTransactionData );
 	return submit( formattedTransactionData );
 }
 
@@ -380,4 +389,10 @@ export function createStripePaymentMethodToken( { stripe, name, country, postalC
 			postal_code: postalCode,
 		},
 	} );
+}
+
+export function getPostalCode() {
+	const countryCode = select( 'wpcom' )?.getContactInfo?.()?.countryCode?.value ?? '';
+	const postalCode = select( 'wpcom' )?.getContactInfo?.()?.postalCode?.value ?? '';
+	return tryToGuessPostalCodeFormat( postalCode.toUpperCase(), countryCode );
 }
