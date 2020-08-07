@@ -28,6 +28,7 @@ import {
 	hasGoogleApps,
 	hasDomainRegistration,
 	hasTransferProduct,
+	needsExplicitAlternateEmailForGSuite,
 } from 'lib/cart-values/cart-items';
 import { useCart } from 'my-sites/checkout/composite-checkout/cart-provider';
 import { getTopLevelOfTld } from 'lib/domains';
@@ -39,6 +40,7 @@ export default function WPContactForm( {
 	shouldShowContactDetailsValidationErrors,
 	shouldShowDomainContactFields,
 	contactValidationCallback,
+	isLoggedOutCart,
 } ) {
 	const translate = useTranslate();
 	const [ items ] = useLineItems();
@@ -63,6 +65,7 @@ export default function WPContactForm( {
 				countriesList={ countriesList }
 				shouldShowContactDetailsValidationErrors={ shouldShowContactDetailsValidationErrors }
 				isDisabled={ isDisabled }
+				isLoggedOutCart={ isLoggedOutCart }
 			/>
 		</BillingFormFields>
 	);
@@ -164,11 +167,18 @@ function ContactDetailsContainer( {
 	countriesList,
 	shouldShowContactDetailsValidationErrors,
 	isDisabled,
+	isLoggedOutCart,
 } ) {
 	const domainNames = useDomainNamesInCart();
-	const { updateDomainContactFields, updateCountryCode, updatePostalCode } = useDispatch( 'wpcom' );
+	const {
+		updateDomainContactFields,
+		updateCountryCode,
+		updatePostalCode,
+		updateEmail,
+	} = useDispatch( 'wpcom' );
 	const contactDetails = prepareDomainContactDetails( contactInfo );
 	const contactDetailsErrors = prepareDomainContactDetailsErrors( contactInfo );
+	const { email } = useSelect( ( select ) => select( 'wpcom' ).getContactInfo() );
 
 	if ( shouldShowDomainContactFields ) {
 		return (
@@ -185,6 +195,7 @@ function ContactDetailsContainer( {
 					updateDomainContactFields={ updateDomainContactFields }
 					shouldShowContactDetailsValidationErrors={ shouldShowContactDetailsValidationErrors }
 					isDisabled={ isDisabled }
+					isLoggedOutCart={ isLoggedOutCart }
 				/>
 			</React.Fragment>
 		);
@@ -208,6 +219,23 @@ function ContactDetailsContainer( {
 			<ContactDetailsFormDescription>
 				{ translate( 'Entering your billing information helps us prevent fraud.' ) }
 			</ContactDetailsFormDescription>
+
+			{ isLoggedOutCart && (
+				<Field
+					id="email"
+					type="email"
+					label={ translate( 'Email' ) }
+					disabled={ isDisabled }
+					onChange={ ( value ) => {
+						updateEmail( value );
+					} }
+					autoComplete="email"
+					isError={ email.isTouched && ! isValid( email ) }
+					errorMessage={ email.errors[ 0 ] || '' }
+					description={ translate( "You'll use this email address to access your account later" ) }
+				/>
+			) }
+
 			<TaxFields
 				section="contact"
 				taxInfo={ contactInfo }
@@ -227,6 +255,7 @@ function DomainContactDetails( {
 	updateDomainContactFields,
 	shouldShowContactDetailsValidationErrors,
 	isDisabled,
+	isLoggedOutCart,
 } ) {
 	const translate = useTranslate();
 	const responseCart = useCart();
@@ -235,18 +264,23 @@ function DomainContactDetails( {
 		! hasDomainRegistration( responseCart ) &&
 		! hasTransferProduct( responseCart );
 	const getIsFieldDisabled = () => isDisabled;
+	const needsAlternateEmailForGSuite =
+		needsOnlyGoogleAppsDetails &&
+		needsExplicitAlternateEmailForGSuite( responseCart, contactDetails );
 	const tlds = getAllTopLevelTlds( domainNames );
 
 	return (
 		<React.Fragment>
 			<ManagedContactDetailsFormFields
 				needsOnlyGoogleAppsDetails={ needsOnlyGoogleAppsDetails }
+				needsAlternateEmailForGSuite={ needsAlternateEmailForGSuite }
 				contactDetails={ contactDetails }
 				contactDetailsErrors={
 					shouldShowContactDetailsValidationErrors ? contactDetailsErrors : {}
 				}
 				onContactDetailsChange={ updateDomainContactFields }
 				getIsFieldDisabled={ getIsFieldDisabled }
+				isLoggedOutCart={ isLoggedOutCart }
 			/>
 			{ tlds.includes( 'ca' ) && (
 				<RegistrantExtraInfoForm

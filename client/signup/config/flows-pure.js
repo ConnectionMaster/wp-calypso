@@ -125,6 +125,14 @@ export function generateFlows( {
 			showRecaptcha: true,
 		},
 
+		'onboarding-registrationless': {
+			steps: [ 'domains', 'plans-new', 'user-new' ],
+			destination: getSignupDestination,
+			description: 'Checkout without user account or site. Read more https://wp.me/pau2Xa-1hW',
+			lastModified: '2020-06-26',
+			showRecaptcha: true,
+		},
+
 		desktop: {
 			steps: [ 'about', 'themes', 'domains', 'plans', 'user' ],
 			destination: getSignupDestination,
@@ -276,6 +284,21 @@ export function generateFlows( {
 		description: 'An experimental approach for WordPress.com/domains',
 		disallowResume: true,
 		lastModified: '2019-06-21',
+	};
+
+	flows[ 'add-domain' ] = {
+		steps: [
+			'select-domain',
+			'site-or-domain',
+			'site-picker',
+			'themes',
+			'plans-site-selected',
+			'user',
+		],
+		destination: getThankYouNoSiteDestination,
+		description: 'An approach to add a domain via the all domains view',
+		disallowResume: true,
+		lastModified: '2020-07-30',
 	};
 
 	flows[ 'site-selected' ] = {
