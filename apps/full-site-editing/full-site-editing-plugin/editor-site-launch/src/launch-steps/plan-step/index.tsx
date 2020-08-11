@@ -2,23 +2,30 @@
  * External dependencies
  */
 import * as React from 'react';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
-import { Title, SubTitle, ActionButtons, BackButton } from '@automattic/onboarding';
+import { Title, SubTitle } from '@automattic/onboarding';
 
 /**
  * Internal dependencies
  */
-import LaunchStep, { Props as LaunchStepProps } from '../../launch-step';
+import LaunchStepContainer, { Props as LaunchStepProps } from '../../launch-step';
 import PlansGridFSE from '../../../../editor-plans-grid/src/plans-grid-fse';
+import { LAUNCH_STORE } from '../../stores';
+
 import './styles.scss';
 
-const PlanStep: React.FunctionComponent< LaunchStepProps > = ( { onPrevStep, onNextStep } ) => {
-	const handleBack = () => {
-		onPrevStep?.();
+const PlanStep: React.FunctionComponent< LaunchStepProps > = ( { onNextStep } ) => {
+	const LaunchStep = useSelect( ( select ) => select( LAUNCH_STORE ).getLaunchStep() );
+	const { setStepComplete } = useDispatch( LAUNCH_STORE );
+
+	const handleNext = () => {
+		setStepComplete( LaunchStep.Plan );
+		onNextStep?.();
 	};
 
 	return (
-		<LaunchStep className="nux-launch-plan-step">
+		<LaunchStepContainer className="nux-launch-plan-step">
 			<div className="nux-launch-step__header">
 				<div>
 					<Title>{ __( 'Choose a plan', 'full-site-editing' ) }</Title>
@@ -29,14 +36,11 @@ const PlanStep: React.FunctionComponent< LaunchStepProps > = ( { onPrevStep, onN
 						) }
 					</SubTitle>
 				</div>
-				<ActionButtons>
-					<BackButton onClick={ handleBack } />
-				</ActionButtons>
 			</div>
 			<div className="nux-launch-step__body">
-				<PlansGridFSE onSelect={ onNextStep } />
+				<PlansGridFSE onSelect={ handleNext } />
 			</div>
-		</LaunchStep>
+		</LaunchStepContainer>
 	);
 };
 

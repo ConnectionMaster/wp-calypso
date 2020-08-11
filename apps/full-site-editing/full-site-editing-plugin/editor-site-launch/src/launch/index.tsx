@@ -3,34 +3,37 @@
  */
 import * as React from 'react';
 import { useSelect, useDispatch } from '@wordpress/data';
+import { EntityProvider } from '@wordpress/core-data';
 
 /**
  * Internal dependencies
  */
 import { LAUNCH_STORE } from '../stores';
-import { LaunchStep, LaunchSequence } from '../../../common/data-stores/launch/data';
-import type { LaunchStepType } from '../../../common/data-stores/launch/types';
 import NameStep from '../launch-steps/name-step';
 import DomainStep from '../launch-steps/domain-step';
 import PlanStep from '../launch-steps/plan-step';
 import FinalStep from '../launch-steps/final-step';
+
 import './styles.scss';
 
-const LaunchStepComponents = {
-	[ LaunchStep.Name ]: NameStep,
-	[ LaunchStep.Domain ]: DomainStep,
-	[ LaunchStep.Plan ]: PlanStep,
-	[ LaunchStep.Final ]: FinalStep,
-};
-
 interface Props {
-	step?: LaunchStepType;
 	onSubmit?: () => void;
 }
 
 const Launch: React.FunctionComponent< Props > = ( { onSubmit } ) => {
 	const { step: currentStep } = useSelect( ( select ) => select( LAUNCH_STORE ).getState() );
+
+	const LaunchStep = useSelect( ( select ) => select( LAUNCH_STORE ).getLaunchStep() );
+	const LaunchSequence = useSelect( ( select ) => select( LAUNCH_STORE ).getLaunchSequence() );
+
 	const { setStep } = useDispatch( LAUNCH_STORE );
+
+	const LaunchStepComponents = {
+		[ LaunchStep.Name ]: NameStep,
+		[ LaunchStep.Domain ]: DomainStep,
+		[ LaunchStep.Plan ]: PlanStep,
+		[ LaunchStep.Final ]: FinalStep,
+	};
 
 	const currentSequence = LaunchSequence.indexOf( currentStep );
 
@@ -56,7 +59,9 @@ const Launch: React.FunctionComponent< Props > = ( { onSubmit } ) => {
 
 	return (
 		<div className="nux-launch">
-			<CurrentLaunchStep onPrevStep={ handlePrevStep } onNextStep={ handleNextStep } />
+			<EntityProvider kind="root" type="site">
+				<CurrentLaunchStep onPrevStep={ handlePrevStep } onNextStep={ handleNextStep } />
+			</EntityProvider>
 		</div>
 	);
 };
