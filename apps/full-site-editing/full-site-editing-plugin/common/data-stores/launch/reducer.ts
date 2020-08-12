@@ -20,7 +20,7 @@ const step: Reducer< LaunchStepType, LaunchAction > = ( state = LaunchStep.Name,
 };
 
 const completedSteps: Reducer< LaunchStepType[], LaunchAction > = ( state = [], action ) => {
-	if ( action.type === 'SET_STEP_COMPLETE' ) {
+	if ( action.type === 'SET_STEP_COMPLETE' && state.indexOf( action.step ) === -1 ) {
 		return [ ...state, action.step ];
 	}
 	if ( action.type === 'SET_STEP_INCOMPLETE' ) {
@@ -43,7 +43,7 @@ const domain: Reducer< DomainSuggestions.DomainSuggestion | undefined, LaunchAct
 };
 
 const domainSearch: Reducer< string, LaunchAction > = ( state = '', action ) => {
-	if ( action.type === 'SET_DOMAIN_SEARCH' ) {
+	if ( action.type === 'SET_DOMAIN_SEARCH' && action.domainSearch?.length > 1 ) {
 		return action.domainSearch;
 	}
 	return state;
@@ -56,12 +56,24 @@ const plan: Reducer< Plans.Plan | undefined, LaunchAction > = ( state, action ) 
 	return state;
 };
 
+const isSidebarOpen: Reducer< boolean, LaunchAction > = ( state = false, action ) => {
+	if ( action.type === 'OPEN_SIDEBAR' ) {
+		return true;
+	}
+
+	if ( action.type === 'CLOSE_SIDEBAR' ) {
+		return false;
+	}
+	return state;
+};
+
 const reducer = combineReducers( {
 	step,
 	completedSteps,
 	domain,
 	domainSearch,
 	plan,
+	isSidebarOpen,
 } );
 
 export type State = ReturnType< typeof reducer >;

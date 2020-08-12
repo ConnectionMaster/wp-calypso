@@ -118,7 +118,7 @@ export default {
 		allowExistingUsers: true,
 	},
 	newSiteGutenbergOnboarding: {
-		datestamp: '20200731',
+		datestamp: '20200811',
 		variations: {
 			gutenberg: 50,
 			control: 50,
@@ -233,5 +233,14 @@ export default {
 		defaultVariation: 'control',
 		allowExistingUsers: false,
 		countryCodeTargets: [ 'US', 'CA' ],
+	},
+	verticalsOnGutenboarding: {
+		datestamp: '20200811',
+		variations: {
+			verticals: 50,
+			noverticals: 50,
+		},
+		defaultVariation: 'noverticals',
+		allowExistingUsers: true,
 	},
 };
