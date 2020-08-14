@@ -7,7 +7,12 @@ import { get } from 'lodash';
 /**
  * Internal dependencies
  */
-import { PRODUCTS_WITH_OPTIONS, OPTIONS_SLUG_MAP } from './constants';
+import {
+	DAILY_PLAN_TO_REALTIME_PLAN,
+	PRODUCTS_WITH_OPTIONS,
+	OPTIONS_SLUG_MAP,
+	UPGRADEABLE_WITH_NUDGE,
+} from './constants';
 import {
 	TERM_ANNUALLY,
 	TERM_MONTHLY,
@@ -15,7 +20,7 @@ import {
 	JETPACK_LEGACY_PLANS,
 	JETPACK_RESET_PLANS,
 } from 'lib/plans/constants';
-import { getPlan, getMonthlyPlanByYearly } from 'lib/plans';
+import { getPlan, getMonthlyPlanByYearly, planHasFeature } from 'lib/plans';
 import { JETPACK_PRODUCT_PRICE_MATRIX } from 'lib/products-values/constants';
 import { Product, JETPACK_PRODUCTS_LIST, objectIsProduct } from 'lib/products-values/products-list';
 import { getJetpackProductDisplayName } from 'lib/products-values/get-jetpack-product-display-name';
@@ -34,7 +39,12 @@ import type {
 	SelectorProductCost,
 	DurationString,
 } from './types';
-import type { JetpackPlanSlugs, Plan } from 'lib/plans/types';
+import type {
+	JetpackDailyPlan,
+	JetpackRealtimePlan,
+	JetpackPlanSlugs,
+	Plan,
+} from 'lib/plans/types';
 import type { JetpackProductSlug } from 'lib/products-values/types';
 
 /**
@@ -70,6 +80,12 @@ export function durationToText( duration: Duration ): TranslateResult {
  */
 
 export function productButtonLabel( product: SelectorProduct ): TranslateResult {
+	if ( product.owned ) {
+		return slugIsJetpackPlanSlug( product.productSlug )
+			? translate( 'Manage Plan' )
+			: translate( 'Manage Subscription' );
+	}
+
 	return (
 		product.buttonLabel ??
 		translate( 'Get %s', {
@@ -77,6 +93,21 @@ export function productButtonLabel( product: SelectorProduct ): TranslateResult 
 			context: '%s is the name of a product',
 		} )
 	);
+}
+
+export function productBadgeLabel(
+	product: SelectorProduct,
+	currentPlan?: string | null
+): TranslateResult | undefined {
+	if ( product.owned ) {
+		return slugIsJetpackPlanSlug( product.productSlug )
+			? translate( 'Your plan' )
+			: translate( 'You own this' );
+	}
+
+	if ( currentPlan && planHasFeature( currentPlan, product.productSlug ) ) {
+		return translate( 'Included in your plan' );
+	}
 }
 
 export function getProductPrices(
@@ -223,4 +254,24 @@ export function slugToSelectorProduct( slug: string ): SelectorProduct | null {
 		return null;
 	}
 	return itemToSelectorProduct( item );
+}
+
+/**
+ * Returns an item slug that represents the real-time version of a daily one.
+ *
+ * @param slug string
+ * @returns string | null
+ */
+export function getRealtimeFromDaily( slug: JetpackDailyPlan ): JetpackRealtimePlan | null {
+	return DAILY_PLAN_TO_REALTIME_PLAN[ slug ];
+}
+
+/**
+ * Returns wheter an item is upgradeable by a nudge.
+ *
+ * @param slug string
+ * @returns boolean | null
+ */
+export function isUpgradeable( slug: string ): boolean {
+	return UPGRADEABLE_WITH_NUDGE.includes( slug );
 }

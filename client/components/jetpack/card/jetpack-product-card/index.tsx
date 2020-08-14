@@ -39,7 +39,7 @@ type OwnProps = {
 	discountedPrice?: number;
 	withStartingPrice?: boolean;
 	billingTimeFrame: TranslateResult;
-	badgeLabel?: string;
+	badgeLabel?: TranslateResult;
 	discountMessage?: string;
 	buttonLabel: TranslateResult;
 	onButtonClick: () => void;
@@ -49,6 +49,7 @@ type OwnProps = {
 	isOwned?: boolean;
 	isDeprecated?: boolean;
 	expiryDate?: Moment;
+	UpgradeNudge?: ReactNode;
 };
 
 export type Props = OwnProps & FeaturesProps;
@@ -78,6 +79,7 @@ const JetpackProductCard: FunctionComponent< Props > = ( {
 	expiryDate,
 	features,
 	isExpanded,
+	UpgradeNudge,
 } ) => {
 	const translate = useTranslate();
 	const priceEl = useRef( null );
@@ -97,6 +99,7 @@ const JetpackProductCard: FunctionComponent< Props > = ( {
 				'is-owned': isOwned,
 				'is-deprecated': isDeprecated,
 			} ) }
+			data-icon={ iconSlug }
 		>
 			<header className="jetpack-product-card__header">
 				<ProductIcon className="jetpack-product-card__icon" slug={ iconSlug } />
@@ -176,7 +179,14 @@ const JetpackProductCard: FunctionComponent< Props > = ( {
 				) }
 				{ description && <p className="jetpack-product-card__description">{ description }</p> }
 			</div>
-			<JetpackProductCardFeatures features={ features } isExpanded={ isExpanded } />
+
+			<JetpackProductCardFeatures
+				features={ features }
+				isExpanded={ isExpanded }
+				className={ UpgradeNudge ? 'foldable-card--square-border' : undefined }
+			/>
+
+			{ UpgradeNudge }
 		</div>
 	);
 };
