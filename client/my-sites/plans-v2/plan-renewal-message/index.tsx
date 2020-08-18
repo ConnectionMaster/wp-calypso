@@ -8,27 +8,26 @@ import React, { FunctionComponent, ReactElement } from 'react';
  * Internal dependencies
  */
 import { OFFER_RESET_SUPPORT_PAGE, PLAN_RENEWAL_RECOMMENDATION } from '../constants';
-import { isEligibleForRenewalAtOldRate, slugToSelectorProduct } from '../utils';
+import { slugToSelectorProduct } from '../utils';
 import ExternalLink from 'components/external-link';
-import { useLocalizedMoment } from 'components/localized-moment';
+import { isRenewable } from 'lib/purchases';
 
 /**
  * Type dependencies
  */
-
 import type { Purchase } from 'lib/purchases/types';
 
 type Props = {
 	purchase: Purchase;
+	withoutLink?: boolean;
 };
 
-const PlanRenewalNotice: FunctionComponent< Props > = ( { purchase } ) => {
-	const moment = useLocalizedMoment();
+const PlanRenewalMessage: FunctionComponent< Props > = ( { purchase, withoutLink } ) => {
 	const translate = useTranslate();
 
 	let notice;
 
-	if ( isEligibleForRenewalAtOldRate( purchase, moment ) ) {
+	if ( isRenewable( purchase ) ) {
 		notice = translate(
 			"We're updating our plans to include new features and improved functionality. " +
 				'As a thank you for being a loyal Jetpack subscriber, you can renew your current plan one time – your choice, for one month or one year. ' +
@@ -68,11 +67,13 @@ const PlanRenewalNotice: FunctionComponent< Props > = ( { purchase } ) => {
 	return (
 		<>
 			{ notice }&nbsp;
-			<ExternalLink icon href={ OFFER_RESET_SUPPORT_PAGE }>
-				{ translate( 'More info' ) }
-			</ExternalLink>
+			{ ! withoutLink && (
+				<ExternalLink icon href={ OFFER_RESET_SUPPORT_PAGE }>
+					{ translate( 'More info' ) }
+				</ExternalLink>
+			) }
 		</>
 	);
 };
 
-export default PlanRenewalNotice;
+export default PlanRenewalMessage;
