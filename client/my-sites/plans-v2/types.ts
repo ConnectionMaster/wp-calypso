@@ -25,6 +25,7 @@ export type PurchaseCallback = ( arg0: SelectorProduct, arg1?: Purchase ) => voi
 
 interface BasePageProps {
 	rootUrl: string;
+	header: ReactNode;
 }
 
 export interface SelectorPageProps extends BasePageProps {
@@ -56,6 +57,7 @@ export interface SelectorProduct extends SelectorProductCost {
 	costProductSlug?: string;
 	monthlyProductSlug?: string;
 	displayName: TranslateResult;
+	shortName: TranslateResult;
 	tagline: TranslateResult;
 	description: TranslateResult | ReactNode;
 	term: Duration;

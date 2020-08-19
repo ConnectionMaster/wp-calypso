@@ -34,7 +34,11 @@ import type {
 
 import './style.scss';
 
-const SelectorPage = ( { defaultDuration = TERM_ANNUALLY, rootUrl }: SelectorPageProps ) => {
+const SelectorPage = ( {
+	defaultDuration = TERM_ANNUALLY,
+	rootUrl,
+	header,
+}: SelectorPageProps ) => {
 	const siteId = useSelector( ( state ) => getSelectedSiteId( state ) );
 	const siteSlug = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
 	const [ productType, setProductType ] = useState< ProductType >( SECURITY );
@@ -57,6 +61,7 @@ const SelectorPage = ( { defaultDuration = TERM_ANNUALLY, rootUrl }: SelectorPag
 
 	return (
 		<Main className="selector__main" wideLayout>
+			{ header }
 			<PlansFilterBar
 				onProductTypeChange={ setProductType }
 				productType={ productType }

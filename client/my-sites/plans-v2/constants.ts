@@ -10,6 +10,8 @@ import {
 	JETPACK_SCAN_PRODUCTS,
 	JETPACK_ANTI_SPAM_PRODUCTS,
 	JETPACK_SEARCH_PRODUCTS,
+	PRODUCT_JETPACK_SCAN,
+	PRODUCT_JETPACK_SCAN_MONTHLY,
 	PRODUCT_JETPACK_BACKUP_DAILY,
 	PRODUCT_JETPACK_BACKUP_DAILY_MONTHLY,
 	PRODUCT_JETPACK_BACKUP_REALTIME,
@@ -195,13 +197,17 @@ export const DAILY_PLAN_TO_REALTIME_PLAN: Record< string, JetpackRealtimePlan > 
 export const UPGRADEABLE_WITH_NUDGE = [
 	PLAN_JETPACK_SECURITY_DAILY,
 	PLAN_JETPACK_SECURITY_DAILY_MONTHLY,
-	// This is only for testing purposes to make the nudge appear inside the
-	// Jetpack Security bundle card. This because at the moment we can't purchase
-	// Jetpack Security Daily.
-	// TODO: remove these two once we can purchase the new plans.
-	OPTIONS_JETPACK_SECURITY,
-	OPTIONS_JETPACK_SECURITY_MONTHLY,
 ];
+
+/*
+ * Matrix of allowed upsells between products (not plans or bundles).
+ */
+export const UPSELL_PRODUCT_MATRIX: Record< string, string > = {
+	[ PRODUCT_JETPACK_SCAN ]: PRODUCT_JETPACK_BACKUP_DAILY,
+	[ PRODUCT_JETPACK_SCAN_MONTHLY ]: PRODUCT_JETPACK_BACKUP_DAILY_MONTHLY,
+	[ PRODUCT_JETPACK_BACKUP_DAILY ]: PRODUCT_JETPACK_SCAN,
+	[ PRODUCT_JETPACK_BACKUP_DAILY_MONTHLY ]: PRODUCT_JETPACK_SCAN_MONTHLY,
+};
 
 export const JETPACK_OFFER_RESET_UPGRADE_NUDGE_DISMISS =
 	'jetpack-offer-reset-upgrade-nudge-dismiss';

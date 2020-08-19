@@ -27,14 +27,13 @@ import debugFactory from 'debug';
 /**
  * Internal dependencies
  */
-import Notice from 'components/notice';
 import { areDomainsInLineItems, isLineItemADomain } from '../hooks/has-domains';
 import useCouponFieldState from '../hooks/use-coupon-field-state';
 import WPCheckoutOrderReview from './wp-checkout-order-review';
 import WPCheckoutOrderSummary from './wp-checkout-order-summary';
 import WPContactForm from './wp-contact-form';
 import WPContactFormSummary from './wp-contact-form-summary';
-import { isCompleteAndValid } from '../types';
+import { isCompleteAndValid } from '../types/wpcom-store-state';
 import { WPOrderReviewTotal, WPOrderReviewSection, LineItemUI } from './wp-order-review-line-items';
 import MaterialIcon from 'components/material-icon';
 import Gridicon from 'components/gridicon';
@@ -300,13 +299,7 @@ export default function WPCheckout( {
 				submitButtonHeader={ <SubmitButtonHeader /> }
 				disableSubmitButton={ isOrderReviewActive }
 			>
-				{ infoMessage && (
-					<CheckoutNoticeWrapper>
-						<Notice status="is-info" showDismiss={ false }>
-							{ infoMessage }
-						</Notice>
-					</CheckoutNoticeWrapper>
-				) }
+				{ infoMessage }
 				<CheckoutStepBody
 					onError={ onReviewError }
 					className="wp-checkout__review-order-step"
@@ -640,32 +633,6 @@ const SubmitButtonHeaderUI = styled.div`
 
 		&:hover {
 			color: ${ ( props ) => props.theme.colors.highlightOver };
-		}
-	}
-`;
-
-const CheckoutNoticeWrapper = styled.div`
-	padding: 32px 32px 20px;
-
-	border-bottom: solid 1px var( --color-border-subtle );
-
-	.notice {
-		margin-bottom: 0;
-	}
-
-	.notice.is-info .notice__icon-wrapper-drop {
-		background-color: var( --color-accent-40 );
-	}
-
-	.notice__text .checkout__conflict-notice-link {
-		margin-left: 20px;
-
-		color: var( --color-neutral-10 );
-
-		text-decoration: none;
-
-		&:visited {
-			color: var( --color-neutral-10 );
 		}
 	}
 `;
