@@ -197,7 +197,7 @@ class Signup extends React.Component {
 	}
 
 	UNSAFE_componentWillReceiveProps( nextProps ) {
-		const { stepName, flowName, progress, isReskinned, path } = nextProps;
+		const { stepName, flowName, progress, isReskinned } = nextProps;
 
 		if ( this.props.stepName !== stepName ) {
 			this.removeFulfilledSteps( nextProps );
@@ -214,7 +214,7 @@ class Signup extends React.Component {
 		if ( ! this.state.controllerHasReset && ! isEqual( this.props.progress, progress ) ) {
 			this.updateShouldShowLoadingScreen( progress );
 		}
-		if ( isReskinned && ( ! this.props.isReskinned || path !== this.props.path ) ) {
+		if ( isReskinned ) {
 			this.addCssClassToBodyForReskinnedFlow();
 		}
 	}
@@ -260,13 +260,7 @@ class Signup extends React.Component {
 
 		const p2SiteStep = this.props.progress[ 'p2-site' ];
 
-		if (
-			this.props.progress.user &&
-			p2SiteStep &&
-			p2SiteStep.status === 'pending' &&
-			user() &&
-			user().get()
-		) {
+		if ( p2SiteStep && p2SiteStep.status === 'pending' && user() && user().get() ) {
 			// By removing and adding the p2-site step, we trigger the `SignupFlowController` store listener
 			// to process the signup flow.
 			this.props.removeStep( p2SiteStep );
