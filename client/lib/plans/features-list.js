@@ -1032,8 +1032,58 @@ export const FEATURES_LIST = {
 			),
 	},
 
+	[ constants.FEATURE_BACKUP_V2 ]: {
+		getSlug: () => constants.FEATURE_BACKUP_V2,
+		getTitle: () => i18n.translate( 'Automated WordPress backups' ),
+	},
+
+	[ constants.FEATURE_BACKUP_DAILY_V2 ]: {
+		getSlug: () => constants.FEATURE_BACKUP_DAILY_V2,
+		getTitle: () => i18n.translate( 'Automated daily site backups' ),
+	},
+
 	[ constants.FEATURE_BACKUP_REALTIME_V2 ]: {
 		getSlug: () => constants.FEATURE_BACKUP_REALTIME_V2,
+		getTitle: () => i18n.translate( 'Automated real-time site backups' ),
+	},
+
+	[ constants.FEATURE_PRODUCT_BACKUP_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_BACKUP_V2,
+		getIcon: () => 'cloud-upload',
+		getTitle: () => i18n.translate( 'Backup' ),
+		getDescription: () =>
+			i18n.translate(
+				'Automatic backups of your entire site, with unlimited, WordPress-optimized secure storage. {{link}}Learn more{{/link}}.',
+				{
+					components: {
+						link: <a href="https://jetpack.com/upgrade/backup/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_PRODUCT_BACKUP_DAILY_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_BACKUP_DAILY_V2,
+		getIcon: () => 'cloud-upload',
+		getTitle: () =>
+			i18n.translate( 'Backup {{em}}Daily{{/em}}', {
+				components: {
+					em: <em />,
+				},
+			} ),
+		getDescription: () =>
+			i18n.translate(
+				'Automatic daily backups of your entire site, with unlimited, WordPress-optimized secure storage. {{link}}Learn more{{/link}}.',
+				{
+					components: {
+						link: <a href="https://jetpack.com/upgrade/backup/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_PRODUCT_BACKUP_REALTIME_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_BACKUP_REALTIME_V2,
 		getIcon: () => 'cloud-upload',
 		getTitle: () =>
 			i18n.translate( 'Backup {{em}}Real-time{{/em}}', {
@@ -1052,8 +1102,48 @@ export const FEATURES_LIST = {
 			),
 	},
 
-	[ constants.FEATURE_SCAN_REALTIME_V2 ]: {
-		getSlug: () => constants.FEATURE_SCAN_REALTIME_V2,
+	[ constants.FEATURE_SCAN_V2 ]: {
+		getSlug: () => constants.FEATURE_SCAN_V2,
+		getTitle: () => i18n.translate( 'Automated daily scanning' ),
+	},
+
+	[ constants.FEATURE_PRODUCT_SCAN_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_SCAN_V2,
+		getIcon: () => '',
+		getTitle: () => i18n.translate( 'Scan' ),
+		getDescription: () =>
+			i18n.translate(
+				'Automated scanning for security vulnerabilities or threats on your site. Includes instant notifications and automatic security fixes. {{link}}Learn more{{/link}}.',
+				{
+					components: {
+						link: <a href="https://jetpack.com/upgrade/scan/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_PRODUCT_SCAN_DAILY_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_SCAN_DAILY_V2,
+		getIcon: () => '',
+		getTitle: () =>
+			i18n.translate( 'Scan {{em}}Daily{{/em}}', {
+				components: {
+					em: <em />,
+				},
+			} ),
+		getDescription: () =>
+			i18n.translate(
+				'Automated daily scanning for security vulnerabilities or threats on your site. Includes instant notifications and automatic security fixes. {{link}}Learn more{{/link}}.',
+				{
+					components: {
+						link: <a href="https://jetpack.com/upgrade/scan/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_PRODUCT_SCAN_REALTIME_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_SCAN_REALTIME_V2,
 		getIcon: () => '',
 		getTitle: () =>
 			i18n.translate( 'Scan {{em}}Real-time{{/em}}', {
@@ -1074,6 +1164,11 @@ export const FEATURES_LIST = {
 
 	[ constants.FEATURE_ANTISPAM_V2 ]: {
 		getSlug: () => constants.FEATURE_ANTISPAM_V2,
+		getTitle: () => i18n.translate( 'Automated spam protection' ),
+	},
+
+	[ constants.FEATURE_PRODUCT_ANTISPAM_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_ANTISPAM_V2,
 		getIcon: () => 'bug',
 		getTitle: () => i18n.translate( 'Anti-spam' ),
 		getDescription: () =>
@@ -1087,8 +1182,36 @@ export const FEATURES_LIST = {
 			),
 	},
 
-	[ constants.FEATURE_ACTIVITY_LOG_ARCHIVE_V2 ]: {
-		getSlug: () => constants.FEATURE_ACTIVITY_LOG_ARCHIVE_V2,
+	[ constants.FEATURE_ACTIVITY_LOG_V2 ]: {
+		getSlug: () => constants.FEATURE_ACTIVITY_LOG_V2,
+		getTitle: () => i18n.translate( 'Activity log' ),
+		getDescription: () =>
+			i18n.translate(
+				'View every change to your site. Pairs with Backup to restore your site to any earlier version. {{link}}Learn more.{{/link}}',
+				{
+					components: {
+						link: <a href="https://jetpack.com/features/security/activity-log/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_ACTIVITY_LOG_30_DAYS_V2 ]: {
+		getSlug: () => constants.FEATURE_ACTIVITY_LOG_30_DAYS_V2,
+		getTitle: () => i18n.translate( 'Activity log: 30-day archive' ),
+		getDescription: () =>
+			i18n.translate(
+				'View every change to your site in the last 30 days. Pairs with Backup to restore your site to any earlier version. {{link}}Learn more.{{/link}}',
+				{
+					components: {
+						link: <a href="https://jetpack.com/features/security/activity-log/"></a>,
+					},
+				}
+			),
+	},
+
+	[ constants.FEATURE_ACTIVITY_LOG_1_YEAR_V2 ]: {
+		getSlug: () => constants.FEATURE_ACTIVITY_LOG_1_YEAR_V2,
 		getTitle: () => i18n.translate( 'Activity log: 1-year archive' ),
 		getDescription: () =>
 			i18n.translate(
@@ -1103,6 +1226,11 @@ export const FEATURES_LIST = {
 
 	[ constants.FEATURE_SEARCH_V2 ]: {
 		getSlug: () => constants.FEATURE_SEARCH_V2,
+		getTitle: () => i18n.translate( 'Instant search and indexing' ),
+	},
+
+	[ constants.FEATURE_PRODUCT_SEARCH_V2 ]: {
+		getSlug: () => constants.FEATURE_PRODUCT_SEARCH_V2,
 		getTitle: () => i18n.translate( 'Search' ),
 		getDescription: () =>
 			i18n.translate(
@@ -1199,6 +1327,56 @@ export const FEATURES_LIST = {
 		getTitle: () => i18n.translate( 'Priority support' ),
 		getDescription: () =>
 			i18n.translate( 'Get fast WordPress support from the WordPress experts. ' ),
+	},
+
+	[ constants.FEATURE_SECURE_STORAGE_V2 ]: {
+		getSlug: () => constants.FEATURE_SECURE_STORAGE_V2,
+		getTitle: () => i18n.translate( 'Unlimited secure storage' ),
+	},
+
+	[ constants.FEATURE_ONE_CLICK_RESTORE_V2 ]: {
+		getSlug: () => constants.FEATURE_ONE_CLICK_RESTORE_V2,
+		getTitle: () => i18n.translate( 'One-click restores from desktop or mobile' ),
+	},
+
+	[ constants.FEATURE_ONE_CLICK_FIX_V2 ]: {
+		getSlug: () => constants.FEATURE_ONE_CLICK_FIX_V2,
+		getTitle: () => i18n.translate( 'One-click fixes for most issues' ),
+	},
+
+	[ constants.FEATURE_INSTANT_EMAIL_V2 ]: {
+		getSlug: () => constants.FEATURE_INSTANT_EMAIL_V2,
+		getTitle: () => i18n.translate( 'Instant email notifications' ),
+	},
+
+	[ constants.FEATURE_AKISMET_V2 ]: {
+		getSlug: () => constants.FEATURE_AKISMET_V2,
+		getTitle: () => i18n.translate( 'Powered by Akismet' ),
+	},
+
+	[ constants.FEATURE_SPAM_BLOCK_V2 ]: {
+		getSlug: () => constants.FEATURE_SPAM_BLOCK_V2,
+		getTitle: () => i18n.translate( 'Block spam without CAPTCHAs' ),
+	},
+
+	[ constants.FEATURE_ADVANCED_STATS_V2 ]: {
+		getSlug: () => constants.FEATURE_ADVANCED_STATS_V2,
+		getTitle: () => i18n.translate( 'Advanced stats' ),
+	},
+
+	[ constants.FEATURE_FILTERING_V2 ]: {
+		getSlug: () => constants.FEATURE_FILTERING_V2,
+		getTitle: () => i18n.translate( 'Powerful filtering' ),
+	},
+
+	[ constants.FEATURE_LANGUAGE_SUPPORT_V2 ]: {
+		getSlug: () => constants.FEATURE_LANGUAGE_SUPPORT_V2,
+		getTitle: () => i18n.translate( 'Supports 29 languages' ),
+	},
+
+	[ constants.FEATURE_SPELLING_CORRECTION_V2 ]: {
+		getSlug: () => constants.FEATURE_SPELLING_CORRECTION_V2,
+		getTitle: () => i18n.translate( 'Spelling correction' ),
 	},
 };
 
