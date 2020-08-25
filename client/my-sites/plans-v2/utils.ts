@@ -91,8 +91,15 @@ export function durationToText( duration: Duration ): TranslateResult {
  * Product UI utils.
  */
 
-export function productButtonLabel( product: SelectorProduct, isOwned: boolean ): TranslateResult {
-	if ( isOwned ) {
+export function productButtonLabel(
+	product: SelectorProduct,
+	isOwned: boolean,
+	currentPlan?: SitePlan | null
+): TranslateResult {
+	if (
+		isOwned ||
+		( currentPlan && planHasFeature( currentPlan.product_slug, product.productSlug ) )
+	) {
 		return product.type !== ITEM_TYPE_PRODUCT
 			? translate( 'Manage Plan' )
 			: translate( 'Manage Subscription' );
@@ -226,7 +233,10 @@ export function itemToSelectorProduct(
 			term: item.term,
 			features: {
 				items: item.features
-					? buildCardFeaturesFromItem( item.features, { withoutDescription: true } )
+					? buildCardFeaturesFromItem( item.features, {
+							withoutDescription: true,
+							withoutIcon: true,
+					  } )
 					: [],
 			},
 		};
@@ -273,7 +283,7 @@ export function itemToSelectorProduct(
  */
 export function buildCardFeatureItemFromFeatureKey(
 	featureKey: JetpackPlanCardFeature,
-	options?: { withoutDescription?: boolean }
+	options?: { withoutDescription?: boolean; withoutIcon?: boolean }
 ): SelectorProductFeaturesItem | undefined {
 	let feature;
 	let subFeaturesKeys;
@@ -289,7 +299,7 @@ export function buildCardFeatureItemFromFeatureKey(
 
 	if ( feature ) {
 		return {
-			icon: feature.getIcon?.(),
+			icon: options?.withoutIcon ? undefined : feature.getIcon?.(),
 			text: feature.getTitle(),
 			description: options?.withoutDescription ? undefined : feature.getDescription?.(),
 			subitems: subFeaturesKeys

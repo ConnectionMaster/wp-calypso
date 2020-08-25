@@ -3,7 +3,7 @@
  * Type dependencies
  */
 import type { TranslateResult } from 'i18n-calypso';
-import type { ReactNode } from 'react';
+import type { ReactNode, ReactElement } from 'react';
 import type { TERM_ANNUALLY, TERM_MONTHLY } from 'lib/plans/constants';
 import type { Purchase } from 'lib/purchases/types';
 import type {
@@ -25,6 +25,7 @@ export type PurchaseCallback = ( arg0: SelectorProduct, arg1?: Purchase ) => voi
 interface BasePageProps {
 	rootUrl: string;
 	header: ReactNode;
+	footer: ReactNode;
 }
 
 export interface SelectorPageProps extends BasePageProps {
@@ -50,7 +51,12 @@ export type SelectorProductCost = {
 };
 
 export type SelectorProductFeaturesItem = {
-	icon?: string;
+	icon?:
+		| string
+		| {
+				icon: string;
+				component?: ReactElement;
+		  };
 	text: TranslateResult;
 	description?: TranslateResult;
 	subitems?: SelectorProductFeaturesItem[];
