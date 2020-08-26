@@ -1,10 +1,10 @@
 /**
  * External dependencies
  */
-import React, { useCallback } from 'react';
-import { useSelector } from 'react-redux';
 import page from 'page';
 import { useTranslate } from 'i18n-calypso';
+import React, { useCallback } from 'react';
+import { useSelector } from 'react-redux';
 
 /**
  * Internal dependencies
@@ -13,16 +13,22 @@ import { ProductIcon } from '@automattic/components';
 import { getCurrencyObject } from '@automattic/format-currency';
 import Gridicon from 'components/gridicon';
 import FormattedHeader from 'components/formatted-header';
+import HeaderCake from 'components/header-cake';
 import JetpackProductCard from 'components/jetpack/card/jetpack-product-card';
 import Main from 'components/main';
-import { addItem, addItems } from 'lib/cart/actions';
-import { jetpackProductItem } from 'lib/cart-values/cart-items';
 import { preventWidows } from 'lib/formatting';
 import { getCurrentUserCurrencyCode } from 'state/current-user/selectors';
 import { isProductsListFetching } from 'state/products-list/selectors';
 import { getSelectedSiteSlug } from 'state/ui/selectors';
 import useItemPrice from './use-item-price';
-import { durationToString, durationToText, getProductUpsell, slugToSelectorProduct } from './utils';
+import {
+	durationToString,
+	durationToText,
+	getOptionFromSlug,
+	getProductUpsell,
+	slugToSelectorProduct,
+	checkout,
+} from './utils';
 
 /**
  * Style dependencies
@@ -38,12 +44,14 @@ interface Props {
 	currencyCode: string;
 	mainProduct: SelectorProduct;
 	upsellProduct: SelectorProduct;
+	onBackButtonClick: () => void;
 	onPurchaseSingleProduct: () => void;
 	onPurchaseBothProducts: () => void;
 }
 
 const UpsellComponent = ( {
 	currencyCode,
+	onBackButtonClick,
 	onPurchaseSingleProduct,
 	onPurchaseBothProducts,
 	mainProduct,
@@ -67,6 +75,7 @@ const UpsellComponent = ( {
 
 	return (
 		<Main className="upsell">
+			<HeaderCake onClick={ onBackButtonClick }>{ translate( 'Product Options' ) }</HeaderCake>
 			<div className="upsell__header">
 				<FormattedHeader
 					headerText={ preventWidows(
@@ -113,27 +122,29 @@ const UpsellComponent = ( {
 				</p>
 			</div>
 
-			<JetpackProductCard
-				iconSlug={ upsellProduct.iconSlug }
-				productName={ upsellProduct.displayName }
-				subheadline={ upsellProduct.tagline }
-				description={ upsellProduct.description }
-				currencyCode={ currencyCode }
-				billingTimeFrame={ durationToText( upsellProduct.term ) }
-				buttonLabel={ translate( 'Yes, add %s', {
-					args: [ upsellProductName ],
-					comment: '%s refers to a name of a product such as Jetpack Backup or Jetpack Scan',
-				} ) }
-				features={ { items: [] } }
-				discountedPrice={ discountedPrice }
-				originalPrice={ originalPrice }
-				onButtonClick={ onPurchaseBothProducts }
-				cancelLabel={ translate( 'No, I do not want %s', {
-					args: [ upsellProductName ],
-					comment: '%s refers to a name of a product such as Jetpack Backup or Jetpack Scan',
-				} ) }
-				onCancelClick={ onPurchaseSingleProduct }
-			/>
+			<div className="upsell__product-card">
+				<JetpackProductCard
+					iconSlug={ upsellProduct.iconSlug }
+					productName={ upsellProduct.displayName }
+					subheadline={ upsellProduct.tagline }
+					description={ upsellProduct.description }
+					currencyCode={ currencyCode }
+					billingTimeFrame={ durationToText( upsellProduct.term ) }
+					buttonLabel={ translate( 'Yes, add %s', {
+						args: [ upsellProductName ],
+						comment: '%s refers to a name of a product such as Jetpack Backup or Jetpack Scan',
+					} ) }
+					features={ upsellProduct.features }
+					discountedPrice={ discountedPrice }
+					originalPrice={ originalPrice }
+					onButtonClick={ onPurchaseBothProducts }
+					cancelLabel={ translate( 'No, I do not want %s', {
+						args: [ upsellProductName ],
+						comment: '%s refers to a name of a product such as Jetpack Backup or Jetpack Scan',
+					} ) }
+					onCancelClick={ onPurchaseSingleProduct }
+				/>
+			</div>
 		</Main>
 	);
 };
@@ -148,31 +159,26 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header, footer }: UpsellP
 	const upsellProductSlug = getProductUpsell( productSlug );
 	const upsellProduct = upsellProductSlug && slugToSelectorProduct( upsellProductSlug );
 
-	const goToCheckout = useCallback( () => {
-		page( `/checkout/${ selectedSiteSlug }` );
-	}, [ selectedSiteSlug ] );
+	const checkoutCb = useCallback( ( slugs ) => checkout( selectedSiteSlug, slugs ), [
+		selectedSiteSlug,
+	] );
 
-	const onPurchaseBothProducts = useCallback( () => {
-		addItems( [
-			jetpackProductItem( productSlug ),
-			jetpackProductItem( upsellProductSlug as string ),
-		] );
-		goToCheckout();
-	}, [ goToCheckout, productSlug, upsellProductSlug ] );
+	const onPurchaseBothProducts = useCallback(
+		() => checkoutCb( [ productSlug, upsellProductSlug ] ),
+		[ checkoutCb, productSlug, upsellProductSlug ]
+	);
 
-	const onPurchaseSingleProduct = useCallback( () => {
-		addItem( jetpackProductItem( productSlug ) );
-		goToCheckout();
-	}, [ goToCheckout, productSlug ] );
+	const onPurchaseSingleProduct = useCallback( () => checkoutCb( productSlug ), [
+		checkoutCb,
+		productSlug,
+	] );
+
+	const urlWithSiteSlug = rootUrl.replace( ':site', selectedSiteSlug );
+	const durationSuffix = duration ? durationToString( duration ) : '';
 
 	// If the product is not valid send the user to the selector page.
 	if ( ! mainProduct ) {
-		// The duration is optional, but if we have it keep it.
-		let durationSuffix = '';
-		if ( duration ) {
-			durationSuffix = '/' + durationToString( duration );
-		}
-		page.redirect( rootUrl.replace( ':site', selectedSiteSlug ) + durationSuffix );
+		page.redirect( urlWithSiteSlug + '/' + durationSuffix );
 		return null;
 	}
 
@@ -186,6 +192,16 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header, footer }: UpsellP
 		return <h1>Loading...</h1>;
 	}
 
+	// Construct a URL to send users to when they click the back button. Since at this moment
+	// there is only one Jetpack Scan option, the back button takes users back to the Selector
+	// page.
+	const productOption = getOptionFromSlug( productSlug );
+	const backUrl = productOption
+		? [ urlWithSiteSlug, productOption, durationSuffix, 'details' ].join( '/' )
+		: urlWithSiteSlug;
+
+	const onBackButtonClick = () => page( backUrl );
+
 	return (
 		<>
 			{ header }
@@ -195,6 +211,7 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header, footer }: UpsellP
 				upsellProduct={ upsellProduct }
 				onPurchaseSingleProduct={ onPurchaseSingleProduct }
 				onPurchaseBothProducts={ onPurchaseBothProducts }
+				onBackButtonClick={ onBackButtonClick }
 			/>
 			{ footer }
 		</>

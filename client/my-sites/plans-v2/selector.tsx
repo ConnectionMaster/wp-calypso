@@ -12,7 +12,7 @@ import PlansFilterBar from './plans-filter-bar';
 import PlansColumn from './plans-column';
 import ProductsColumn from './products-column';
 import { SECURITY } from './constants';
-import { durationToString } from './utils';
+import { durationToString, getProductUpsell, checkout } from './utils';
 import { TERM_ANNUALLY } from 'lib/plans/constants';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import { managePurchase } from 'me/purchases/paths';
@@ -20,6 +20,7 @@ import Main from 'components/main';
 import QueryProductsList from 'components/data/query-products-list';
 import QuerySitePurchases from 'components/data/query-site-purchases';
 import QuerySites from 'components/data/query-sites';
+import JetpackFreeCard from 'components/jetpack/card/jetpack-free-card';
 
 /**
  * Type dependencies
@@ -47,18 +48,30 @@ const SelectorPage = ( {
 
 	// Sends a user to a page based on whether there are subtypes.
 	const selectProduct: PurchaseCallback = ( product: SelectorProduct, purchase ) => {
-		const root = rootUrl.replace( ':site', siteSlug );
 		if ( purchase ) {
 			page( managePurchase( siteSlug, purchase.id ) );
 			return;
 		}
+
+		const root = rootUrl.replace( ':site', siteSlug );
 		const durationString = durationToString( currentDuration );
+
 		if ( product.subtypes.length ) {
 			page( `${ root }/${ product.productSlug }/${ durationString }/details` );
-		} else {
-			page( `${ root }/${ product.productSlug }/${ durationString }/additions` );
+			return;
 		}
+
+		if ( getProductUpsell( product.productSlug ) ) {
+			page( `${ root }/${ product.productSlug }/${ durationString }/additions` );
+			return;
+		}
+
+		checkout( siteSlug, product.productSlug );
 	};
+
+	const isInConnectFlow =
+		/jetpack\/connect\/plans/.test( window.location.href ) &&
+		/source=jetpack-connect-plans/.test( window.location.href );
 
 	return (
 		<Main className="selector__main" wideLayout>
@@ -83,6 +96,14 @@ const SelectorPage = ( {
 					siteId={ siteId }
 				/>
 			</div>
+
+			{ isInConnectFlow && (
+				<>
+					<div className="selector__divider" />
+					<JetpackFreeCard />
+				</>
+			) }
+
 			<QueryProductsList />
 			{ siteId && <QuerySitePurchases siteId={ siteId } /> }
 			{ siteId && <QuerySites siteId={ siteId } /> }
