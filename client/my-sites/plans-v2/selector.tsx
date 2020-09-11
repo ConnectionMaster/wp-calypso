@@ -16,6 +16,7 @@ import { SECURITY } from './constants';
 import { getProductUpsell, getPathToDetails, getPathToUpsell, checkout } from './utils';
 import QueryProducts from './query-products';
 import isJetpackCloud from 'lib/jetpack/is-jetpack-cloud';
+import { getYearlyPlanByMonthly } from 'lib/plans';
 import { TERM_ANNUALLY } from 'lib/plans/constants';
 import { getSiteProducts } from 'state/sites/selectors';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
@@ -57,7 +58,16 @@ const SelectorPage = ( {
 	}, [ defaultDuration ] );
 
 	// Sends a user to a page based on whether there are subtypes.
-	const selectProduct: PurchaseCallback = ( product: SelectorProduct, purchase ) => {
+	const selectProduct: PurchaseCallback = (
+		product: SelectorProduct,
+		isUpgradeableToYearly = false,
+		purchase
+	) => {
+		if ( purchase && isUpgradeableToYearly ) {
+			checkout( siteSlug, getYearlyPlanByMonthly( product.productSlug ) );
+			return;
+		}
+
 		if ( purchase ) {
 			page( managePurchase( siteSlug, purchase.id ) );
 			return;
@@ -66,7 +76,7 @@ const SelectorPage = ( {
 		if ( product.subtypes.length ) {
 			dispatch(
 				recordTracksEvent( 'calypso_product_subtypes_view', {
-					site_id: siteId,
+					site_id: siteId || undefined,
 					product_slug: product.productSlug,
 					duration: currentDuration,
 				} )
@@ -96,7 +106,7 @@ const SelectorPage = ( {
 
 		dispatch(
 			recordTracksEvent( 'calypso_plans_type_change', {
-				site_id: siteId,
+				site_id: siteId || undefined,
 				product_type: selectedType,
 			} )
 		);
@@ -110,7 +120,7 @@ const SelectorPage = ( {
 
 		dispatch(
 			recordTracksEvent( 'calypso_plans_duration_change', {
-				site_id: siteId,
+				site_id: siteId || undefined,
 				duration: selectedDuration,
 			} )
 		);
