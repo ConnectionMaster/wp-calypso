@@ -11,6 +11,7 @@
  * External dependencies
  */
 import React from 'react';
+import { useSelector } from 'react-redux';
 
 /**
  * Internal dependencies
@@ -20,14 +21,29 @@ import MySitesSidebarUnifiedItem from './item';
 import MySitesSidebarUnifiedMenu from './menu';
 import useSiteMenuItems from './use-site-menu-items';
 import useDomainsViewStatus from './use-domains-view-status';
+import { getIsRequestingAdminMenu } from 'state/admin-menu/selectors';
 import Sidebar from 'layout/sidebar';
 import SidebarSeparator from 'layout/sidebar/separator';
 import 'layout/sidebar-unified/style.scss';
 import 'state/admin-menu/init';
+import Spinner from 'components/spinner';
+
+import './style.scss';
 
 export const MySitesSidebarUnified = ( { path } ) => {
 	const menuItems = useSiteMenuItems();
 	const isAllDomainsView = useDomainsViewStatus();
+	const isRequestingMenu = useSelector( getIsRequestingAdminMenu );
+
+	/**
+	 * If there are no menu items and we are currently requesting some,
+	 * then show a spinner. The check for menuItems is necessary because
+	 * we may choose to render the menu from statically stored JSON data
+	 * and therefore we need to be ready to render.
+	 */
+	if ( ! menuItems && isRequestingMenu ) {
+		return <Spinner className="sidebar-unified__menu-loading" />;
+	}
 
 	return (
 		<Sidebar>
@@ -41,7 +57,7 @@ export const MySitesSidebarUnified = ( { path } ) => {
 					return <MySitesSidebarUnifiedMenu key={ item.slug } path={ path } { ...item } />;
 				}
 
-				return <MySitesSidebarUnifiedItem isTopLevel key={ item.slug } path={ path } { ...item } />;
+				return <MySitesSidebarUnifiedItem key={ item.slug } path={ path } { ...item } />;
 			} ) }
 		</Sidebar>
 	);
