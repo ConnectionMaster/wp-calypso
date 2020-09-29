@@ -3,7 +3,7 @@
  */
 import { useTranslate } from 'i18n-calypso';
 import page from 'page';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 /**
@@ -44,22 +44,36 @@ import type { ProductSlug } from 'lib/products-values/types';
 
 import './style.scss';
 
-const DetailsPage = ( { duration, productSlug, rootUrl, header }: DetailsPageProps ) => {
+const DetailsPage = ( {
+	rootUrl,
+	urlQueryArgs,
+	siteSlug: siteSlugProp,
+	productSlug,
+	duration,
+	header,
+}: DetailsPageProps ) => {
 	const dispatch = useDispatch();
 	const siteId = useSelector( ( state ) => getSelectedSiteId( state ) );
-	const siteSlug = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
+	const siteSlugState = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
+	const siteSlug = siteSlugProp || siteSlugState;
 	const currencyCode = useSelector( ( state ) => getCurrentUserCurrencyCode( state ) );
 	const hasUpsell = useHasProductUpsell();
 	const translate = useTranslate();
 	const isLoading = useIsLoading( siteId );
 
+	useEffect( () => {
+		window.scrollTo( 0, 0 );
+	}, [] );
+
 	// If the product slug isn't one that has options, proceed to the upsell.
 	if ( ! ( PRODUCTS_WITH_OPTIONS as readonly string[] ).includes( productSlug ) ) {
-		page.redirect( getPathToUpsell( rootUrl, productSlug, duration as Duration, siteSlug ) );
+		page.redirect(
+			getPathToUpsell( rootUrl, urlQueryArgs, productSlug, duration as Duration, siteSlug )
+		);
 		return null;
 	}
 
-	const selectorPageUrl = getPathToSelector( rootUrl, duration, siteSlug );
+	const selectorPageUrl = getPathToSelector( rootUrl, urlQueryArgs, duration, siteSlug );
 
 	// If the product is not valid, send the user to the selector page.
 	const product = slugToSelectorProduct( productSlug );
@@ -71,11 +85,11 @@ const DetailsPage = ( { duration, productSlug, rootUrl, header }: DetailsPagePro
 	// Go to a new page for upsells.
 	const selectProduct: PurchaseCallback = ( { productSlug: slug }: SelectorProduct ) => {
 		if ( hasUpsell( slug as ProductSlug ) ) {
-			page( getPathToUpsell( rootUrl, slug, duration as Duration, siteSlug ) );
+			page( getPathToUpsell( rootUrl, urlQueryArgs, slug, duration as Duration, siteSlug ) );
 			return;
 		}
 
-		checkout( siteSlug, slug );
+		checkout( siteSlug, slug, urlQueryArgs );
 	};
 
 	const onDurationChange = ( newDuration: Duration ) => {
@@ -93,7 +107,9 @@ const DetailsPage = ( { duration, productSlug, rootUrl, header }: DetailsPagePro
 				duration: newDuration,
 			} )
 		);
-		page( getPathToDetails( rootUrl, newProductSlug as string, newDuration, siteSlug ) );
+		page(
+			getPathToDetails( rootUrl, urlQueryArgs, newProductSlug as string, newDuration, siteSlug )
+		);
 	};
 
 	const { shortName } = product;

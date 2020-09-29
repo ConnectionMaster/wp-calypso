@@ -3,7 +3,7 @@
  */
 import page from 'page';
 import { useTranslate } from 'i18n-calypso';
-import React, { ReactNode, useCallback, useMemo } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 
 /**
@@ -86,6 +86,10 @@ const UpsellComponent = ( {
 		() => JETPACK_BACKUP_PRODUCTS.some( ( slug ) => slug === upsellSlug ),
 		[ upsellSlug ]
 	);
+
+	useEffect( () => {
+		window.scrollTo( 0, 0 );
+	}, [] );
 
 	return (
 		<Main className="upsell" wideLayout>
@@ -180,8 +184,16 @@ const UpsellComponent = ( {
 	);
 };
 
-const UpsellPage = ( { duration, productSlug, rootUrl, header }: UpsellPageProps ) => {
-	const siteSlug = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
+const UpsellPage = ( {
+	rootUrl,
+	urlQueryArgs,
+	siteSlug: siteSlugProp,
+	productSlug,
+	duration,
+	header,
+}: UpsellPageProps ) => {
+	const siteSlugState = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
+	const siteSlug = siteSlugProp || siteSlugState;
 	const siteId = useSelector( ( state ) => getSelectedSiteId( state ) );
 	const isLoading = useIsLoading( siteId );
 	const currencyCode = useSelector( ( state ) => getCurrentUserCurrencyCode( state ) );
@@ -191,7 +203,9 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header }: UpsellPageProps
 	const upsellProductSlug = getProductUpsell( productSlug );
 	const upsellProduct = upsellProductSlug && slugToSelectorProduct( upsellProductSlug );
 
-	const checkoutCb = useCallback( ( slugs ) => checkout( siteSlug, slugs ), [ siteSlug ] );
+	const checkoutCb = useCallback( ( slugs ) => checkout( siteSlug, slugs, urlQueryArgs ), [
+		siteSlug,
+	] );
 
 	const onPurchaseBothProducts = useCallback(
 		() => checkoutCb( [ productSlug, upsellProductSlug ] ),
@@ -203,7 +217,7 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header }: UpsellPageProps
 		productSlug,
 	] );
 
-	const selectorPageUrl = getPathToSelector( rootUrl, duration, siteSlug );
+	const selectorPageUrl = getPathToSelector( rootUrl, urlQueryArgs, duration, siteSlug );
 
 	// If the product is not valid send the user to the selector page.
 	if ( ! mainProduct ) {
@@ -222,7 +236,7 @@ const UpsellPage = ( { duration, productSlug, rootUrl, header }: UpsellPageProps
 	// page.
 	const productOption = getOptionFromSlug( productSlug );
 	const backUrl = productOption
-		? getPathToDetails( rootUrl, productOption, duration as Duration, siteSlug )
+		? getPathToDetails( rootUrl, urlQueryArgs, productOption, duration as Duration, siteSlug )
 		: selectorPageUrl;
 
 	const onBackButtonClick = () => page( backUrl );
