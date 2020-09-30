@@ -2,7 +2,6 @@
  * **** WARNING: No ES6 modules here. Not transpiled! ****
  */
 
-/* eslint import/no-extraneous-dependencies: [ "error", { packageDir: __dirname/.. } ] */
 /* eslint-disable import/no-nodejs-modules */
 
 /**
@@ -32,6 +31,7 @@ const devTarget = process.env.DEV_TARGET || 'evergreen';
 const shouldEmitStats = process.env.EMIT_STATS && process.env.EMIT_STATS !== 'false';
 const shouldEmitStatsWithReasons = process.env.EMIT_STATS === 'withreasons';
 const shouldConcatenateModules = process.env.CONCATENATE_MODULES !== 'false';
+const cacheDirectory = path.resolve( '.cache', 'babel-server' );
 
 const fileLoader = FileConfig.loader( {
 	publicPath: isDevelopment ? `/calypso/${ devTarget }/images/` : '/calypso/images/',
@@ -110,14 +110,14 @@ const webpackConfig = {
 			TranspileConfig.loader( {
 				workerCount,
 				configFile: path.resolve( 'babel.config.js' ),
-				cacheDirectory: path.join( buildDir, '.babel-server-cache' ),
+				cacheDirectory,
 				cacheIdentifier,
 				exclude: /node_modules\//,
 			} ),
 			TranspileConfig.loader( {
 				workerCount,
 				presets: [ require.resolve( '@automattic/calypso-build/babel/dependencies' ) ],
-				cacheDirectory: path.join( buildDir, '.babel-server-cache' ),
+				cacheDirectory,
 				cacheIdentifier,
 				include: shouldTranspileDependency,
 			} ),

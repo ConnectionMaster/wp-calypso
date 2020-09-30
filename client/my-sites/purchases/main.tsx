@@ -12,6 +12,14 @@ import Subscriptions from './subscriptions';
 import DocumentHead from 'components/data/document-head';
 import FormattedHeader from 'components/formatted-header';
 import ManagePurchase from 'me/purchases/manage-purchase';
+import CancelPurchase from 'me/purchases/cancel-purchase';
+import ConfirmCancelDomain from 'me/purchases/confirm-cancel-domain';
+import {
+	getPurchaseListUrlFor,
+	getCancelPurchaseUrlFor,
+	getConfirmCancelDomainUrlFor,
+	getManagePurchaseUrlFor,
+} from './paths';
 
 export function Purchases() {
 	const translate = useTranslate();
@@ -55,7 +63,67 @@ export function PurchaseDetails( {
 				purchaseId={ purchaseId }
 				siteSlug={ siteSlug }
 				showHeader={ false }
-				purchaseListUrl={ `/purchases/subscriptions/${ siteSlug }` }
+				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
+				getCancelPurchaseUrlFor={ getCancelPurchaseUrlFor }
+			/>
+		</Main>
+	);
+}
+
+export function PurchaseCancel( {
+	purchaseId,
+	siteSlug,
+}: {
+	purchaseId: number;
+	siteSlug: string;
+} ) {
+	const translate = useTranslate();
+
+	return (
+		<Main className="purchases is-wide-layout">
+			<DocumentHead title={ translate( 'Cancel purchase' ) } />
+			<FormattedHeader
+				brandFont
+				className="purchases__page-heading"
+				headerText={ translate( 'Cancel purchase' ) }
+				align="left"
+			/>
+
+			<CancelPurchase
+				purchaseId={ purchaseId }
+				siteSlug={ siteSlug }
+				getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
+				getConfirmCancelDomainUrlFor={ getConfirmCancelDomainUrlFor }
+				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
+			/>
+		</Main>
+	);
+}
+
+export function PurchaseCancelDomain( {
+	purchaseId,
+	siteSlug,
+}: {
+	purchaseId: number;
+	siteSlug: string;
+} ) {
+	const translate = useTranslate();
+
+	return (
+		<Main className="purchases is-wide-layout">
+			<DocumentHead title={ translate( 'Cancel domain' ) } />
+			<FormattedHeader
+				brandFont
+				className="purchases__page-heading"
+				headerText={ translate( 'Cancel domain' ) }
+				align="left"
+			/>
+
+			<ConfirmCancelDomain
+				purchaseId={ purchaseId }
+				siteSlug={ siteSlug }
+				getCancelPurchaseUrlFor={ getCancelPurchaseUrlFor }
+				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
 			/>
 		</Main>
 	);

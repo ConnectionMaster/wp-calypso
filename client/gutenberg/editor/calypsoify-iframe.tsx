@@ -11,8 +11,8 @@ import { localize, LocalizeProps } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
+import AsyncLoad from 'components/async-load';
 import MediaStore from 'lib/media/store';
-import EditorMediaModal from 'post-editor/editor-media-modal';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'state/ui/selectors';
 import {
 	getCustomizerUrl,
@@ -43,7 +43,6 @@ import { editPost, trashPost } from 'state/posts/actions';
 import { getEditorPostId } from 'state/editor/selectors';
 import { protectForm, ProtectedFormProps } from 'lib/protect-form';
 import PageViewTracker from 'lib/analytics/page-view-tracker';
-import QuerySites from 'components/data/query-sites';
 import config from 'config';
 import EditorDocumentHead from 'post-editor/editor-document-head';
 import isUnlaunchedSite from 'state/selectors/is-unlaunched-site';
@@ -657,7 +656,7 @@ class CalypsoifyIframe extends Component<
 	};
 
 	render() {
-		const { iframeUrl, siteId, shouldLoadIframe } = this.props;
+		const { iframeUrl, shouldLoadIframe } = this.props;
 		const {
 			classicBlockEditorId,
 			isMediaModalVisible,
@@ -675,7 +674,6 @@ class CalypsoifyIframe extends Component<
 
 		return (
 			<Fragment>
-				<QuerySites siteId={ siteId } />
 				<PageViewTracker
 					path={ this.getStatsPath() }
 					title={ this.getStatsTitle() }
@@ -699,7 +697,9 @@ class CalypsoifyIframe extends Component<
 						/* eslint-enable jsx-a11y/iframe-has-title */
 					) }
 				</div>
-				<EditorMediaModal
+				<AsyncLoad
+					require="post-editor/editor-media-modal"
+					placeholder={ null }
 					disabledDataSources={ getDisabledDataSources( allowedTypes ) }
 					enabledFilters={ getEnabledFilters( allowedTypes ) }
 					galleryViewEnabled={ isUsingClassicBlock }

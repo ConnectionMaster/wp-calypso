@@ -201,15 +201,13 @@ export default {
 		countryCodeTargets: [ 'US', 'CA' ],
 	},
 	reskinSignupFlow: {
-		datestamp: '21200903',
+		datestamp: '20200928',
 		variations: {
 			reskinned: 50,
 			control: 50,
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: false,
-		localeTargets: 'any',
-		localeExceptions: [ 'en', 'es' ],
 	},
 	existingUsersGutenbergOnboard: {
 		datestamp: '20200911',
@@ -238,5 +236,14 @@ export default {
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: false,
+	},
+	oneClickUpsell: {
+		datestamp: '20200922',
+		variations: {
+			test: 50,
+			control: 50,
+		},
+		defaultVariation: 'control',
+		allowExistingUsers: true,
 	},
 };

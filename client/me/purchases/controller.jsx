@@ -69,18 +69,22 @@ export function addCreditCard( context, next ) {
 
 export function cancelPurchase( context, next ) {
 	setTitle( context, titles.cancelPurchase );
+	const classes = 'cancel-purchase';
 
 	context.primary = (
-		<CancelPurchase
-			purchaseId={ parseInt( context.params.purchaseId, 10 ) }
-			siteSlug={ context.params.site }
-		/>
+		<Main className={ classes }>
+			<CancelPurchase
+				purchaseId={ parseInt( context.params.purchaseId, 10 ) }
+				siteSlug={ context.params.site }
+			/>
+		</Main>
 	);
 	next();
 }
 
 export function confirmCancelDomain( context, next ) {
 	const state = context.store.getState();
+	const classes = 'confirm-cancel-domain';
 
 	if ( userHasNoSites( state ) ) {
 		return noSites( context, '/me/purchases/:site/:purchaseId/confirm-cancel-domain' );
@@ -89,10 +93,12 @@ export function confirmCancelDomain( context, next ) {
 	setTitle( context, titles.confirmCancelDomain );
 
 	context.primary = (
-		<ConfirmCancelDomain
-			purchaseId={ parseInt( context.params.purchaseId, 10 ) }
-			siteSlug={ context.params.site }
-		/>
+		<Main className={ classes }>
+			<ConfirmCancelDomain
+				purchaseId={ parseInt( context.params.purchaseId, 10 ) }
+				siteSlug={ context.params.site }
+			/>
+		</Main>
 	);
 	next();
 }
