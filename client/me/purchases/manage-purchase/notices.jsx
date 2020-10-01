@@ -63,6 +63,12 @@ class PurchaseNotice extends Component {
 		renewableSitePurchases: PropTypes.arrayOf( PropTypes.object ),
 		selectedSite: PropTypes.object,
 		editCardDetailsPath: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
+		getManagePurchaseUrlFor: PropTypes.func,
+		isProductOwner: PropTypes.bool,
+	};
+
+	static defaultProps = {
+		getManagePurchaseUrlFor: managePurchase,
 	};
 
 	state = {
@@ -248,7 +254,14 @@ class PurchaseNotice extends Component {
 	};
 
 	renderPurchaseExpiringNotice() {
-		const { moment, purchase, purchaseAttachedTo, selectedSite, translate } = this.props;
+		const {
+			moment,
+			purchase,
+			purchaseAttachedTo,
+			selectedSite,
+			translate,
+			getManagePurchaseUrlFor,
+		} = this.props;
 
 		// For purchases included with a plan (for example, a domain mapping
 		// bundled with the plan), the plan purchase is used on this page when
@@ -287,7 +300,9 @@ class PurchaseNotice extends Component {
 						expiry: moment( currentPurchase.expiryDate ).fromNow(),
 					},
 					components: {
-						managePurchase: <a href={ managePurchase( selectedSite.slug, currentPurchase.id ) } />,
+						managePurchase: (
+							<a href={ getManagePurchaseUrlFor( selectedSite.slug, currentPurchase.id ) } />
+						),
 					},
 				}
 			);
@@ -322,6 +337,7 @@ class PurchaseNotice extends Component {
 			purchaseAttachedTo,
 			selectedSite,
 			renewableSitePurchases,
+			getManagePurchaseUrlFor,
 		} = this.props;
 
 		if ( ! config.isEnabled( 'upgrades/upcoming-renewals-notices' ) ) {
@@ -392,7 +408,9 @@ class PurchaseNotice extends Component {
 						onClick={ this.openUpcomingRenewalsDialog }
 					/>
 				),
-				managePurchase: <a href={ managePurchase( selectedSite.slug, currentPurchase.id ) } />,
+				managePurchase: (
+					<a href={ getManagePurchaseUrlFor( selectedSite.slug, currentPurchase.id ) } />
+				),
 			},
 		};
 
@@ -841,7 +859,13 @@ class PurchaseNotice extends Component {
 	};
 
 	renderExpiredRenewNotice() {
-		const { purchase, purchaseAttachedTo, selectedSite, translate } = this.props;
+		const {
+			purchase,
+			purchaseAttachedTo,
+			selectedSite,
+			translate,
+			getManagePurchaseUrlFor,
+		} = this.props;
 
 		// For purchases included with a plan (for example, a domain mapping
 		// bundled with the plan), the plan purchase is used on this page when
@@ -877,7 +901,9 @@ class PurchaseNotice extends Component {
 						includedPurchaseName: getName( includedPurchase ),
 					},
 					components: {
-						managePurchase: <a href={ managePurchase( selectedSite.slug, currentPurchase.id ) } />,
+						managePurchase: (
+							<a href={ getManagePurchaseUrlFor( selectedSite.slug, currentPurchase.id ) } />
+						),
 					},
 				}
 			);
@@ -921,6 +947,20 @@ class PurchaseNotice extends Component {
 		);
 	}
 
+	renderNonProductOwnerNotice() {
+		const { translate } = this.props;
+
+		return (
+			<Notice
+				showDismiss={ false }
+				status="is-info"
+				text={ translate(
+					'This product was purchased by a different WordPress.com account. To manage this product, log in to that account or contact the account owner.'
+				) }
+			></Notice>
+		);
+	}
+
 	render() {
 		if ( this.props.isDataLoading ) {
 			return null;
@@ -928,6 +968,10 @@ class PurchaseNotice extends Component {
 
 		if ( isDomainTransfer( this.props.purchase ) ) {
 			return null;
+		}
+
+		if ( ! this.props.isProductOwner ) {
+			return this.renderNonProductOwnerNotice();
 		}
 
 		const consumedConciergeSessionNotice = this.renderConciergeConsumedNotice();
