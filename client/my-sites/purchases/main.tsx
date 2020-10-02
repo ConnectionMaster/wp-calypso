@@ -14,6 +14,7 @@ import FormattedHeader from 'components/formatted-header';
 import ManagePurchase from 'me/purchases/manage-purchase';
 import CancelPurchase from 'me/purchases/cancel-purchase';
 import ConfirmCancelDomain from 'me/purchases/confirm-cancel-domain';
+import MySitesSidebarNavigation from 'my-sites/sidebar-navigation';
 import {
 	getPurchaseListUrlFor,
 	getCancelPurchaseUrlFor,
@@ -21,13 +22,16 @@ import {
 	getManagePurchaseUrlFor,
 	getAddPaymentMethodUrlFor,
 } from './paths';
+import { getEditPaymentMethodUrlFor } from './utils';
 import AddCardDetails from 'me/purchases/payment/add-card-details';
+import EditCardDetails from 'me/purchases/payment/edit-card-details';
 
 export function Purchases() {
 	const translate = useTranslate();
 
 	return (
 		<Main className="purchases is-wide-layout">
+			<MySitesSidebarNavigation />
 			<DocumentHead title={ translate( 'Billing' ) } />
 			<FormattedHeader
 				brandFont
@@ -68,6 +72,7 @@ export function PurchaseDetails( {
 				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
 				getCancelPurchaseUrlFor={ getCancelPurchaseUrlFor }
 				getAddPaymentMethodUrlFor={ getAddPaymentMethodUrlFor }
+				getEditPaymentMethodUrlFor={ getEditPaymentMethodUrlFor }
 				getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
 			/>
 		</Main>
@@ -128,6 +133,37 @@ export function PurchaseAddPaymentMethod( {
 				siteSlug={ siteSlug }
 				getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
 				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
+				isFullWidth={ true }
+			/>
+		</Main>
+	);
+}
+
+export function PurchaseEditPaymentMethod( {
+	purchaseId,
+	siteSlug,
+}: {
+	purchaseId: number;
+	siteSlug: string;
+} ) {
+	const translate = useTranslate();
+
+	return (
+		<Main className="purchases is-wide-layout">
+			<DocumentHead title={ translate( 'Billing' ) } />
+			<FormattedHeader
+				brandFont
+				className="purchases__page-heading"
+				headerText={ translate( 'Billing' ) }
+				align="left"
+			/>
+
+			<EditCardDetails
+				purchaseId={ purchaseId }
+				siteSlug={ siteSlug }
+				getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
+				purchaseListUrl={ getPurchaseListUrlFor( siteSlug ) }
+				isFullWidth={ true }
 			/>
 		</Main>
 	);

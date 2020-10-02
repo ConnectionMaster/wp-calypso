@@ -104,6 +104,7 @@ class ManagePurchase extends Component {
 		purchaseListUrl: PropTypes.string,
 		getCancelPurchaseUrlFor: PropTypes.func,
 		getAddPaymentMethodUrlFor: PropTypes.func,
+		getEditPaymentMethodUrlFor: PropTypes.func,
 		getManagePurchaseUrlFor: PropTypes.func,
 		cardTitle: PropTypes.string,
 		hasLoadedDomains: PropTypes.bool,
@@ -124,6 +125,7 @@ class ManagePurchase extends Component {
 		showHeader: true,
 		purchaseListUrl: purchasesRoot,
 		getAddPaymentMethodUrlFor: getEditCardDetailsPath,
+		getEditPaymentMethodUrlFor: getEditCardDetailsPath,
 		cardTitle: titles.managePurchase,
 		getCancelPurchaseUrlFor: cancelPurchase,
 		getManagePurchaseUrlFor: managePurchase,
@@ -242,14 +244,14 @@ class ManagePurchase extends Component {
 	}
 
 	renderEditPaymentMethodNavItem() {
-		const { purchase, translate } = this.props;
+		const { purchase, translate, siteSlug, getEditPaymentMethodUrlFor } = this.props;
 
 		if ( ! this.props.site ) {
 			return null;
 		}
 
 		if ( canEditPaymentDetails( purchase ) ) {
-			const path = this.props.getAddPaymentMethodUrlFor( this.props.siteSlug, purchase );
+			const path = getEditPaymentMethodUrlFor( siteSlug, purchase );
 			const renewing = isRenewing( purchase );
 
 			if (
@@ -273,14 +275,24 @@ class ManagePurchase extends Component {
 	}
 
 	renderRemovePurchaseNavItem() {
+		const {
+			hasLoadedSites,
+			hasNonPrimaryDomainsFlag,
+			hasCustomPrimaryDomain,
+			site,
+			purchase,
+			purchaseListUrl,
+		} = this.props;
+
 		return (
 			<RemovePurchase
-				hasLoadedSites={ this.props.hasLoadedSites }
+				hasLoadedSites={ hasLoadedSites }
 				hasLoadedUserPurchasesFromServer={ this.props.hasLoadedUserPurchasesFromServer }
-				hasNonPrimaryDomainsFlag={ this.props.hasNonPrimaryDomainsFlag }
-				hasCustomPrimaryDomain={ this.props.hasCustomPrimaryDomain }
-				site={ this.props.site }
-				purchase={ this.props.purchase }
+				hasNonPrimaryDomainsFlag={ hasNonPrimaryDomainsFlag }
+				hasCustomPrimaryDomain={ hasCustomPrimaryDomain }
+				site={ site }
+				purchase={ purchase }
+				purchaseListUrl={ purchaseListUrl }
 			/>
 		);
 	}
@@ -457,7 +469,13 @@ class ManagePurchase extends Component {
 	}
 
 	renderPlaceholder() {
-		const { siteSlug, getManagePurchaseUrlFor } = this.props;
+		const {
+			siteSlug,
+			getManagePurchaseUrlFor,
+			getAddCardDetailsPathFor,
+			getAddPaymentMethodUrlFor,
+			getEditCardDetailsPathFor,
+		} = this.props;
 
 		return (
 			<Fragment>
@@ -477,6 +495,9 @@ class ManagePurchase extends Component {
 						purchaseId={ false }
 						siteSlug={ siteSlug }
 						getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
+						getAddCardDetailsPathFor={ getAddCardDetailsPathFor }
+						getEditCardDetailsPathFor={ getEditCardDetailsPathFor }
+						getAddPaymentMethodUrlFor={ getAddPaymentMethodUrlFor }
 					/>
 				</Card>
 				<PurchasePlanDetails isPlaceholder />
@@ -509,6 +530,7 @@ class ManagePurchase extends Component {
 			isProductOwner,
 			getManagePurchaseUrlFor,
 			siteSlug,
+			getEditPaymentMethodUrlFor,
 		} = this.props;
 
 		const classes = classNames( 'manage-purchase__info', {
@@ -556,6 +578,7 @@ class ManagePurchase extends Component {
 							purchaseId={ purchase.id }
 							siteSlug={ siteSlug }
 							getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
+							getEditPaymentMethodUrlFor={ getEditPaymentMethodUrlFor }
 						/>
 					) }
 					{ isProductOwner && preventRenewal && this.renderSelectNewButton() }
@@ -589,12 +612,14 @@ class ManagePurchase extends Component {
 			isPurchaseTheme,
 			translate,
 			getManagePurchaseUrlFor,
+			getAddPaymentMethodUrlFor,
+			getEditPaymentMethodUrlFor,
 			isProductOwner,
 		} = this.props;
 
 		let editCardDetailsPath = false;
 		if ( ! isDataLoading( this.props ) && site && canEditPaymentDetails( purchase ) ) {
-			editCardDetailsPath = getEditCardDetailsPath( siteSlug, purchase );
+			editCardDetailsPath = getEditPaymentMethodUrlFor( siteSlug, purchase );
 		}
 
 		let showExpiryNotice = false;
@@ -641,6 +666,7 @@ class ManagePurchase extends Component {
 						editCardDetailsPath={ editCardDetailsPath }
 						getManagePurchaseUrlFor={ getManagePurchaseUrlFor }
 						isProductOwner={ isProductOwner }
+						getAddPaymentMethodUrlFor={ getAddPaymentMethodUrlFor }
 					/>
 				) }
 				<AsyncLoad
@@ -691,5 +717,6 @@ export default connect( ( state, props ) => {
 		isPurchaseTheme,
 		theme: isPurchaseTheme && getCanonicalTheme( state, siteId, purchase.meta ),
 		isAtomicSite: isSiteAtomic( state, siteId ),
+		userId,
 	};
 } )( localize( ManagePurchase ) );

@@ -6,7 +6,7 @@
 
 #wpnc-panel {
 	position: fixed;
-	top: 47px;
+	top: var( --masterbar-height );
 	right: 0;
 	bottom: 0;
 	min-width: 400px;
@@ -14,6 +14,27 @@
 	@include breakpoint-deprecated( '<660px' ) {
 		width: 100%;
 		min-width: 0;
+	}
+
+	.has-text-align-center {
+		text-align: center;
+	}
+
+	.has-text-align-right {
+		text-align: right;
+	}
+
+	.has-text-align-left {
+		text-align: left;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-weight: bold;
 	}
 
 	&.wpnt-open {
@@ -37,13 +58,13 @@
 	}
 
 	&.wpnc__main .wpnc__single-view {
-			left: inherit;
-			width: 400px;
+		left: inherit;
+		width: 400px;
 
-			@include breakpoint-deprecated( '<800px' ) {
-		    	left: 0;
-				width: auto;
-		  }
+		@include breakpoint-deprecated( '<800px' ) {
+			left: 0;
+			width: auto;
+		}
 	}
 
 	@include breakpoint-deprecated( '<800px' ) {
