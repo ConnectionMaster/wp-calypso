@@ -28,9 +28,9 @@ const mochaTimeOut = config.get( 'mochaTimeoutMS' );
 const startBrowserTimeoutMS = config.get( 'startBrowserTimeoutMS' );
 const screenSize = driverManager.currentScreenSize();
 const host = dataHelper.getJetpackHost();
+const themedSites = dataHelper.configGet( 'themedSites' );
 
 import {
-	GutenbergBlockComponent,
 	BlogPostsBlockComponent,
 	ContactFormBlockComponent,
 	ContactInfoBlockComponent,
@@ -56,6 +56,11 @@ const blockInits = new Map()
 		await block.openEditSettings();
 		await block.insertEmail( 'testing@automattic.com' );
 		await block.insertSubject( "Let's work together" );
+	} )
+	.set( LayoutGridBlockComponent, async ( block ) => {
+		await block.setupColumns( 2 );
+		await block.insertBlock( RatingStarBlockComponent );
+		await block.insertBlock( DynamicSeparatorBlockComponent );
 	} );
 
 /**
@@ -242,14 +247,6 @@ async function startNewPost( siteURL ) {
 	await gEditorComponent.initEditor();
 }
 
-after( async function () {
-	if ( process.env.GUTENBERG_EDGE === 'true' ) {
-		await Promise.all(
-			sampleImages.map( ( fileDetails ) => mediaHelper.deleteFile( fileDetails ) )
-		);
-	}
-} );
-
 describe( `[${ host }] Test Gutenberg upgrade from non-edge to edge across most popular themes (${ screenSize })`, function () {
 	before( async function () {
 		if ( process.env.GUTENBERG_EDGE === 'true' ) {
@@ -259,6 +256,14 @@ describe( `[${ host }] Test Gutenberg upgrade from non-edge to edge across most 
 			sampleImages = times( 5, () => mediaHelper.createFile() );
 		} else {
 			this.skip();
+		}
+	} );
+
+	after( async function () {
+		if ( process.env.GUTENBERG_EDGE === 'true' ) {
+			await Promise.all(
+				sampleImages.map( ( fileDetails ) => mediaHelper.deleteFile( fileDetails ) )
+			);
 		}
 	} );
 
@@ -276,13 +281,7 @@ describe( `[${ host }] Test Gutenberg upgrade from non-edge to edge across most 
 		TiledGalleryBlockComponent,
 		YoutubeBlockComponent,
 	].forEach( ( blockClass ) => {
-		[
-			'e2egbupgradehever',
-			'e2egbupgradeshawburn',
-			'e2egbupgrademorden',
-			'e2egbupgradeexford',
-			'e2egbupgrademayland',
-		].forEach( ( siteName ) => {
+		themedSites.forEach( ( siteName ) => {
 			describe( `Test the ${ blockClass.blockName } block on ${ siteName } @parallel`, function () {
 				const edgeSiteName = siteName + 'edge';
 				const siteURL = `${ siteName }.wordpress.com`;
