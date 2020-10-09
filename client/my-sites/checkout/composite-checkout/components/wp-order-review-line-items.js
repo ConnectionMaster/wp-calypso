@@ -38,7 +38,7 @@ function WPLineItem( {
 	item,
 	className,
 	hasDeleteButton,
-	removeItem,
+	removeProductFromCart,
 	getItemVariants,
 	onChangePlanLength,
 	isSummary,
@@ -121,7 +121,7 @@ function WPLineItem( {
 							setIsModalVisible( false );
 						} }
 						primaryAction={ () => {
-							removeItem( item.wpcom_meta.uuid );
+							removeProductFromCart( item.wpcom_meta.uuid );
 							onEvent( {
 								type: 'a8c_checkout_delete_product',
 								payload: {
@@ -157,7 +157,7 @@ WPLineItem.propTypes = {
 	total: PropTypes.bool,
 	isSummary: PropTypes.bool,
 	hasDeleteButton: PropTypes.bool,
-	removeItem: PropTypes.func,
+	removeProductFromCart: PropTypes.func,
 	item: PropTypes.shape( {
 		label: PropTypes.string,
 		amount: PropTypes.shape( {
@@ -174,7 +174,7 @@ function LineItemPrice( { item, isSummary } ) {
 		item.amount.value < item.wpcom_meta?.item_original_subtotal_integer && originalAmount;
 	const actualAmount = item.amount.displayValue;
 	return (
-		<LineItemPriceUI isSummary={ isSummary }>
+		<LineItemPriceWrapper isSummary={ isSummary }>
 			{ isDiscounted ? (
 				<>
 					<s>{ originalAmount }</s> { actualAmount }
@@ -182,11 +182,11 @@ function LineItemPrice( { item, isSummary } ) {
 			) : (
 				actualAmount
 			) }
-		</LineItemPriceUI>
+		</LineItemPriceWrapper>
 	);
 }
 
-export const LineItemUI = styled( WPLineItem )`
+export const LineItem = styled( WPLineItem )`
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: space-between;
@@ -213,7 +213,7 @@ const LineItemMeta = styled.div`
 	width: 100%;
 `;
 
-const DiscountCalloutUI = styled.div`
+const DiscountCallout = styled.div`
 	color: ${ ( props ) => props.theme.colors.success };
 	text-align: right;
 
@@ -228,7 +228,7 @@ const LineItemTitle = styled.div`
 	font-size: ${ ( { isSummary } ) => ( isSummary ? '14px' : '16px' ) };
 `;
 
-const LineItemPriceUI = styled.span`
+const LineItemPriceWrapper = styled.span`
 	margin-left: 12px;
 	font-size: ${ ( { isSummary } ) => ( isSummary ? '14px' : '16px' ) };
 
@@ -300,7 +300,7 @@ function DeleteIcon( { uniqueID, product } ) {
 export function WPOrderReviewTotal( { total, className } ) {
 	return (
 		<div className={ joinClasses( [ className, 'order-review-total' ] ) }>
-			<LineItemUI total item={ total } />
+			<LineItem total item={ total } />
 		</div>
 	);
 }
@@ -309,7 +309,7 @@ export function WPOrderReviewLineItems( {
 	items,
 	className,
 	isSummary,
-	removeItem,
+	removeProductFromCart,
 	removeCoupon,
 	getItemVariants,
 	onChangePlanLength,
@@ -328,10 +328,12 @@ export function WPOrderReviewLineItems( {
 				.map( ( item ) => {
 					return (
 						<WPOrderReviewListItem key={ item.id }>
-							<LineItemUI
+							<LineItem
 								item={ item }
 								hasDeleteButton={ ! isSummary && canItemBeDeleted( item ) }
-								removeItem={ item.type === 'coupon' ? removeCoupon : removeItem }
+								removeProductFromCart={
+									item.type === 'coupon' ? removeCoupon : removeProductFromCart
+								}
 								getItemVariants={ getItemVariants }
 								onChangePlanLength={ onChangePlanLength }
 								isSummary={ isSummary }
@@ -347,7 +349,7 @@ export function WPOrderReviewLineItems( {
 WPOrderReviewLineItems.propTypes = {
 	className: PropTypes.string,
 	isSummary: PropTypes.bool,
-	removeItem: PropTypes.func,
+	removeProductFromCart: PropTypes.func,
 	removeCoupon: PropTypes.func,
 	items: PropTypes.arrayOf(
 		PropTypes.shape( {
@@ -519,13 +521,13 @@ function DomainDiscountCallout( { item } ) {
 
 	const isFreeBundledDomainRegistration = item.wpcom_meta?.is_bundled && item.amount.value === 0;
 	if ( isFreeBundledDomainRegistration ) {
-		return <DiscountCalloutUI>{ translate( 'First year free' ) }</DiscountCalloutUI>;
+		return <DiscountCallout>{ translate( 'First year free' ) }</DiscountCallout>;
 	}
 
 	const isFreeDomainMapping =
 		item.wpcom_meta?.product_slug === 'domain_map' && item.amount.value === 0;
 	if ( isFreeDomainMapping ) {
-		return <DiscountCalloutUI>{ translate( 'Free with your plan' ) }</DiscountCalloutUI>;
+		return <DiscountCallout>{ translate( 'Free with your plan' ) }</DiscountCallout>;
 	}
 
 	return null;
@@ -539,7 +541,7 @@ function GSuiteDiscountCallout( { item } ) {
 		item.amount.value < item.wpcom_meta?.item_original_subtotal_integer &&
 		item.wpcom_meta?.is_sale_coupon_applied
 	) {
-		return <DiscountCalloutUI>{ translate( 'Discount for first year' ) }</DiscountCalloutUI>;
+		return <DiscountCallout>{ translate( 'Discount for first year' ) }</DiscountCallout>;
 	}
 	return null;
 }
