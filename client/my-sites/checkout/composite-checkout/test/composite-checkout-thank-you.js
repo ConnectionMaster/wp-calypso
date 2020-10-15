@@ -7,8 +7,8 @@
 /**
  * Internal dependencies
  */
-import { getThankYouPageUrl } from '../use-get-thank-you-url';
-import { isEnabled } from 'config';
+import getThankYouPageUrl from '../hooks/use-get-thank-you-url/get-thank-you-page-url';
+import { isEnabled } from 'calypso/config';
 
 let mockGSuiteCountryIsValid = true;
 jest.mock( 'lib/user', () =>
@@ -530,6 +530,24 @@ describe( 'getThankYouPageUrl', () => {
 			receiptId: '1234abcd',
 		} );
 		expect( url ).toBe( '/checkout/foo.bar/offer-plan-upgrade/business/1234abcd' );
+	} );
+
+	it( 'redirects to the thank-you pending page with an order id when the business upgrade nudge would normally be included', () => {
+		isEnabled.mockImplementation( ( flag ) => flag === 'upsell/concierge-session' );
+		const cart = {
+			products: [
+				{
+					product_slug: 'value_bundle',
+				},
+			],
+		};
+		const url = getThankYouPageUrl( {
+			...defaultArgs,
+			siteSlug: 'foo.bar',
+			orderId: '1234abcd',
+			cart,
+		} );
+		expect( url ).toBe( '/checkout/thank-you/foo.bar/pending/1234abcd' );
 	} );
 
 	it( 'redirects to concierge nudge if concierge and jetpack are not in the cart, blogger is in the cart, and the previous route is not the nudge', () => {
