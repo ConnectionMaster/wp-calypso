@@ -754,33 +754,14 @@ function getGutenboardingStatus( calypsoPort ) {
 		[ port2 ]
 	);
 	port1.onmessage = ( { data } ) => {
-		const {
-			isGutenboarding,
-			frankenflowUrl,
-			isNewLaunch,
-			isNewLaunchMobile,
-			isExperimental,
-		} = data;
+		const { isGutenboarding, frankenflowUrl, isNewLaunchMobile, isExperimental } = data;
 		calypsoifyGutenberg.isGutenboarding = isGutenboarding;
 		calypsoifyGutenberg.frankenflowUrl = frankenflowUrl;
-		calypsoifyGutenberg.isNewLaunch = isNewLaunch;
 		calypsoifyGutenberg.isNewLaunchMobile = isNewLaunchMobile;
 		calypsoifyGutenberg.isExperimental = isExperimental;
 		// Hook necessary if message recieved after editor has loaded.
 		window.wp.hooks.doAction( 'setGutenboardingStatus', isGutenboarding );
 	};
-}
-
-function handleLaunchModal( calypsoPort ) {
-	subscribe( () => {
-		const { isSidebarOpen } = select( 'automattic/launch' ).getState();
-
-		// Hide inline help when launch modal is open
-		calypsoPort.postMessage( {
-			action: 'toggleInlineHelp',
-			payload: { hidden: isSidebarOpen },
-		} );
-	} );
 }
 
 /**
@@ -1053,8 +1034,6 @@ function initPort( message ) {
 		getCloseButtonUrl( calypsoPort );
 
 		getGutenboardingStatus( calypsoPort );
-
-		handleLaunchModal( calypsoPort );
 
 		getNavSidebarLabels( calypsoPort );
 

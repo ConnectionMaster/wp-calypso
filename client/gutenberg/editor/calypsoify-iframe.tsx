@@ -57,6 +57,7 @@ import { REASON_BLOCK_EDITOR_UNKOWN_IFRAME_LOAD_FAILURE } from 'calypso/state/de
 import { setMediaLibrarySelectedItems } from 'calypso/state/media/actions';
 import { fetchMediaItem, getMediaItem } from 'calypso/state/media/thunks';
 import Iframe from './iframe';
+import type { CartData } from 'calypso/client/blocks/editor-checkout-modal';
 /**
  * Types
  */
@@ -93,7 +94,7 @@ interface State {
 	multiple?: any;
 	postUrl?: T.URL;
 	previewUrl: T.URL;
-	cartData?: any;
+	cartData?: CartData;
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -373,14 +374,12 @@ class CalypsoifyIframe extends Component<
 			const isGutenboarding =
 				this.props.siteCreationFlow === 'gutenboarding' && this.props.isSiteUnlaunched;
 			const frankenflowUrl = `${ window.location.origin }/start/new-launch?siteSlug=${ this.props.siteSlug }&source=editor`;
-			const isNewLaunch = config.isEnabled( 'gutenboarding/new-launch' );
 			const isNewLaunchMobile = config.isEnabled( 'gutenboarding/new-launch-mobile' );
 			const isExperimental = config.isEnabled( 'gutenboarding/feature-picker' );
 
 			ports[ 0 ].postMessage( {
 				isGutenboarding,
 				frankenflowUrl,
-				isNewLaunch,
 				isNewLaunchMobile,
 				isExperimental,
 			} );
@@ -753,8 +752,9 @@ class CalypsoifyIframe extends Component<
 					<AsyncLoad
 						require="calypso/blocks/editor-checkout-modal"
 						onClose={ this.closeCheckoutModal }
-						isOpen={ isCheckoutModalVisible }
 						cartData={ cartData }
+						placeholder={ null }
+						isOpen
 					/>
 				) }
 				<EditorRevisionsDialog loadRevision={ this.loadRevision } />
