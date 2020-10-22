@@ -652,6 +652,7 @@ class ManagePurchase extends Component {
 				<QueryUserPurchases userId={ this.props.userId } />
 				{ siteId && <QuerySiteDomains siteId={ siteId } /> }
 				{ isPurchaseTheme && <QueryCanonicalTheme siteId={ siteId } themeId={ purchase.meta } /> }
+
 				<HeaderCake backHref={ this.props.purchaseListUrl }>{ this.props.cardTitle }</HeaderCake>
 				{ showExpiryNotice ? (
 					<Notice status="is-info" text={ <PlanRenewalMessage /> } showDismiss={ false }>
