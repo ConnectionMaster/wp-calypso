@@ -201,24 +201,6 @@ export default {
 		allowExistingUsers: true,
 		localeTargets: [ 'en' ],
 	},
-	removeUsernameInSignup: {
-		datestamp: '20201002',
-		variations: {
-			variantRemoveUsername: 50,
-			control: 50,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: false,
-	},
-	oneClickUpsell: {
-		datestamp: '20200922',
-		variations: {
-			test: 50,
-			control: 50,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: true,
-	},
 	jetpackConversionRateOptimization: {
 		datestamp: '20201020',
 		variations: {
