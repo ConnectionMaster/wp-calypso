@@ -44,7 +44,9 @@ type OwnProps = {
 	billingTerm: Duration;
 	buttonLabel: TranslateResult;
 	buttonPrimary: boolean;
+	badgeLabel?: TranslateResult;
 	onButtonClick: PurchaseCallback;
+	onSlideOutClick: PurchaseCallback;
 	searchRecordsDetails?: ReactNode;
 	isHighlighted?: boolean;
 	isOwned?: boolean;
@@ -71,7 +73,9 @@ const JetpackProductCardAlt2: FunctionComponent< Props > = ( {
 	billingTerm,
 	buttonLabel,
 	buttonPrimary,
+	badgeLabel,
 	onButtonClick,
+	onSlideOutClick,
 	searchRecordsDetails,
 	isHighlighted,
 	isOwned,
@@ -198,6 +202,7 @@ const JetpackProductCardAlt2: FunctionComponent< Props > = ( {
 					) }
 				</header>
 				<div className="jetpack-product-card-alt-2__body">
+					{ badgeLabel && <p className="jetpack-product-card-alt-2__owned">{ badgeLabel }</p> }
 					{ buttonElt }
 					{ description && (
 						<p className="jetpack-product-card-alt-2__description">{ description }</p>
@@ -213,7 +218,7 @@ const JetpackProductCardAlt2: FunctionComponent< Props > = ( {
 					isExpanded={ isExpanded }
 					onFeaturesToggle={ onFeaturesToggle }
 					ctaElt={ buttonElt }
-					onButtonClick={ onButtonClick }
+					onButtonClick={ onSlideOutClick }
 				/>
 			) }
 		</div>

@@ -14,9 +14,6 @@ export default function MyComponent() {
 				checked={ this.props.checked }
 				disabled={ this.props.disabled }
 				onChange={ this.props.onChange }
-				onKeyDown={ this.props.onKeyDown }
-				className={ this.props.className }
-				wrapperClassName={ this.props.wrapperClassName }
 				aria-label={ this.props[ 'aria-label' ] }
 				id="you-rock-uniquely"
 			>
@@ -32,8 +29,5 @@ export default function MyComponent() {
 - `checked`: (bool) the current status of the toggle.
 - `disabled`: (bool) whether the toggle should be in the disabled state.
 - `onChange`: (callback) what should be executed once the user clicks the toggle.
-- `onKeyDown`: (callback) what should be executed once the user presses a key while the toggle is selected.
-- `className`: (string) a class name that should be added to the toggle `input` control.
-- `wrapperClassName`: (string) a class name that should be added to the `div` wrapping the component.
 - `aria-label`: (string) a label that should be added to the control for accessibility purposes.
 - `id`: (string) the id of the checkbox and the for attribute of the label, should be unique.
