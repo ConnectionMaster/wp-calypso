@@ -16,10 +16,11 @@ let lastUUID = 100;
 function convertResponseCartProductToRequestCartProduct(
 	product: ResponseCartProduct | RequestCartProduct
 ): RequestCartProduct {
-	const { product_slug, meta, product_id, extra } = product;
+	const { product_slug, meta, product_id, extra, volume } = product;
 	return {
 		product_slug,
 		meta,
+		volume,
 		product_id,
 		extra,
 	};
@@ -142,10 +143,14 @@ export function convertRawResponseCartToResponseCart(
 	}
 
 	// If tax.location is an empty PHP associative array, it will be JSON serialized to [] but we need {}
-	const taxLocation =
-		rawResponseCart.tax?.location && Array.isArray( rawResponseCart.tax.location )
-			? rawResponseCart.tax.location
-			: {};
+	let taxLocation = {};
+	if ( rawResponseCart.tax?.location ) {
+		if ( Array.isArray( rawResponseCart.tax.location ) ) {
+			taxLocation = {};
+		} else {
+			taxLocation = rawResponseCart.tax.location;
+		}
+	}
 
 	const rawProducts =
 		rawResponseCart.products?.length && Array.isArray( rawResponseCart.products )

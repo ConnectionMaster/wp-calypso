@@ -57,7 +57,7 @@ $jetpack-product-card-alt-2-icon-size: 55px;
 		margin-bottom: 0;
 	}
 
-	.foldable-card {
+	.card.foldable-card {
 		width: 100%;
 		margin-bottom: 0;
 		padding: 0 10px;
@@ -463,8 +463,7 @@ button.components-button.jetpack-product-card-alt-2__slideout-button {
 		background-color: #f6f7f7;
 	}
 
-	.jetpack-product-card-alt-2__slide-out-product.expanded {
-		margin-left: -16px;
-		margin-right: -16px;
+	.jetpack-product-card-alt-2__product-name {
+		letter-spacing: -0.5px; // Prevent names from falling on 2 lines
 	}
 }
