@@ -100,16 +100,12 @@ function WPLineItem( {
 				<LineItemPrice item={ item } isSummary={ isSummary } />
 			</span>
 			{ item.sublabel && (
-				<>
-					<LineItemMeta>
-						<LineItemSublabelAndPrice item={ item } isMonthlyPricingTest={ isMonthlyPricingTest } />
-						<DomainDiscountCallout item={ item } />
-						{ isMonthlyPricingTest && <AnnualDiscountCallout item={ item } /> }
-					</LineItemMeta>
-					<LineItemMeta>
-						<DiscountForFirstYearOnly item={ item } />
-					</LineItemMeta>
-				</>
+				<LineItemMeta>
+					<LineItemSublabelAndPrice item={ item } isMonthlyPricingTest={ isMonthlyPricingTest } />
+					<DomainDiscountCallout item={ item } />
+					{ isMonthlyPricingTest && <AnnualDiscountCallout item={ item } /> }
+					<DiscountForFirstYearOnly item={ item } />
+				</LineItemMeta>
 			) }
 			{ isGSuite && <GSuiteUsersList item={ item } /> }
 			{ hasDeleteButton && formStatus === FormStatus.READY && (
@@ -186,12 +182,12 @@ WPLineItem.propTypes = {
 };
 
 function LineItemPrice( { item, isSummary } ) {
-	const originalAmountDisplay =
-		item.wpcom_meta?.related_monthly_plan_cost_display ||
-		item.wpcom_meta?.item_original_subtotal_display;
-	const originalAmountInteger =
-		item.wpcom_meta?.related_monthly_plan_cost_integer ||
-		item.wpcom_meta?.item_original_subtotal_integer;
+	let originalAmountDisplay = item.wpcom_meta?.item_original_subtotal_display;
+	let originalAmountInteger = item.wpcom_meta?.item_original_subtotal_integer;
+	if ( item.wpcom_meta?.related_monthly_plan_cost_integer ) {
+		originalAmountInteger = item.wpcom_meta?.related_monthly_plan_cost_integer;
+		originalAmountDisplay = item.wpcom_meta?.related_monthly_plan_cost_display;
+	}
 	const isDiscounted = item.amount.value < originalAmountInteger && originalAmountDisplay;
 	const actualAmount = item.amount.displayValue;
 	return (
@@ -619,26 +615,14 @@ function DiscountForFirstYearOnly( { item } ) {
 		group: GROUP_WPCOM,
 	} );
 	if ( isWpcomOneYearPlan ) {
-		return (
-			<div>
-				{ translate(
-					'Promotional pricing is for the first year only. Your plan will renew at the regular price.'
-				) }
-			</div>
-		);
+		return <DiscountCallout>{ translate( 'Discount for first year' ) }</DiscountCallout>;
 	}
 	const isWpcomTwoYearPlan = planMatches( item.wpcom_meta.product_slug, {
 		term: TERM_BIENNIALLY,
 		group: GROUP_WPCOM,
 	} );
 	if ( isWpcomTwoYearPlan ) {
-		return (
-			<div>
-				{ translate(
-					'Promotional pricing is for the first 2 years only. Your plan will renew at the regular price.'
-				) }
-			</div>
-		);
+		return <DiscountCallout>{ translate( 'Discount for first term' ) }</DiscountCallout>;
 	}
 
 	return null;
