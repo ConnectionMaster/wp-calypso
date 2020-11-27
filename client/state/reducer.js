@@ -30,7 +30,6 @@ import media from './media/reducer';
 import mySites from './my-sites/reducer';
 import notices from './notices/reducer';
 import { unseenCount as notificationsUnseenCount } from './notifications';
-import postFormats from './post-formats/reducer';
 import selectedEditor from './selected-editor/reducer';
 import siteKeyrings from './site-keyrings/reducer';
 import siteRoles from './site-roles/reducer';
@@ -38,7 +37,6 @@ import sites from './sites/reducer';
 import storedCards from './stored-cards/reducer';
 import support from './support/reducer';
 import ui from './ui/reducer';
-import userProfileLinks from './profile-links/reducer';
 import userSettings from './user-settings/reducer';
 import users from './users/reducer';
 
@@ -63,7 +61,6 @@ const reducers = {
 	mySites,
 	notices,
 	notificationsUnseenCount,
-	postFormats,
 	selectedEditor,
 	siteKeyrings,
 	siteRoles,
@@ -71,7 +68,6 @@ const reducers = {
 	storedCards,
 	support,
 	ui,
-	userProfileLinks,
 	userSettings,
 	users,
 };
