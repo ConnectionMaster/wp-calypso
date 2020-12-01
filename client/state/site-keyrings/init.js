@@ -2,6 +2,6 @@
  * Internal dependencies
  */
 import { registerReducer } from 'calypso/state/redux-store';
-import formReducer from './reducer';
+import reducer from './reducer';
 
-registerReducer( [ 'form' ], formReducer );
+registerReducer( [ 'siteKeyrings' ], reducer );
