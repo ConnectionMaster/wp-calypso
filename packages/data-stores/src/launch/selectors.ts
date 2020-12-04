@@ -36,8 +36,14 @@ export const getSelectedPlan = ( state: State ): Plans.Plan | undefined => state
  * @param state State
  */
 export const getPaidPlan = ( state: State ): Plans.Plan | undefined => state.paidPlan;
-
 // Check if a domain has been explicitly selected (including free subdomain)
+
+/**
+ * Check if the user has selected a domain, including explicitly selecting the subdomain
+ * This is useful for step/flow completion in the context of highlighting steps or enabling Launch button
+ *
+ * @param state State
+ */
 export const hasSelectedDomain = ( state: State ): boolean =>
 	!! getSelectedDomain( state ) || state.confirmedDomainSelection;
 
@@ -74,15 +80,3 @@ export const isFlowStarted = ( state: State ): boolean =>
 // Get first incomplete step
 export const getFirstIncompleteStep = ( state: State ): LaunchStepType | undefined =>
 	LaunchSequence.find( ( step ) => ! isStepCompleted( state, step ) );
-
-// Check if site title step should be displayed
-export const isSiteTitleStepVisible = ( state: State ): boolean => state.isSiteTitleStepVisible;
-
-// Check if launch modal can be dismissed
-export const isModalDismissible = ( state: State ): boolean => state.isModalDismissible;
-
-// Check if launch modal title should be visible
-export const isModalTitleVisible = ( state: State ): boolean => state.isModalTitleVisible;
-
-// Check if launch modal can be dismissed
-export const isFocusedLaunchOpen = ( state: State ): boolean => state.isFocusedLaunchOpen;
