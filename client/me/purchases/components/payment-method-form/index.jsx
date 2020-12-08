@@ -45,7 +45,7 @@ import './style.scss';
 
 const debug = debugFactory( 'calypso:credit-card-form' );
 
-export function CreditCardForm( {
+export function PaymentMethodForm( {
 	apiParams = {},
 	countriesList,
 	initialValues = undefined,
@@ -62,7 +62,7 @@ export function CreditCardForm( {
 	const {
 		stripe,
 		stripeConfiguration,
-		setStripeError,
+		reloadStripeConfiguration,
 		isStripeLoading,
 		stripeLoadingError,
 	} = useStripe();
@@ -140,7 +140,7 @@ export function CreditCardForm( {
 		} catch ( error ) {
 			debug( 'Error while submitting', error );
 			setFormSubmitting( false );
-			error && setStripeError && setStripeError( error );
+			error && reloadStripeConfiguration && reloadStripeConfiguration();
 			error && displayError( { translate, error } );
 		}
 	};
@@ -155,8 +155,8 @@ export function CreditCardForm( {
 
 	return (
 		<form onSubmit={ onSubmit }>
-			<Card className="credit-card-form__content">
-				{ heading && <div className="credit-card-form__heading">{ heading }</div> }
+			<Card className="payment-method-form__content">
+				{ heading && <div className="payment-method-form__heading">{ heading }</div> }
 				<QueryPaymentCountries />
 				<CreditCardFormFields
 					card={ kebabCaseFormFields( formFieldValues ) }
@@ -166,7 +166,7 @@ export function CreditCardForm( {
 					getErrorMessage={ getErrorMessage }
 					autoFocus={ autoFocus } // eslint-disable-line jsx-a11y/no-autofocus
 				/>
-				<div className="credit-card-form__card-terms">
+				<div className="payment-method-form__terms">
 					<Gridicon icon="info-outline" size={ 18 } />
 					<p>
 						<TosText translate={ translate } />
@@ -189,7 +189,7 @@ export function CreditCardForm( {
 	);
 }
 
-CreditCardForm.propTypes = {
+PaymentMethodForm.propTypes = {
 	apiParams: PropTypes.object,
 	countriesList: PropTypes.array.isRequired,
 	initialValues: PropTypes.object,
@@ -271,4 +271,4 @@ function displayError( { translate, error } ) {
 
 export default connect( ( state ) => ( {
 	countriesList: getCountries( state, 'payments' ),
-} ) )( localize( CreditCardForm ) );
+} ) )( localize( PaymentMethodForm ) );
