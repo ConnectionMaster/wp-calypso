@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-
+import React from 'react';
+import { connect } from 'react-redux';
 import { get, uniqBy } from 'lodash';
 import i18n from 'i18n-calypso';
 
@@ -12,6 +13,7 @@ import notices from 'calypso/notices';
 import PluginsLog from 'calypso/lib/plugins/log-store';
 import { filterNotices } from 'calypso/lib/plugins/utils';
 import versionCompare from 'calypso/lib/version-compare';
+import { getSelectedSite } from 'calypso/state/ui/selectors';
 import { reduxDispatch } from 'calypso/lib/redux-bridge';
 import { removePluginStatuses } from 'calypso/state/plugins/installed/status/actions';
 
@@ -41,7 +43,21 @@ function getTranslateArg( logs, sampleLog, typeFilter ) {
 	};
 }
 
-export default {
+class PluginNotices extends React.Component {
+	constructor( props ) {
+		super( props );
+
+		this.state = { notices: this.refreshPluginNotices() };
+	}
+
+	componentDidMount() {
+		PluginsLog.on( 'change', this.showNotification );
+	}
+
+	componentWillUnmount() {
+		PluginsLog.removeListener( 'change', this.showNotification );
+	}
+
 	shouldComponentUpdateNotices( currentNotices, nextNotices ) {
 		if ( currentNotices.errors && currentNotices.errors.length !== nextNotices.errors.length ) {
 			return true;
@@ -59,30 +75,18 @@ export default {
 			return true;
 		}
 		return false;
-	},
+	}
 
-	getInitialState() {
-		return { notices: this.refreshPluginNotices() };
-	},
-
-	componentDidMount() {
-		PluginsLog.on( 'change', this.showNotification );
-	},
-
-	componentWillUnmount() {
-		PluginsLog.removeListener( 'change', this.showNotification );
-	},
-
-	refreshPluginNotices() {
+	refreshPluginNotices = () => {
 		const site = this.props.selectedSite;
 		return {
 			errors: filterNotices( PluginsLog.getErrors(), site, this.props.pluginSlug ),
 			inProgress: filterNotices( PluginsLog.getInProgress(), site, this.props.pluginSlug ),
 			completed: filterNotices( PluginsLog.getCompleted(), site, this.props.pluginSlug ),
 		};
-	},
+	};
 
-	showNotification() {
+	showNotification = () => {
 		const logNotices = this.refreshPluginNotices();
 		this.setState( { notices: logNotices } );
 		if ( logNotices.inProgress.length > 0 ) {
@@ -119,16 +123,16 @@ export default {
 				showDismiss,
 			} );
 		}
-	},
+	};
 
-	getMessage( logs, messageFunction, typeFilter ) {
+	getMessage = ( logs, messageFunction, typeFilter ) => {
 		const sampleLog = logs[ 0 ].status === 'inProgress' ? logs[ 0 ] : logs[ logs.length - 1 ];
 		const translateArg = getTranslateArg( logs, sampleLog, typeFilter );
 		const combination = getCombination( translateArg );
 		return messageFunction( sampleLog.action, combination, translateArg, sampleLog );
-	},
+	};
 
-	successMessage( action, combination, translateArg ) {
+	successMessage = ( action, combination, translateArg ) => {
 		switch ( action ) {
 			case 'INSTALL_PLUGIN':
 				if ( translateArg.isMultiSite ) {
@@ -365,9 +369,9 @@ export default {
 					args: translateArg,
 				} );
 		}
-	},
+	};
 
-	inProgressMessage( action, combination, translateArg ) {
+	inProgressMessage = ( action, combination, translateArg ) => {
 		switch ( action ) {
 			case 'INSTALL_PLUGIN':
 				switch ( combination ) {
@@ -565,9 +569,9 @@ export default {
 				}
 				break;
 		}
-	},
+	};
 
-	erroredAndCompletedMessage( logNotices ) {
+	erroredAndCompletedMessage = ( logNotices ) => {
 		const completedMessage = this.getMessage(
 			logNotices.completed,
 			this.successMessage,
@@ -575,9 +579,9 @@ export default {
 		);
 		const errorMessage = this.getMessage( logNotices.errors, this.errorMessage, 'error' );
 		return ' ' + completedMessage + ' ' + errorMessage;
-	},
+	};
 
-	errorMessage( action, combination, translateArg, sampleLog ) {
+	errorMessage = ( action, combination, translateArg, sampleLog ) => {
 		if ( combination === '1 site 1 plugin' ) {
 			return this.singleErrorMessage( action, translateArg, sampleLog );
 		}
@@ -767,9 +771,9 @@ export default {
 					}
 				);
 		}
-	},
+	};
 
-	additionalExplanation( error_code ) {
+	additionalExplanation = ( error_code ) => {
 		switch ( error_code ) {
 			case 'no_package':
 				return i18n.translate( "Plugin doesn't exist in the plugin repo." );
@@ -839,9 +843,9 @@ export default {
 		}
 
 		return null;
-	},
+	};
 
-	singleErrorMessage( action, translateArg, sampleLog ) {
+	singleErrorMessage = ( action, translateArg, sampleLog ) => {
 		const additionalExplanation = this.additionalExplanation( sampleLog.error.error );
 		switch ( action ) {
 			case 'INSTALL_PLUGIN':
@@ -979,7 +983,7 @@ export default {
 					args: translateArg,
 				} );
 		}
-	},
+	};
 
 	getErrorButton( log ) {
 		if ( log.length > 1 ) {
@@ -990,7 +994,7 @@ export default {
 			return i18n.translate( 'Turn On.' );
 		}
 		return null;
-	},
+	}
 
 	getErrorHref( log ) {
 		if ( log.length > 1 ) {
@@ -1006,7 +1010,7 @@ export default {
 			remoteManagementUrl = log.site.options.admin_url + 'admin.php?page=jetpack&configure=manage';
 		}
 		return remoteManagementUrl;
-	},
+	}
 
 	getSuccessButton( log ) {
 		if ( log.length > 1 ) {
@@ -1019,7 +1023,7 @@ export default {
 		}
 
 		return i18n.translate( 'Setup' );
-	},
+	}
 
 	getSuccessHref( log ) {
 		if ( log.length > 1 ) {
@@ -1031,5 +1035,13 @@ export default {
 			return null;
 		}
 		return get( log, 'plugin.wp_admin_settings_page_url' );
-	},
-};
+	}
+
+	render() {
+		return null;
+	}
+}
+
+export default connect( ( state ) => ( {
+	selectedSite: getSelectedSite( state ),
+} ) )( PluginNotices );

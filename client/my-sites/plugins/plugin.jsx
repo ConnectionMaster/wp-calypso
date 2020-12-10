@@ -23,7 +23,7 @@ import {
 	getPlugin as getWporgPlugin,
 } from 'calypso/state/plugins/wporg/selectors';
 import { fetchPluginData as wporgFetchPluginData } from 'calypso/state/plugins/wporg/actions';
-import PluginNotices from 'calypso/lib/plugins/notices';
+import PluginNotices from 'calypso/my-sites/plugins/notices';
 import MainComponent from 'calypso/components/main';
 import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
 import JetpackManageErrorPage from 'calypso/my-sites/jetpack-manage-error-page';
@@ -41,18 +41,20 @@ import isSiteAutomatedTransfer from 'calypso/state/selectors/is-site-automated-t
 import NoPermissionsError from './no-permissions-error';
 import getToursHistory from 'calypso/state/guided-tours/selectors/get-tours-history';
 import hasNavigated from 'calypso/state/selectors/has-navigated';
-import { getSitesWithoutPlugin } from 'calypso/state/plugins/installed/selectors';
-
-/* eslint-disable react/prefer-es6-class */
+import {
+	getPluginOnSites,
+	getSitesWithoutPlugin,
+	isRequestingForSites,
+} from 'calypso/state/plugins/installed/selectors';
 
 function goBack() {
 	window.history.back();
 }
 
+/* eslint-disable react/prefer-es6-class */
 const SinglePlugin = createReactClass( {
 	displayName: 'SinglePlugin',
 	_DEFAULT_PLUGINS_BASE_PATH: 'http://wordpress.org/plugins/',
-	mixins: [ PluginNotices ],
 
 	UNSAFE_componentWillMount() {
 		if ( ! this.isFetched() ) {
@@ -87,14 +89,13 @@ const SinglePlugin = createReactClass( {
 		const props = nextProps || this.props;
 
 		const sites = uniq( props.sites );
-		const sitePlugin = PluginsStore.getPlugin( sites, props.pluginSlug );
 		const plugin = Object.assign(
 			{
 				name: props.pluginSlug,
 				id: props.pluginSlug,
 				slug: props.pluginSlug,
 			},
-			sitePlugin
+			props.plugin
 		);
 
 		const notInstalledSites = props.sitesWithoutPlugin.map( ( siteId ) =>
@@ -175,14 +176,13 @@ const SinglePlugin = createReactClass( {
 			return true;
 		}
 
-		const sites = this.props.sites;
-
 		// If the plugin has at least one site then we know it exists
-		if ( plugin.sites && plugin.sites[ 0 ] ) {
+		const pluginSites = Object.values( plugin.sites );
+		if ( pluginSites && pluginSites[ 0 ] ) {
 			return true;
 		}
 
-		if ( sites.some( PluginsStore.isFetchingSite ) ) {
+		if ( this.props.requestingPluginsForSites ) {
 			return 'unknown';
 		}
 
@@ -195,10 +195,6 @@ const SinglePlugin = createReactClass( {
 
 	isFetched() {
 		return this.props.wporgFetched;
-	},
-
-	isFetchingSites() {
-		return this.props.sites.every( PluginsStore.isFetchingSite );
 	},
 
 	getPlugin() {
@@ -237,7 +233,7 @@ const SinglePlugin = createReactClass( {
 	},
 
 	isPluginInstalledOnsite() {
-		if ( this.isFetchingSites() ) {
+		if ( this.props.requestingPluginsForSites ) {
 			return null;
 		}
 
@@ -297,7 +293,7 @@ const SinglePlugin = createReactClass( {
 	},
 
 	render() {
-		const { selectedSite } = this.props;
+		const { pluginSlug, selectedSite } = this.props;
 		if ( ! this.props.isRequestingSites && ! this.props.userCanManagePlugins ) {
 			return <NoPermissionsError title={ this.getPageTitle() } />;
 		}
@@ -327,6 +323,8 @@ const SinglePlugin = createReactClass( {
 				<DocumentHead title={ this.getPageTitle() } />
 				<PageViewTracker path={ analyticsPath } title="Plugins > Plugin Details" />
 				<SidebarNavigation />
+				<PluginNotices pluginSlug={ pluginSlug } />
+
 				<div className="plugin__page">
 					{ this.displayHeader( calypsoify ) }
 					<PluginMeta
@@ -360,6 +358,7 @@ export default connect(
 		const siteIds = uniq( sites.map( ( site ) => site.ID ) );
 
 		return {
+			plugin: getPluginOnSites( state, siteIds, props.pluginSlug ),
 			wporgPlugin: getWporgPlugin( state, props.pluginSlug ),
 			wporgFetching: isWporgPluginFetching( state, props.pluginSlug ),
 			wporgFetched: isWporgPluginFetched( state, props.pluginSlug ),
@@ -368,6 +367,7 @@ export default connect(
 			isAtomicSite: isSiteAutomatedTransfer( state, selectedSiteId ),
 			isJetpackSite: selectedSiteId && isJetpackSite( state, selectedSiteId ),
 			isRequestingSites: isRequestingSites( state ),
+			requestingPluginsForSites: isRequestingForSites( state, siteIds ),
 			userCanManagePlugins: selectedSiteId
 				? canCurrentUser( state, selectedSiteId, 'manage_options' )
 				: canCurrentUserManagePlugins( state ),
