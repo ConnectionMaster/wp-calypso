@@ -14,6 +14,7 @@ import {
 	usePath,
 	useCurrentStep,
 	useAnchorFmPodcastId,
+	useAnchorFmEpisodeId,
 } from '../path';
 import { STORE_KEY as ONBOARD_STORE } from '../stores/onboard';
 import { USER_STORE } from '../stores/user';
@@ -42,6 +43,7 @@ export default function useStepNavigation(): { goBack: () => void; goNext: () =>
 	const currentUser = useSelect( ( select ) => select( USER_STORE ).getCurrentUser() );
 	const newUser = useSelect( ( select ) => select( USER_STORE ).getNewUser() );
 	const anchorFmPodcastId = useAnchorFmPodcastId();
+	const anchorFmEpisodeId = useAnchorFmEpisodeId();
 
 	const { createSite } = useDispatch( ONBOARD_STORE );
 	const newSiteVisibility = useNewSiteVisibility();
@@ -54,6 +56,7 @@ export default function useStepNavigation(): { goBack: () => void; goNext: () =>
 				bearerToken: undefined,
 				visibility: newSiteVisibility,
 				anchorFmPodcastId,
+				anchorFmEpisodeId,
 			} );
 		}
 		// Adding a newUser check works for Anchor.fm flow.  Without it, we ask for login twice.
@@ -64,22 +67,30 @@ export default function useStepNavigation(): { goBack: () => void; goNext: () =>
 				bearerToken: undefined,
 				visibility: newSiteVisibility,
 				anchorFmPodcastId,
+				anchorFmEpisodeId,
 			} );
 		}
 		return onSignupDialogOpen();
 	};
 
 	const currentStepIndex = steps.findIndex( ( step ) => step === Step[ currentStep ] );
+
 	const previousStepPath = currentStepIndex > 0 ? makePath( steps[ currentStepIndex - 1 ] ) : '';
 	const nextStepPath =
-		currentStepIndex < steps.length - 1 ? makePath( steps[ currentStepIndex + 1 ] ) : '';
+		currentStepIndex !== -1 && // check first if current step still exists
+		currentStepIndex < steps.length - 1
+			? makePath( steps[ currentStepIndex + 1 ] )
+			: '';
 
 	const isLastStep = currentStepIndex === steps.length - 1;
 
-	// Transfer anchor podcast ID from the query string to the location state, if needed
+	// Transfer anchor podcast ID, episode ID from the query string to the location state, if needed
 	const locationState = useLocation< GutenLocationStateType >().state ?? {};
 	if ( anchorFmPodcastId ) {
 		locationState.anchorFmPodcastId = anchorFmPodcastId;
+	}
+	if ( anchorFmEpisodeId ) {
+		locationState.anchorFmEpisodeId = anchorFmEpisodeId;
 	}
 
 	const handleBack = () => history.push( previousStepPath, locationState );
