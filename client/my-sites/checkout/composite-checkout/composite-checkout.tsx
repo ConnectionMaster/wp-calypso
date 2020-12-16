@@ -39,6 +39,7 @@ import QueryContactDetailsCache from 'calypso/components/data/query-contact-deta
 import QuerySitePlans from 'calypso/components/data/query-site-plans';
 import QueryPlans from 'calypso/components/data/query-plans';
 import QueryProducts from 'calypso/components/data/query-products-list';
+import QueryExperiments from 'calypso/components/data/query-experiments';
 import CartMessages from 'calypso/my-sites/checkout/cart/cart-messages';
 import useIsApplePayAvailable from './hooks/use-is-apple-pay-available';
 import filterAppropriatePaymentMethods from './lib/filter-appropriate-payment-methods';
@@ -571,6 +572,7 @@ export default function CompositeCheckout( {
 			<QuerySitePlans siteId={ siteId } />
 			<QuerySitePurchases siteId={ siteId } />
 			<QueryPlans />
+			<QueryExperiments />
 			<QueryProducts />
 			<QueryContactDetailsCache />
 			<PageViewTracker path={ analyticsPath } title="Checkout" properties={ analyticsProps } />
@@ -593,6 +595,7 @@ export default function CompositeCheckout( {
 				isLoading={ isLoading }
 				isValidating={ isCartPendingUpdate }
 				theme={ theme }
+				initiallySelectedPaymentMethodId={ paymentMethods?.length ? paymentMethods[ 0 ].id : null }
 			>
 				<WPCheckout
 					removeProductFromCart={ removeProductFromCart }

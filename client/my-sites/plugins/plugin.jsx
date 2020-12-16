@@ -40,6 +40,7 @@ import NoPermissionsError from './no-permissions-error';
 import getToursHistory from 'calypso/state/guided-tours/selectors/get-tours-history';
 import hasNavigated from 'calypso/state/selectors/has-navigated';
 import {
+	getPluginOnSite,
 	getPluginOnSites,
 	getSitesWithoutPlugin,
 	isPluginActionInProgress,
@@ -232,7 +233,7 @@ class SinglePlugin extends React.Component {
 			return null;
 		}
 
-		return !! PluginsStore.getSitePlugin( this.props.selectedSite, this.state.plugin.slug );
+		return !! this.props.sitePlugin;
 	}
 
 	renderSitesList( plugin ) {
@@ -288,7 +289,7 @@ class SinglePlugin extends React.Component {
 	}
 
 	render() {
-		const { pluginSlug, selectedSite } = this.props;
+		const { selectedSite } = this.props;
 		if ( ! this.props.isRequestingSites && ! this.props.userCanManagePlugins ) {
 			return <NoPermissionsError title={ this.getPageTitle() } />;
 		}
@@ -314,7 +315,7 @@ class SinglePlugin extends React.Component {
 				<DocumentHead title={ this.getPageTitle() } />
 				<PageViewTracker path={ analyticsPath } title="Plugins > Plugin Details" />
 				<SidebarNavigation />
-				<PluginNotices pluginSlug={ pluginSlug } />
+				<PluginNotices pluginId={ plugin.id } sites={ this.props.sites } plugins={ [ plugin ] } />
 
 				<div className="plugin__page">
 					{ this.displayHeader( calypsoify ) }
@@ -350,6 +351,7 @@ export default connect(
 
 		return {
 			plugin: getPluginOnSites( state, siteIds, props.pluginSlug ),
+			sitePlugin: selectedSiteId && getPluginOnSite( state, selectedSiteId, props.pluginSlug ),
 			wporgPlugin: getWporgPlugin( state, props.pluginSlug ),
 			wporgFetching: isWporgPluginFetching( state, props.pluginSlug ),
 			wporgFetched: isWporgPluginFetched( state, props.pluginSlug ),
