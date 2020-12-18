@@ -44,6 +44,7 @@ import LayoutLoader from './loader';
 import wooDnaConfig from 'calypso/jetpack-connect/woo-dna-config';
 import { withCurrentRoute } from 'calypso/components/route';
 import QueryExperiments from 'calypso/components/data/query-experiments';
+import Experiment from 'calypso/components/experiment';
 import { getVariationForUser } from 'calypso/state/experiments/selectors';
 
 /**
@@ -185,6 +186,7 @@ class Layout extends Component {
 		return (
 			<div className={ sectionClass }>
 				<QueryExperiments />
+				<Experiment name="new_onboarding_existing_users_non_en_v4" />
 				<BodySectionCssClass
 					group={ this.props.sectionGroup }
 					section={ this.props.sectionName }
@@ -291,9 +293,14 @@ export default compose(
 			wooDnaConfig( currentQuery ).isWooDnaFlow();
 		const oauth2Client = getCurrentOAuth2Client( state );
 		const wccomFrom = currentQuery?.[ 'wccom-from' ];
-		const isEligibleForJITM = [ 'stats', 'plans', 'themes', 'plugins', 'comments' ].includes(
-			sectionName
-		);
+		const isEligibleForJITM = [
+			'home',
+			'stats',
+			'plans',
+			'themes',
+			'plugins',
+			'comments',
+		].includes( sectionName );
 		const isNewLaunchFlow = startsWith( currentRoute, '/start/new-launch' );
 
 		return {
