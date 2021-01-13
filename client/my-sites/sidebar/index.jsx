@@ -698,6 +698,7 @@ export class MySitesSidebar extends Component {
 				onNavigate={ this.trackStoreClick }
 				materialIcon="shopping_cart"
 				forceInternalLink
+				className="sidebar__store"
 			>
 				{ isCalypsoStoreDeprecatedOrRemoved && isBusiness( site.plan ) && (
 					<InfoPopover className="sidebar__store-tooltip" position="bottom right">
@@ -730,7 +731,7 @@ export class MySitesSidebar extends Component {
 			return null;
 		}
 
-		const storeLink = site.options.admin_url + 'admin.php?page=wc-admin';
+		const storeLink = site.options.admin_url + 'admin.php?page=wc-admin&from-calypso';
 
 		return (
 			<SidebarItem
