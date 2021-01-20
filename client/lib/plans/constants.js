@@ -281,7 +281,6 @@ export const FEATURE_PRODUCT_SCAN_V2_NO_SLIDEOUT = 'product-scan-v2-no-slideout'
 export const FEATURE_PRODUCT_SCAN_DAILY_V2 = 'product-scan-daily-v2';
 export const FEATURE_PRODUCT_SCAN_REALTIME_V2 = 'product-scan-realtime-v2';
 export const FEATURE_ANTISPAM_V2 = 'antispam-v2';
-export const FEATURE_AUTOMATED_SPAM_PROTECTION_V2 = 'automated-spam-protection-v2';
 export const FEATURE_PRODUCT_ANTISPAM_V2 = 'product-antispam-v2';
 export const FEATURE_ACTIVITY_LOG_V2 = 'activity-log-v2';
 export const FEATURE_ACTIVITY_LOG_1_YEAR_V2 = 'activity-log-1-year-v2';
@@ -347,7 +346,7 @@ export const TYPE_SECURITY_REALTIME = 'TYPE_SECURITY_REALTIME';
 export const TYPE_ALL = 'TYPE_ALL';
 export const TYPE_P2_PLUS = 'TYPE_P2_PLUS';
 
-export const STORE_DEPRECATION_START_DATE = new Date( '2021-01-15T16:00:00+00:00' );
+export const STORE_DEPRECATION_START_DATE = new Date( '2021-01-19T19:30:00+00:00' );
 
 export function isMonthly( plan ) {
 	return WPCOM_MONTHLY_PLANS.includes( plan ) || JETPACK_MONTHLY_PLANS.includes( plan );
