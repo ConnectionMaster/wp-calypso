@@ -4,7 +4,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { connect } from 'react-redux';
-import { noop, truncate, get } from 'lodash';
+import { truncate, get } from 'lodash';
 import classnames from 'classnames';
 import ReactDom from 'react-dom';
 import closest from 'component-closest';
@@ -36,14 +36,21 @@ import isReaderCardExpanded from 'calypso/state/selectors/is-reader-card-expande
  * Style dependencies
  */
 import './style.scss';
-import { isEligibleForUnseen } from 'calypso/reader/get-helpers';
+import {
+	canBeMarkedAsSeen,
+	getDefaultSeenValue,
+	isEligibleForUnseen,
+} from 'calypso/reader/get-helpers';
 import { getReaderTeams } from 'calypso/state/teams/selectors';
 import isSiteWPForTeams from 'calypso/state/selectors/is-site-wpforteams';
 import isFeedWPForTeams from 'calypso/state/selectors/is-feed-wpforteams';
-import { isFollowing } from 'calypso/state/reader/follows/selectors';
+import getCurrentRoute from 'calypso/state/selectors/get-current-route';
+
+const noop = () => {};
 
 class ReaderPostCard extends React.Component {
 	static propTypes = {
+		currentRoute: PropTypes.string,
 		post: PropTypes.object.isRequired,
 		site: PropTypes.object,
 		feed: PropTypes.object,
@@ -58,7 +65,6 @@ class ReaderPostCard extends React.Component {
 		isDiscoverStream: PropTypes.bool,
 		postKey: PropTypes.object,
 		compact: PropTypes.bool,
-		isFollowingItem: PropTypes.bool,
 		isWPForTeamsItem: PropTypes.bool,
 		teams: PropTypes.array,
 	};
@@ -122,6 +128,7 @@ class ReaderPostCard extends React.Component {
 
 	render() {
 		const {
+			currentRoute,
 			post,
 			discoverPost,
 			discoverSite,
@@ -139,11 +146,12 @@ class ReaderPostCard extends React.Component {
 			compact,
 			teams,
 			isWPForTeamsItem,
-			isFollowingItem,
 		} = this.props;
 
-		const isSeen =
-			isEligibleForUnseen( { teams, isFollowingItem, isWPForTeamsItem } ) && !! post.is_seen;
+		let isSeen = getDefaultSeenValue( currentRoute );
+		if ( canBeMarkedAsSeen( { post, currentRoute } ) ) {
+			isSeen = isEligibleForUnseen( { teams, isWPForTeamsItem } ) && post.is_seen;
+		}
 		const isPhotoPost = !! ( post.display_type & DisplayTypes.PHOTO_ONLY ) && ! compact;
 		const isGalleryPost = !! ( post.display_type & DisplayTypes.GALLERY ) && ! compact;
 		const isVideo = !! ( post.display_type & DisplayTypes.FEATURED_VIDEO ) && ! compact;
@@ -290,13 +298,11 @@ class ReaderPostCard extends React.Component {
 
 export default connect(
 	( state, ownProps ) => ( {
-		isFollowingItem: isFollowing( state, {
-			blogId: ownProps.postKey.blogId,
-			feedId: ownProps.postKey.feedId,
-		} ),
+		currentRoute: getCurrentRoute( state ),
 		isWPForTeamsItem:
-			isSiteWPForTeams( state, ownProps.postKey.blogId ) ||
-			isFeedWPForTeams( state, ownProps.postKey.feedId ),
+			ownProps.postKey &&
+			( isSiteWPForTeams( state, ownProps.postKey.blogId ) ||
+				isFeedWPForTeams( state, ownProps.postKey.feedId ) ),
 		teams: getReaderTeams( state ),
 		isExpanded: isReaderCardExpanded( state, ownProps.postKey ),
 	} ),

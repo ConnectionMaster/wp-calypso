@@ -4,7 +4,7 @@
 
 import PropTypes from 'prop-types';
 import React from 'react';
-import { noop, intersection } from 'lodash';
+import { intersection } from 'lodash';
 import classNames from 'classnames';
 import Gridicon from 'calypso/components/gridicon';
 
@@ -13,6 +13,8 @@ import Gridicon from 'calypso/components/gridicon';
  */
 import i18n from 'i18n-calypso';
 import { allowedSearchWelcomeTaxonomies, taxonomyToGridicon } from './taxonomies-config.js';
+
+const noop = () => {};
 
 class MagicSearchWelcome extends React.Component {
 	constructor( props ) {
@@ -108,15 +110,19 @@ class MagicSearchWelcome extends React.Component {
 				key={ taxonomy }
 				data-key={ taxonomy }
 			>
-				<Gridicon
-					icon={ taxonomyToGridicon( taxonomy ) }
-					className="themes-magic-search-card__welcome-taxonomy-icon"
-					size={ 18 }
-				/>
-				{ taxonomyTranslations[ taxonomy ] ||
-					i18n.translate( 'Unknown', {
-						context: 'Theme Showcase filter name',
-					} ) }
+				<span className="themes-magic-search-card__welcome-taxonomy-icon-container">
+					<Gridicon
+						icon={ taxonomyToGridicon( taxonomy ) }
+						className="themes-magic-search-card__welcome-taxonomy-icon"
+						size={ 18 }
+					/>{ ' ' }
+				</span>
+				<span className="themes-magic-search-card__welcome-taxonomy-text-container">
+					{ taxonomyTranslations[ taxonomy ] ||
+						i18n.translate( 'Unknown', {
+							context: 'Theme Showcase filter name',
+						} ) }
+				</span>
 			</div>
 		);
 	};

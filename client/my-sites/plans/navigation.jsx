@@ -10,7 +10,7 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { sectionify } from 'calypso/lib/route';
 import SectionNav from 'calypso/components/section-nav';
 import NavTabs from 'calypso/components/section-nav/tabs';
@@ -19,6 +19,7 @@ import PopoverCart from 'calypso/my-sites/checkout/cart/popover-cart';
 import isSiteOnFreePlan from 'calypso/state/selectors/is-site-on-free-plan';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getSite, isJetpackSite } from 'calypso/state/sites/selectors';
+import isAtomicSite from 'calypso/state/selectors/is-site-wpcom-atomic';
 import CalypsoShoppingCartProvider from 'calypso/my-sites/checkout/calypso-shopping-cart-provider';
 
 class PlansNavigation extends React.Component {
@@ -62,14 +63,6 @@ class PlansNavigation extends React.Component {
 					onMobileNavPanelOpen={ this.onMobileNavPanelOpen }
 				>
 					<NavTabs label="Section" selectedText={ sectionTitle }>
-						<NavItem
-							path={ `/plans/${ site.slug }` }
-							selected={
-								path === '/plans' || path === '/plans/monthly' || path === '/plans/yearly'
-							}
-						>
-							{ translate( 'Plans' ) }
-						</NavItem>
 						{ shouldShowMyPlan && (
 							<NavItem
 								path={ `/plans/my-plan/${ site.slug }` }
@@ -78,6 +71,14 @@ class PlansNavigation extends React.Component {
 								{ translate( 'My Plan' ) }
 							</NavItem>
 						) }
+						<NavItem
+							path={ `/plans/${ site.slug }` }
+							selected={
+								path === '/plans' || path === '/plans/monthly' || path === '/plans/yearly'
+							}
+						>
+							{ translate( 'Plans' ) }
+						</NavItem>
 					</NavTabs>
 					<CartToggleButton
 						site={ this.props.site }
@@ -133,9 +134,10 @@ export default connect( ( state ) => {
 	const site = getSite( state, siteId );
 	const isJetpack = isJetpackSite( state, siteId );
 	const isOnFreePlan = isSiteOnFreePlan( state, siteId );
+	const isAtomic = isAtomicSite( state, siteId );
 	return {
 		isJetpack,
-		shouldShowMyPlan: ! isOnFreePlan || isJetpack,
+		shouldShowMyPlan: ! isOnFreePlan || ( isJetpack && ! isAtomic ),
 		site,
 	};
 } )( localize( PlansNavigation ) );

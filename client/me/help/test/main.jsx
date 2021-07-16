@@ -26,11 +26,11 @@ import {
 	PLAN_JETPACK_PREMIUM_MONTHLY,
 	PLAN_JETPACK_BUSINESS,
 	PLAN_JETPACK_BUSINESS_MONTHLY,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
 import { mapStateToProps } from '../main';
+import { getUserPurchases } from 'calypso/state/purchases/selectors';
 
 jest.mock( 'calypso/lib/analytics/tracks', () => ( {} ) );
-jest.mock( 'calypso/lib/user', () => jest.fn() );
 jest.mock( '../help-unverified-warning', () => 'HelpUnverifiedWarning' );
 jest.mock( 'calypso/components/main', () => 'Main' );
 jest.mock( 'calypso/components/section-header', () => 'SectionHeader' );
@@ -58,8 +58,6 @@ jest.mock( 'i18n-calypso', () => ( {
 	numberFormat: ( x ) => x,
 } ) );
 
-import purchasesSelectors from 'calypso/state/purchases/selectors';
-
 describe( 'mapStateToProps should return correct value for isBusinessPlanUser', () => {
 	[
 		PLAN_FREE,
@@ -79,7 +77,7 @@ describe( 'mapStateToProps should return correct value for isBusinessPlanUser', 
 		undefined,
 	].forEach( ( productSlug ) => {
 		test( `False for plan ${ JSON.stringify( productSlug ) }`, () => {
-			purchasesSelectors.getUserPurchases.mockImplementation( () => [ { productSlug } ] );
+			getUserPurchases.mockImplementation( () => [ { productSlug } ] );
 			expect( mapStateToProps( {}, {} ).isBusinessPlanUser ).toBe( false );
 		} );
 	} );
@@ -92,18 +90,18 @@ describe( 'mapStateToProps should return correct value for isBusinessPlanUser', 
 		PLAN_ECOMMERCE_2_YEARS,
 	].forEach( ( productSlug ) => {
 		test( `True for plan ${ JSON.stringify( productSlug ) }`, () => {
-			purchasesSelectors.getUserPurchases.mockImplementation( () => [ { productSlug } ] );
+			getUserPurchases.mockImplementation( () => [ { productSlug } ] );
 			expect( mapStateToProps( {}, {} ).isBusinessPlanUser ).toBe( true );
 		} );
 	} );
 
 	test( 'Should be false for purchases not loaded', () => {
-		purchasesSelectors.getUserPurchases.mockImplementation( () => null );
+		getUserPurchases.mockImplementation( () => null );
 		expect( mapStateToProps( {}, {} ).isBusinessPlanUser ).toBe( false );
 	} );
 
 	test( 'Should be false for no purchases', () => {
-		purchasesSelectors.getUserPurchases.mockImplementation( () => [] );
+		getUserPurchases.mockImplementation( () => [] );
 		expect( mapStateToProps( {}, {} ).isBusinessPlanUser ).toBe( false );
 	} );
 } );

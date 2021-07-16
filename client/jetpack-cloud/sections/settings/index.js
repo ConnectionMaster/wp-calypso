@@ -14,12 +14,12 @@ import {
 	showNotAuthorizedForNonAdmins,
 } from 'calypso/jetpack-cloud/sections/settings/controller';
 import { settingsPath } from 'calypso/lib/jetpack/paths';
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
 
 export default function () {
 	if ( isJetpackCloud() ) {
-		page( settingsPath(), siteSelection, sites, navigation, makeLayout, clientRender );
+		page( settingsPath(), siteSelection, sites, makeLayout, clientRender );
 		page(
 			settingsPath( ':site' ),
 			siteSelection,

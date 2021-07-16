@@ -11,7 +11,7 @@ import { getCurrencyDefaults } from '@automattic/format-currency';
 /**
  * Internal Dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { submitSurvey } from 'calypso/lib/purchases/actions';
 import { Dialog, Button } from '@automattic/components';
 import FormFieldset from 'calypso/components/forms/form-fieldset';
@@ -33,7 +33,13 @@ import UpgradeATStep from './step-components/upgrade-at-step';
 import PrecancellationChatButton from './precancellation-chat-button';
 import DowngradeStep from './step-components/downgrade-step';
 import { getName, isRefundable } from 'calypso/lib/purchases';
-import { isGoogleApps, isJetpackPlanSlug, isJetpackProductSlug } from 'calypso/lib/products-values';
+import {
+	isGSuiteOrGoogleWorkspace,
+	isJetpackPlanSlug,
+	isJetpackProductSlug,
+	TERM_ANNUALLY,
+	JETPACK_PRODUCTS_LIST,
+} from '@automattic/calypso-products';
 import { radioTextOption, radioSelectOption } from './radio-option';
 import {
 	cancellationOptionsForPurchase,
@@ -48,10 +54,8 @@ import { CANCEL_FLOW_TYPE } from './constants';
 import { getDowngradePlanRawPrice } from 'calypso/state/purchases/selectors';
 import QueryPlans from 'calypso/components/data/query-plans';
 import QuerySitePlans from 'calypso/components/data/query-site-plans';
-import { JETPACK_PRODUCTS_LIST } from 'calypso/lib/products-values/constants';
 import { DOWNGRADEABLE_PLANS_FROM_PLAN } from 'calypso/my-sites/plans/jetpack-plans/constants';
-import { slugToSelectorProduct } from 'calypso/my-sites/plans/jetpack-plans/utils';
-import { TERM_ANNUALLY } from 'calypso/lib/plans/constants';
+import slugToSelectorProduct from 'calypso/my-sites/plans/jetpack-plans/slug-to-selector-product';
 
 /**
  * Style dependencies
@@ -274,7 +278,7 @@ class CancelPurchaseForm extends React.Component {
 	onSubmit = () => {
 		const { purchase } = this.props;
 
-		if ( ! isGoogleApps( purchase ) ) {
+		if ( ! isGSuiteOrGoogleWorkspace( purchase ) ) {
 			this.setState( {
 				isSubmitting: true,
 			} );
@@ -355,8 +359,9 @@ class CancelPurchaseForm extends React.Component {
 			? this.state.questionOneText
 			: 'select_a_product';
 
-		const appendRadioOption = ( key, radioPrompt, textPlaceholder ) =>
+		const appendRadioOption = ( groupName, key, radioPrompt, textPlaceholder ) =>
 			( reasons[ key ] = radioTextOption(
+				groupName,
 				key,
 				questionOneRadio,
 				questionOneText,
@@ -367,6 +372,7 @@ class CancelPurchaseForm extends React.Component {
 			) );
 
 		const appendRadioOptionWithSelect = (
+			groupName,
 			key,
 			radioPrompt,
 			selectLabel,
@@ -374,6 +380,7 @@ class CancelPurchaseForm extends React.Component {
 			selected
 		) =>
 			( reasons[ key ] = radioSelectOption(
+				groupName,
 				key,
 				questionOneRadio,
 				this.onRadioOneChange,
@@ -385,24 +392,28 @@ class CancelPurchaseForm extends React.Component {
 			) );
 
 		appendRadioOption(
+			'questionOne',
 			'couldNotInstall',
 			translate( "I couldn't install a plugin/theme I wanted." ),
 			translate( 'What plugin/theme were you trying to install?' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'tooHard',
 			translate( 'It was too hard to set up my site.' ),
 			translate( 'Where did you run into problems?' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'didNotInclude',
 			translate( "This upgrade didn't include what I needed." ),
 			translate( 'What are we missing that you need?' )
 		);
 
 		appendRadioOptionWithSelect(
+			'questionOne',
 			'downgradeToAnotherPlan',
 			translate( "I'd like to downgrade to another plan." ),
 			translate( 'Mind telling us which one?' ),
@@ -411,33 +422,38 @@ class CancelPurchaseForm extends React.Component {
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'onlyNeedFree',
 			translate( 'The plan was too expensive.' ),
 			translate( 'How can we improve our upgrades?' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'couldNotActivate',
 			translate( 'I was unable to activate or use the product.' ),
 			translate( 'Where did you run into problems?' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'noLongerWantToTransfer',
 			translate( 'I no longer want to transfer my domain.' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'couldNotCompleteTransfer',
 			translate( 'Something went wrong and I could not complete the transfer.' )
 		);
 
 		appendRadioOption(
+			'questionOne',
 			'useDomainWithoutTransferring',
 			translate( 'I’m going to use my domain with WordPress.com without transferring it.' )
 		);
 
-		appendRadioOption( 'anotherReasonOne', translate( 'Another reason…' ), ' ' );
+		appendRadioOption( 'questionOne', 'anotherReasonOne', translate( 'Another reason…' ), ' ' );
 
 		return (
 			<div className="cancel-purchase-form__question">
@@ -456,8 +472,9 @@ class CancelPurchaseForm extends React.Component {
 			return null;
 		}
 
-		const appendRadioOption = ( key, radioPrompt, textPlaceholder ) =>
+		const appendRadioOption = ( groupName, key, radioPrompt, textPlaceholder ) =>
 			( reasons[ key ] = radioTextOption(
+				groupName,
 				key,
 				questionTwoRadio,
 				questionTwoText,
@@ -467,39 +484,48 @@ class CancelPurchaseForm extends React.Component {
 				textPlaceholder
 			) );
 
-		appendRadioOption( 'stayingHere', translate( "I'm staying here and using the free plan." ) );
+		appendRadioOption(
+			'questionTwo',
+			'stayingHere',
+			translate( "I'm staying here and using the free plan." )
+		);
 
 		appendRadioOption(
+			'questionTwo',
 			'otherWordPress',
 			translate( "I'm going to use WordPress somewhere else." ),
 			translate( 'Mind telling us where?' )
 		);
 
 		appendRadioOption(
+			'questionTwo',
 			'differentService',
 			translate( "I'm going to use a different service for my website or blog." ),
 			translate( 'Mind telling us which one?' )
 		);
 
 		appendRadioOption(
+			'questionTwo',
 			'noNeed',
 			translate( 'I no longer need a website or blog.' ),
 			translate( 'What will you do instead?' )
 		);
 
 		appendRadioOption(
+			'questionTwo',
 			'otherPlugin',
 			translate( 'I found a better plugin or service.' ),
 			translate( 'Mind telling us which one(s)?' )
 		);
 
 		appendRadioOption(
+			'questionTwo',
 			'leavingWP',
 			translate( "I'm moving my site off of WordPress." ),
 			translate( 'Any particular reason(s)?' )
 		);
 
-		appendRadioOption( 'anotherReasonTwo', translate( 'Another reason…' ), ' ' );
+		appendRadioOption( 'questionTwo', 'anotherReasonTwo', translate( 'Another reason…' ), ' ' );
 
 		return (
 			<div className="cancel-purchase-form__question">
@@ -514,9 +540,10 @@ class CancelPurchaseForm extends React.Component {
 		const { translate } = this.props;
 		const { importQuestionRadio, importQuestionText } = this.state;
 
-		const appendRadioOption = ( key, radioPrompt, textPlaceholder ) =>
+		const appendRadioOption = ( groupName, key, radioPrompt, textPlaceholder ) =>
 			reasons.push(
 				radioTextOption(
+					groupName,
 					key,
 					importQuestionRadio,
 					importQuestionText,
@@ -527,18 +554,24 @@ class CancelPurchaseForm extends React.Component {
 				)
 			);
 
-		appendRadioOption( 'happy', translate( 'I was happy.' ) );
+		appendRadioOption( 'importQuestion', 'happy', translate( 'I was happy.' ) );
 
 		appendRadioOption(
+			'importQuestion',
 			'look',
 			translate(
 				'Most of my content was imported, but it was too hard to get things looking right.'
 			)
 		);
 
-		appendRadioOption( 'content', translate( 'Not enough of my content was imported.' ) );
+		appendRadioOption(
+			'importQuestion',
+			'content',
+			translate( 'Not enough of my content was imported.' )
+		);
 
 		appendRadioOption(
+			'importQuestion',
 			'functionality',
 			translate( "I didn't have the functionality I have on my existing site." )
 		);
@@ -643,6 +676,9 @@ class CancelPurchaseForm extends React.Component {
 	surveyContent() {
 		const { translate, isImport, showSurvey, purchase } = this.props;
 		const { surveyStep } = this.state;
+		const isJetpack =
+			isJetpackProductSlug( purchase.productSlug ) || isJetpackPlanSlug( purchase.productSlug );
+		const productName = isJetpack ? translate( 'Jetpack' ) : translate( 'WordPress.com' );
 
 		if ( showSurvey ) {
 			if ( surveyStep === steps.INITIAL_STEP ) {
@@ -651,7 +687,10 @@ class CancelPurchaseForm extends React.Component {
 						<FormSectionHeading>{ translate( 'Your thoughts are needed.' ) }</FormSectionHeading>
 						<p>
 							{ translate(
-								'Before you go, please answer a few quick questions to help us improve WordPress.com.'
+								'Before you go, please answer a few quick questions to help us improve %(productName)s.',
+								{
+									args: { productName },
+								}
 							) }
 						</p>
 						{ this.renderQuestionOne() }
@@ -790,6 +829,8 @@ class CancelPurchaseForm extends React.Component {
 			onClick: this.downgradeClick,
 			isPrimary: true,
 		};
+		const removeText = translate( 'Remove It' );
+		const removingText = translate( 'Removing' );
 		const remove = (
 			<Button
 				disabled={ this.props.disableButtons }
@@ -798,7 +839,7 @@ class CancelPurchaseForm extends React.Component {
 				primary
 				data-e2e-button="remove"
 			>
-				{ this.props.disableButtons ? 'Removing' : 'Remove It' }
+				{ this.props.disableButtons ? removingText : removeText }
 			</Button>
 		);
 

@@ -24,22 +24,27 @@ import PluginIcon from 'calypso/my-sites/plugins/plugin-icon/plugin-icon';
 import PluginActivateToggle from 'calypso/my-sites/plugins/plugin-activate-toggle';
 import PluginAutoupdateToggle from 'calypso/my-sites/plugins/plugin-autoupdate-toggle';
 import safeProtocolUrl from 'calypso/lib/safe-protocol-url';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { isCompatiblePlugin } from 'calypso/my-sites/plugins/plugin-compatibility';
 import PluginInstallButton from 'calypso/my-sites/plugins/plugin-install-button';
 import PluginRemoveButton from 'calypso/my-sites/plugins/plugin-remove-button';
 import PluginInformation from 'calypso/my-sites/plugins/plugin-information';
 import WpcomPluginInstallButton from 'calypso/my-sites/plugins/plugin-install-button-wpcom';
 import PluginAutomatedTransfer from 'calypso/my-sites/plugins/plugin-automated-transfer';
-import { getExtensionSettingsPath } from 'calypso/my-sites/plugins/utils';
+import { getExtensionSettingsPath, siteObjectsToSiteIds } from 'calypso/my-sites/plugins/utils';
 import { userCan } from 'calypso/lib/site/utils';
 import UpsellNudge from 'calypso/blocks/upsell-nudge';
-import { FEATURE_UPLOAD_PLUGINS, TYPE_BUSINESS } from 'calypso/lib/plans/constants';
-import { findFirstSimilarPlanKey } from 'calypso/lib/plans';
-import { isBusiness, isEcommerce, isEnterprise } from 'calypso/lib/products-values';
+import {
+	findFirstSimilarPlanKey,
+	FEATURE_UPLOAD_PLUGINS,
+	TYPE_BUSINESS,
+	isBusiness,
+	isEcommerce,
+	isEnterprise,
+} from '@automattic/calypso-products';
 import { addSiteFragment } from 'calypso/lib/route';
 import { getSelectedSiteId, getSelectedSite } from 'calypso/state/ui/selectors';
-import { getSiteSlug } from 'calypso/state/sites/selectors';
+import { getSiteSlug, isJetpackSite } from 'calypso/state/sites/selectors';
 import isVipSite from 'calypso/state/selectors/is-vip-site';
 import { isAutomatedTransferActive } from 'calypso/state/automated-transfer/selectors';
 import isSiteAutomatedTransfer from 'calypso/state/selectors/is-site-automated-transfer';
@@ -58,6 +63,7 @@ import {
 	ENABLE_AUTOUPDATE_PLUGIN,
 	REMOVE_PLUGIN,
 } from 'calypso/lib/plugins/constants';
+import withPluginRedirect from '../with-plugin-redirect';
 
 const activationPreventionActions = [
 	ENABLE_AUTOUPDATE_PLUGIN,
@@ -149,6 +155,23 @@ export class PluginMeta extends Component {
 			! this.props.selectedSite.jetpack && includes( installedPlugins, this.props.plugin.name )
 		);
 	};
+
+	renderSupportedFlag() {
+		const supportedAuthors = [ 'Automattic', 'WooCommerce' ];
+		const { plugin, translate } = this.props;
+		if (
+			this.props.isJetpackSite ||
+			! supportedAuthors.find( ( author ) => author === plugin.author_name )
+		) {
+			return;
+		}
+
+		return (
+			<div className="plugin-meta__supported-flag">
+				{ translate( 'Supported by WordPress.com' ) }
+			</div>
+		);
+	}
 
 	renderActions() {
 		if ( ! this.props.selectedSite ) {
@@ -259,9 +282,9 @@ export class PluginMeta extends Component {
 	}
 
 	isWpcomInstallDisabled() {
-		const { isTransfering, plugin } = this.props;
+		const { isTransferring, plugin } = this.props;
 
-		return ! this.hasBusinessPlan() || ! isCompatiblePlugin( plugin.slug ) || isTransfering;
+		return ! this.hasBusinessPlan() || ! isCompatiblePlugin( plugin.slug ) || isTransferring;
 	}
 
 	isJetpackInstallDisabled() {
@@ -282,6 +305,7 @@ export class PluginMeta extends Component {
 				<WpcomPluginInstallButton
 					disabled={ this.isWpcomInstallDisabled() }
 					plugin={ this.props.plugin }
+					isTransferring={ this.props.isTransferring }
 				/>
 			);
 		}
@@ -559,9 +583,11 @@ export class PluginMeta extends Component {
 								isPlaceholder={ this.props.isPlaceholder }
 							/>
 							{ this.renderName() }
-							<div className="plugin-meta__meta">{ this.renderAuthorUrl() }</div>
+							<div className="plugin-meta__meta">
+								{ this.renderAuthorUrl() } { this.renderSupportedFlag() }
+							</div>
 						</div>
-						{ ! this.props.calypsoify && this.renderActions() }
+						{ this.renderActions() }
 					</div>
 				</Card>
 
@@ -584,7 +610,6 @@ export class PluginMeta extends Component {
 							this.props.selectedSite && this.props.selectedSite.options.software_version
 						}
 						hasUpdate={ this.getAvailableNewVersions().length > 0 }
-						calypsoify={ this.props.calypsoify }
 					/>
 				) }
 
@@ -617,8 +642,7 @@ export class PluginMeta extends Component {
 const mapStateToProps = ( state, { plugin, sites } ) => {
 	const siteId = getSelectedSiteId( state );
 	const selectedSite = getSelectedSite( state );
-	// eslint-disable-next-line wpcalypso/redux-no-bound-selectors
-	const siteIds = sites.map( ( site ) => site.ID );
+	const siteIds = siteObjectsToSiteIds( sites );
 
 	return {
 		disabledActivation: isPluginActionInProgress(
@@ -640,9 +664,10 @@ const mapStateToProps = ( state, { plugin, sites } ) => {
 		isVipSite: isVipSite( state, siteId ),
 		slug: getSiteSlug( state, siteId ),
 		pluginsOnSites: getPluginOnSites( state, siteIds, plugin.slug ),
+		isJetpackSite: isJetpackSite( state, siteId ),
 	};
 };
 
 export default connect( mapStateToProps, { removePluginStatuses, updatePlugin } )(
-	localize( PluginMeta )
+	localize( withPluginRedirect( PluginMeta ) )
 );

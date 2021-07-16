@@ -8,13 +8,12 @@ import React from 'react';
 /**
  * Internal dependencies
  */
-import { getCurrentUser } from 'calypso/state/current-user/selectors';
 import { makeLayout, render as clientRender } from 'calypso/controller';
-import { siteSelection, sites } from 'calypso/my-sites/controller';
-import { startJetpackCloudOAuthOverride } from 'calypso/lib/jetpack/oauth-override';
+import { sites, siteSelection } from 'calypso/my-sites/controller';
 import { translate } from 'i18n-calypso';
 import Landing from './sections/landing';
-import isJetpackSite from 'calypso/state/sites/selectors/is-jetpack-site';
+import { getCurrentUser } from 'calypso/state/current-user/selectors';
+import getPrimarySiteIsJetpack from 'calypso/state/selectors/get-primary-site-is-jetpack';
 
 const debug = new Debug( 'calypso:jetpack-cloud:controller' );
 
@@ -30,12 +29,18 @@ const selectionPrompt = ( context, next ) => {
 	next();
 };
 
+const clearPageTitle = ( context, next ) => {
+	context.clearPageTitle = true;
+	next();
+};
+
 const redirectToPrimarySiteLanding = ( context ) => {
 	debug( 'controller: redirectToPrimarySiteLanding', context );
 	const state = context.store.getState();
 	const currentUser = getCurrentUser( state );
+	const isPrimarySiteJetpackSite = getPrimarySiteIsJetpack( state );
 
-	isJetpackSite( state, currentUser.primary_blog )
+	isPrimarySiteJetpackSite
 		? page( `/landing/${ currentUser.primarySiteSlug }` )
 		: page( `/landing` );
 };
@@ -46,15 +51,16 @@ const landingController = ( context, next ) => {
 	next();
 };
 
-export const handleOAuthOverride = () => {
-	debug( 'controller: handleOAuthOverride' );
-	startJetpackCloudOAuthOverride();
-	window.location.replace( '/' );
-};
-
 export default function () {
 	page( '/landing/:site', siteSelection, landingController, makeLayout, clientRender );
-	page( '/landing', siteSelection, selectionPrompt, sites, makeLayout, clientRender );
-	page( '/oauth-override', handleOAuthOverride );
+	page(
+		'/landing',
+		siteSelection,
+		selectionPrompt,
+		clearPageTitle,
+		sites,
+		makeLayout,
+		clientRender
+	);
 	page( '/', redirectToPrimarySiteLanding );
 }

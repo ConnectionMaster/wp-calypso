@@ -7,16 +7,9 @@ import deepFreeze from 'deep-freeze';
 /**
  * Internal dependencies
  */
-import reducer, { id, capabilities, currencyCode } from '../reducer';
-import {
-	CURRENT_USER_RECEIVE,
-	DESERIALIZE,
-	PLANS_RECEIVE,
-	SERIALIZE,
-	SITE_RECEIVE,
-	SITE_PLANS_FETCH_COMPLETED,
-	SITES_RECEIVE,
-} from 'calypso/state/action-types';
+import reducer, { id, capabilities } from '../reducer';
+import { serialize, deserialize } from 'calypso/state/utils';
+import { CURRENT_USER_RECEIVE, SITE_RECEIVE, SITES_RECEIVE } from 'calypso/state/action-types';
 import { useSandbox } from 'calypso/test-helpers/use-sinon';
 
 describe( 'reducer', () => {
@@ -28,7 +21,6 @@ describe( 'reducer', () => {
 		expect( reducer( undefined, {} ) ).to.have.keys( [
 			'id',
 			'user',
-			'currencyCode',
 			'capabilities',
 			'flags',
 			'gravatarStatus',
@@ -54,125 +46,23 @@ describe( 'reducer', () => {
 		} );
 
 		test( 'should validate ID is positive', () => {
-			const state = id( -1, {
-				type: DESERIALIZE,
-			} );
-
+			const state = deserialize( id, -1 );
 			expect( state ).to.equal( null );
 		} );
 
 		test( 'should validate ID is a number', () => {
-			const state = id( 'foobar', {
-				type: DESERIALIZE,
-			} );
-
+			const state = deserialize( id, 'foobar' );
 			expect( state ).to.equal( null );
 		} );
 
 		test( 'returns valid ID', () => {
-			const state = id( 73705554, {
-				type: DESERIALIZE,
-			} );
-
+			const state = deserialize( id, 73705554 );
 			expect( state ).to.equal( 73705554 );
 		} );
 
 		test( 'will SERIALIZE current user', () => {
-			const state = id( 73705554, {
-				type: SERIALIZE,
-			} );
-
+			const state = serialize( id, 73705554 );
 			expect( state ).to.equal( 73705554 );
-		} );
-	} );
-
-	describe( '#currencyCode()', () => {
-		test( 'should default to null', () => {
-			const state = currencyCode( undefined, {} );
-			expect( state ).to.equal( null );
-		} );
-		test( 'should set currency code when plans are received', () => {
-			const state = currencyCode( undefined, {
-				type: PLANS_RECEIVE,
-				plans: [
-					{
-						product_id: 1001,
-						currency_code: 'USD',
-					},
-				],
-			} );
-			expect( state ).to.equal( 'USD' );
-		} );
-		test( 'should return current state when we have empty plans', () => {
-			const state = currencyCode( 'USD', {
-				type: PLANS_RECEIVE,
-				plans: [],
-			} );
-			expect( state ).to.equal( 'USD' );
-		} );
-		test( 'should update current state when we receive new plans', () => {
-			const state = currencyCode( 'USD', {
-				type: PLANS_RECEIVE,
-				plans: [
-					{
-						product_id: 1001,
-						currency_code: 'EUR',
-					},
-				],
-			} );
-			expect( state ).to.equal( 'EUR' );
-		} );
-		test( 'should return current state when we have empty site plans', () => {
-			const state = currencyCode( 'USD', {
-				type: SITE_PLANS_FETCH_COMPLETED,
-				plans: [],
-			} );
-			expect( state ).to.equal( 'USD' );
-		} );
-		test( 'should set currency code when site plans are received', () => {
-			const state = currencyCode( undefined, {
-				type: SITE_PLANS_FETCH_COMPLETED,
-				plans: [
-					{
-						productName: 'Free',
-						currencyCode: 'USD',
-					},
-				],
-			} );
-			expect( state ).to.equal( 'USD' );
-		} );
-		test( 'should update currency code when site plans are received', () => {
-			const state = currencyCode( 'USD', {
-				type: SITE_PLANS_FETCH_COMPLETED,
-				plans: [
-					{
-						productName: 'Free',
-						currencyCode: 'CAD',
-					},
-				],
-			} );
-			expect( state ).to.equal( 'CAD' );
-		} );
-		test( 'should persist state', () => {
-			const original = 'JPY';
-			const state = currencyCode( original, {
-				type: SERIALIZE,
-			} );
-			expect( state ).to.equal( original );
-		} );
-		test( 'should restore valid persisted state', () => {
-			const original = 'JPY';
-			const state = currencyCode( original, {
-				type: DESERIALIZE,
-			} );
-			expect( state ).to.equal( original );
-		} );
-		test( 'should ignore invalid persisted state', () => {
-			const original = 1234;
-			const state = currencyCode( original, {
-				type: DESERIALIZE,
-			} );
-			expect( state ).to.equal( null );
 		} );
 	} );
 
@@ -297,9 +187,7 @@ describe( 'reducer', () => {
 					manage_options: false,
 				},
 			} );
-			const state = capabilities( original, {
-				type: SERIALIZE,
-			} );
+			const state = serialize( capabilities, original );
 
 			expect( state ).to.equal( original );
 		} );
@@ -310,9 +198,7 @@ describe( 'reducer', () => {
 					manage_options: false,
 				},
 			} );
-			const state = capabilities( original, {
-				type: DESERIALIZE,
-			} );
+			const state = deserialize( capabilities, original );
 
 			expect( state ).to.equal( original );
 		} );
@@ -323,9 +209,7 @@ describe( 'reducer', () => {
 					manage_options: false,
 				},
 			} );
-			const state = capabilities( original, {
-				type: DESERIALIZE,
-			} );
+			const state = deserialize( capabilities, original );
 
 			expect( state ).to.eql( {} );
 		} );

@@ -10,20 +10,10 @@ import { renderToString } from 'react-dom/server';
  */
 import LayoutLoggedOut from '../logged-out';
 
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
-} ) );
 jest.mock( 'calypso/lib/signup/step-actions', () => ( {} ) );
-jest.mock( 'calypso/lib/user', () => () => {
-	return {
-		get() {
-			return {};
-		},
-	};
-} );
 
 describe( 'index', () => {
-	describe( 'when trying to renderToString() LayoutLoggedOut ', () => {
+	describe( 'when trying to renderToString() LayoutLoggedOut', () => {
 		test( "doesn't throw an exception", () => {
 			expect( () => {
 				renderToString(

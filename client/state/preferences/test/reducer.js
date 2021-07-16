@@ -15,8 +15,6 @@ import {
 	PREFERENCES_FETCH_SUCCESS,
 	PREFERENCES_FETCH_FAILURE,
 	PREFERENCES_SAVE_SUCCESS,
-	SERIALIZE,
-	DESERIALIZE,
 } from 'calypso/state/action-types';
 
 describe( 'reducer', () => {
@@ -24,6 +22,7 @@ describe( 'reducer', () => {
 		expect( reducer( undefined, {} ) ).to.have.keys( [
 			'localValues',
 			'remoteValues',
+			'failed',
 			'fetching',
 			'lastFetchedTimestamp',
 		] );
@@ -152,18 +151,6 @@ describe( 'reducer', () => {
 			const original = { all: true };
 			const state = fetching( original, {
 				type: PREFERENCES_FETCH_FAILURE,
-			} );
-			expect( state ).to.eql( false );
-		} );
-		test( 'should never persist state', () => {
-			const state = fetching( true, {
-				type: SERIALIZE,
-			} );
-			expect( state ).to.be.undefined;
-		} );
-		test( 'should never load persisted state', () => {
-			const state = fetching( true, {
-				type: DESERIALIZE,
 			} );
 			expect( state ).to.eql( false );
 		} );

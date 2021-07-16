@@ -1,6 +1,3 @@
-/**
- * External dependencies
- */
 const fs = require( 'fs' ); // eslint-disable-line import/no-nodejs-modules
 const path = require( 'path' ); // eslint-disable-line import/no-nodejs-modules
 
@@ -25,12 +22,6 @@ const sections = [
 		group: 'sites',
 	},
 	{
-		name: 'me',
-		paths: [ '/me' ],
-		module: 'calypso/me',
-		group: 'me',
-	},
-	{
 		name: 'account',
 		paths: [ '/me/account' ],
 		module: 'calypso/me/account',
@@ -43,15 +34,21 @@ const sections = [
 		group: 'me',
 	},
 	{
-		name: 'activity',
-		paths: [ '/activity-log' ],
-		module: 'calypso/my-sites/activity',
-		group: 'sites',
+		name: 'concierge',
+		paths: [ '/me/concierge' ],
+		module: 'calypso/me/concierge',
+		group: 'me',
 	},
 	{
-		name: 'security',
-		paths: [ '/me/security' ],
-		module: 'calypso/me/security',
+		name: 'happychat',
+		paths: [ '/me/chat' ],
+		module: 'calypso/me/happychat',
+		group: 'me',
+	},
+	{
+		name: 'notification-settings',
+		paths: [ '/me/notifications' ],
+		module: 'calypso/me/notification-settings',
 		group: 'me',
 	},
 	{
@@ -67,15 +64,9 @@ const sections = [
 		group: 'me',
 	},
 	{
-		name: 'site-purchases',
-		paths: [ '/purchases' ],
-		module: 'calypso/my-sites/purchases',
-		group: 'sites',
-	},
-	{
-		name: 'notification-settings',
-		paths: [ '/me/notifications' ],
-		module: 'calypso/me/notification-settings',
+		name: 'security',
+		paths: [ '/me/security' ],
+		module: 'calypso/me/security',
 		group: 'me',
 	},
 	{
@@ -84,11 +75,25 @@ const sections = [
 		module: 'calypso/me/site-blocks',
 		group: 'me',
 	},
+	// This should be the last section for `/me` paths as it would otherwise have precedence over
+	// the other sub `/me/*` sections when resolving the requested path
 	{
-		name: 'concierge',
-		paths: [ '/me/concierge' ],
-		module: 'calypso/me/concierge',
+		name: 'me',
+		paths: [ '/me' ],
+		module: 'calypso/me',
 		group: 'me',
+	},
+	{
+		name: 'activity',
+		paths: [ '/activity-log' ],
+		module: 'calypso/my-sites/activity',
+		group: 'sites',
+	},
+	{
+		name: 'site-purchases',
+		paths: [ '/purchases' ],
+		module: 'calypso/my-sites/purchases',
+		group: 'sites',
 	},
 	{
 		name: 'media',
@@ -106,6 +111,12 @@ const sections = [
 		name: 'plugins',
 		paths: [ '/plugins' ],
 		module: 'calypso/my-sites/plugins',
+		group: 'sites',
+	},
+	{
+		name: 'marketplace',
+		paths: [ '/marketplace' ],
+		module: 'calypso/my-sites/marketplace',
 		group: 'sites',
 	},
 	{
@@ -198,7 +209,7 @@ const sections = [
 	// or it'll be falsely associated with the latter section.
 	{
 		name: 'themes',
-		paths: [ '/themes', '/design' ],
+		paths: [ '/themes', `/([a-z]{2,3}|[a-z]{2}-[a-z]{2})/themes`, '/design' ],
 		module: 'calypso/my-sites/themes',
 		enableLoggedOut: true,
 		group: 'sites',
@@ -207,7 +218,7 @@ const sections = [
 	},
 	{
 		name: 'theme',
-		paths: [ '/theme' ],
+		paths: [ '/theme', `/([a-z]{2,3}|[a-z]{2}-[a-z]{2})/theme` ],
 		module: 'calypso/my-sites/theme',
 		enableLoggedOut: true,
 		group: 'sites',
@@ -222,9 +233,9 @@ const sections = [
 		group: 'sites',
 	},
 	{
-		name: 'titan-links',
-		paths: [ '/titan' ],
-		module: 'calypso/my-sites/email/titan-redirector',
+		name: 'incoming-redirect',
+		paths: [ '/incoming-redirect' ],
+		module: 'calypso/incoming-redirect',
 		enableLoggedOut: true,
 	},
 	{
@@ -350,7 +361,7 @@ const sections = [
 	},
 	{
 		name: 'auth',
-		paths: [ '/oauth-login', '/authorize', '/api/oauth/token' ],
+		paths: [ '/api/oauth/token' ],
 		module: 'calypso/auth',
 		enableLoggedOut: true,
 	},
@@ -359,12 +370,6 @@ const sections = [
 		paths: [ '/types' ],
 		module: 'calypso/my-sites/types',
 		group: 'sites',
-	},
-	{
-		name: 'happychat',
-		paths: [ '/me/chat' ],
-		module: 'calypso/me/happychat',
-		group: 'me',
 	},
 	{
 		name: 'comments',
@@ -441,7 +446,7 @@ const sections = [
 	},
 	{
 		name: 'jetpack-cloud',
-		paths: [ '/', '/landing', '/settings', '/oauth-override' ],
+		paths: [ '/', '/landing', '/settings' ],
 		module: 'calypso/jetpack-cloud',
 		group: 'jetpack-cloud',
 		enableLoggedOut: true,
@@ -484,6 +489,12 @@ const sections = [
 		paths: [ '/partner-portal' ],
 		module: 'calypso/jetpack-cloud/sections/partner-portal',
 		group: 'jetpack-cloud',
+	},
+	{
+		name: 'woocommerce-installation',
+		paths: [ '/woocommerce-installation' ],
+		module: 'calypso/my-sites/woocommerce',
+		group: 'woocommerce-installation',
 	},
 ];
 

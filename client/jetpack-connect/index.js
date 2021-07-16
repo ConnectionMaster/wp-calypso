@@ -6,10 +6,8 @@ import page from 'page';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
-import userFactory from 'calypso/lib/user';
+import config from '@automattic/calypso-config';
 import * as controller from './controller';
-import { login } from 'calypso/lib/paths';
 import { siteSelection } from 'calypso/my-sites/controller';
 import { makeLayout, render as clientRender } from 'calypso/controller';
 import { getLanguageRouteParam } from 'calypso/lib/i18n-utils';
@@ -23,8 +21,6 @@ import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
 import './style.scss';
 
 export default function () {
-	const user = userFactory();
-	const isLoggedOut = ! user.get();
 	const locale = getLanguageRouteParam( 'locale' );
 
 	const planTypeString = [
@@ -41,7 +37,9 @@ export default function () {
 	].join( '|' );
 
 	page(
-		`/jetpack/connect/:type(${ planTypeString })/:interval(yearly|monthly)?`,
+		`/jetpack/connect/:type(${ planTypeString })/:interval(yearly|monthly)?/${ locale }`,
+		controller.redirectToSiteLessCheckout,
+		controller.redirectWithoutLocaleIfLoggedIn,
 		controller.loginBeforeJetpackSearch,
 		controller.persistMobileAppFlow,
 		controller.setMasterbar,
@@ -50,25 +48,13 @@ export default function () {
 		clientRender
 	);
 
-	if ( config.isEnabled( 'jetpack/connect/remote-install' ) ) {
-		page(
-			'/jetpack/connect/install',
-			controller.setMasterbar,
-			controller.credsForm,
-			makeLayout,
-			clientRender
-		);
-	} else {
-		page(
-			`/jetpack/connect/:type(install)/${ locale }`,
-			controller.redirectWithoutLocaleIfLoggedIn,
-			controller.persistMobileAppFlow,
-			controller.setMasterbar,
-			controller.connect,
-			makeLayout,
-			clientRender
-		);
-	}
+	page(
+		'/jetpack/connect/install',
+		controller.setMasterbar,
+		controller.credsForm,
+		makeLayout,
+		clientRender
+	);
 
 	page(
 		'/jetpack/connect',
@@ -79,24 +65,14 @@ export default function () {
 		clientRender
 	);
 
-	if ( isLoggedOut ) {
-		page(
-			`/jetpack/connect/authorize/${ locale }`,
-			controller.setMasterbar,
-			controller.signupForm,
-			makeLayout,
-			clientRender
-		);
-	} else {
-		page(
-			`/jetpack/connect/authorize/${ locale }`,
-			controller.redirectWithoutLocaleIfLoggedIn,
-			controller.setMasterbar,
-			controller.authorizeForm,
-			makeLayout,
-			clientRender
-		);
-	}
+	page(
+		`/jetpack/connect/authorize/${ locale }`,
+		controller.redirectWithoutLocaleIfLoggedIn,
+		controller.setMasterbar,
+		controller.authorizeOrSignup,
+		makeLayout,
+		clientRender
+	);
 
 	page(
 		'/jetpack/connect/instructions',
@@ -114,27 +90,12 @@ export default function () {
 			page.redirect( `/jetpack/connect/store${ params.interval ? '/' + params.interval : '' }` )
 	);
 
-	if ( isLoggedOut ) {
-		page( '/jetpack/connect/plans/:interval(yearly|monthly)?/:site', ( { path } ) =>
-			page( login( { isNative: true, isJetpack: true, redirectTo: path } ) )
-		);
-	}
-
 	jetpackPlans(
 		`/jetpack/connect/plans`,
+		controller.redirectToLoginIfLoggedOut,
 		siteSelection,
 		controller.offerResetRedirects,
 		controller.offerResetContext
-	);
-
-	page(
-		`/jetpack/connect/:type(${ planTypeString })?/${ locale }`,
-		controller.redirectWithoutLocaleIfLoggedIn,
-		controller.persistMobileAppFlow,
-		controller.setMasterbar,
-		controller.connect,
-		makeLayout,
-		clientRender
 	);
 
 	page( '/jetpack/sso/:siteId?/:ssoNonce?', controller.sso, makeLayout, clientRender );

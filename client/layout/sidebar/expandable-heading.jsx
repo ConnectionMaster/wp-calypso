@@ -2,7 +2,6 @@
  * External dependencies
  */
 import Gridicon from 'calypso/components/gridicon';
-import { noop } from 'lodash';
 import PropTypes from 'prop-types';
 import React from 'react';
 
@@ -13,6 +12,9 @@ import Count from 'calypso/components/count';
 import MaterialIcon from 'calypso/components/material-icon';
 import SidebarHeading from 'calypso/layout/sidebar/heading';
 import TranslatableString from 'calypso/components/translatable/proptype';
+import { decodeEntities } from 'calypso/lib/formatting';
+
+const noop = () => {};
 
 const ExpandableSidebarHeading = ( {
 	title,
@@ -24,6 +26,8 @@ const ExpandableSidebarHeading = ( {
 	materialIconStyle,
 	expanded,
 	menuId,
+	hideExpandableIcon,
+	inlineText,
 	...props
 } ) => {
 	return (
@@ -43,10 +47,13 @@ const ExpandableSidebarHeading = ( {
 			) }
 			{ undefined !== customIcon && customIcon }
 			<span className="sidebar__expandable-title">
-				{ title }
+				{ decodeEntities( title ) }
 				{ undefined !== count && <Count count={ count } /> }
+				{ inlineText && <span className="sidebar__inline-text">{ inlineText }</span> }
 			</span>
-			<MaterialIcon icon="keyboard_arrow_down" className="sidebar__expandable-arrow" />
+			{ ! hideExpandableIcon && (
+				<MaterialIcon icon="keyboard_arrow_down" className="sidebar__expandable-arrow" />
+			) }
 		</SidebarHeading>
 	);
 };
@@ -59,6 +66,7 @@ ExpandableSidebarHeading.propTypes = {
 	icon: PropTypes.string,
 	materialIcon: PropTypes.string,
 	materialIconStyle: PropTypes.string,
+	hideExpandableIcon: PropTypes.bool,
 };
 
 ExpandableSidebarHeading.defaultProps = {

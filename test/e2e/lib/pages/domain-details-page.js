@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as DriverHelper from '../driver-helper.js';
 import AsyncBaseContainer from '../async-base-container';
+import * as driverHelper from '../driver-helper.js';
 
 export default class DomainDetailsPage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -15,14 +8,14 @@ export default class DomainDetailsPage extends AsyncBaseContainer {
 	}
 
 	async viewPaymentSettings() {
-		return await DriverHelper.clickWhenClickable(
+		return await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css( 'a.subscription-settings' )
 		);
 	}
 
 	async cancelDomain() {
-		return await DriverHelper.clickWhenClickable(
+		return await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css( 'a svg.material-icon-delete' )
 		);

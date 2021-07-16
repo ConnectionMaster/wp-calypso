@@ -9,8 +9,8 @@ import { trim } from 'lodash';
  */
 import { decodeEntities } from 'calypso/lib/formatting';
 import { isSiteDescriptionBlocked } from 'calypso/reader/lib/site-description-blocklist';
-import { getUrlParts } from 'calypso/lib/url';
-import config from 'calypso/config';
+import { getUrlParts } from '@automattic/calypso-url';
+import config from '@automattic/calypso-config';
 import { isAutomatticTeamMember } from 'calypso/reader/lib/teams';
 
 /**
@@ -96,25 +96,37 @@ export const getSiteAuthorName = ( site ) => {
 };
 
 /**
+ * Get list of routes that should not have unseen functionality.
+ *
+ * @returns {[string, string, string]} list of routes.
+ */
+export const getRoutesWithoutSeenSupport = () => {
+	return [ '/read/conversations', '/read/conversations/a8c', '/activities/likes' ];
+};
+
+/**
+ * Get default seen value given a route. FALSE if the route does not support seen functionality, TRUE otherwise.
+ *
+ * @param {string} currentRoute given route
+ *
+ * @returns {boolean} default seen value for given route
+ */
+export const getDefaultSeenValue = ( currentRoute ) => {
+	const routesWithoutSeen = getRoutesWithoutSeenSupport();
+	return routesWithoutSeen.includes( currentRoute ) ? false : true;
+};
+
+/**
  * Check if user is eligible to use seen posts feature (unseen counts and mark as seen)
  *
  * @param {object} flags eligibility data
  * @param {Array} flags.teams list of reader teams
- * @param {boolean} flags.isFollowingItem wether or not is following a blog id
  * @param {boolean} flags.isWPForTeamsItem id if exists
  *
  * @returns {boolean} whether or not the user can use the feature for the given site
  */
-export const isEligibleForUnseen = ( {
-	teams,
-	isFollowingItem = false,
-	isWPForTeamsItem = false,
-} ) => {
+export const isEligibleForUnseen = ( { teams, isWPForTeamsItem = false } ) => {
 	if ( ! config.isEnabled( 'reader/seen-posts' ) ) {
-		return false;
-	}
-
-	if ( ! isFollowingItem ) {
 		return false;
 	}
 
@@ -123,4 +135,35 @@ export const isEligibleForUnseen = ( {
 	}
 
 	return isWPForTeamsItem;
+};
+
+/**
+ * Check if the post/posts can be marked as seen based on the existence of `is_seen` flag and the current route.
+ *
+ * @param {Object} params method params
+ * @param {Object} params.post object
+ * @param {Array} params.posts list
+ * @param {string} params.currentRoute given route
+ *
+ * @returns {boolean} whether or not the post can be marked as seen
+ */
+export const canBeMarkedAsSeen = ( { post = null, posts = [], currentRoute = '' } ) => {
+	const routesWithoutSeen = getRoutesWithoutSeenSupport();
+	if ( currentRoute && routesWithoutSeen.includes( currentRoute ) ) {
+		return false;
+	}
+
+	if ( post !== null ) {
+		return post.hasOwnProperty( 'is_seen' );
+	}
+
+	if ( posts.length ) {
+		for ( const thePost in posts ) {
+			if ( thePost.hasOwnProperty( 'is_seen' ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
 };

@@ -2,12 +2,7 @@
  * External dependencies
  */
 import { snakeCase } from 'lodash';
-
-/**
- * Internal dependencies
- */
-import { CheckoutPaymentMethodSlug } from '../types/checkout-payment-method-slug';
-import { WPCOMPaymentMethod } from '../types/backend/payment-method';
+import type { CheckoutPaymentMethodSlug, WPCOMPaymentMethod } from '@automattic/wpcom-checkout';
 
 /**
  * Convert a WPCOM payment method class name to a checkout payment method slug
@@ -51,11 +46,10 @@ export function translateWpcomPaymentMethodToCheckoutPaymentMethod(
 			return 'wechat';
 		case 'WPCOM_Billing_Dlocal_Redirect_India_Netbanking':
 			return 'netbanking';
-		case 'WPCOM_Billing_Dlocal_Redirect_Indonesia_Wallet':
-			return 'id_wallet';
 		case 'WPCOM_Billing_Web_Payment':
-			return 'apple-pay';
+			return 'web-pay';
 	}
+	throw new Error( `Unknown payment method '${ paymentMethod }'` );
 }
 
 export function translateCheckoutPaymentMethodToWpcomPaymentMethod(
@@ -72,8 +66,6 @@ export function translateCheckoutPaymentMethodToWpcomPaymentMethod(
 			return 'WPCOM_Billing_Ebanx_Redirect_Brazil_Tef';
 		case 'netbanking':
 			return 'WPCOM_Billing_Dlocal_Redirect_India_Netbanking';
-		case 'id_wallet':
-			return 'WPCOM_Billing_Dlocal_Redirect_Indonesia_Wallet';
 		case 'paypal-direct':
 			return 'WPCOM_Billing_PayPal_Direct';
 		case 'paypal':
@@ -99,6 +91,7 @@ export function translateCheckoutPaymentMethodToWpcomPaymentMethod(
 		case 'wechat':
 			return 'WPCOM_Billing_Stripe_Source_Wechat';
 		case 'apple-pay':
+		case 'google-pay':
 			return 'WPCOM_Billing_Web_Payment';
 		case 'full-credits':
 			return 'WPCOM_Billing_WPCOM';
@@ -114,7 +107,6 @@ export function readWPCOMPaymentMethodClass( slug: string ): WPCOMPaymentMethod 
 		case 'WPCOM_Billing_Ebanx':
 		case 'WPCOM_Billing_Ebanx_Redirect_Brazil_Tef':
 		case 'WPCOM_Billing_Dlocal_Redirect_India_Netbanking':
-		case 'WPCOM_Billing_Dlocal_Redirect_Indonesia_Wallet':
 		case 'WPCOM_Billing_PayPal_Direct':
 		case 'WPCOM_Billing_PayPal_Express':
 		case 'WPCOM_Billing_Stripe_Payment_Method':
@@ -134,11 +126,13 @@ export function readWPCOMPaymentMethodClass( slug: string ): WPCOMPaymentMethod 
 }
 
 export function readCheckoutPaymentMethodSlug( slug: string ): CheckoutPaymentMethodSlug | null {
+	if ( slug.startsWith( 'existingCard-' ) ) {
+		slug = 'card';
+	}
 	switch ( slug ) {
 		case 'ebanx':
 		case 'brazil-tef':
 		case 'netbanking':
-		case 'id_wallet':
 		case 'paypal-direct':
 		case 'paypal':
 		case 'card':
@@ -151,10 +145,13 @@ export function readCheckoutPaymentMethodSlug( slug: string ): CheckoutPaymentMe
 		case 'sofort':
 		case 'stripe-three-d-secure':
 		case 'wechat':
-		case 'apple-pay':
+		case 'web-pay':
 		case 'full-credits':
 		case 'free-purchase':
 			return slug;
+		case 'apple-pay':
+		case 'google-pay':
+			return 'web-pay';
 	}
 	return null;
 }
@@ -171,6 +168,7 @@ export function translateCheckoutPaymentMethodToTracksPaymentMethod(
 		case 'card':
 			return 'credit_card';
 		case 'apple-pay':
+		case 'google-pay':
 			return 'web_payment';
 	}
 	return snakeCase( paymentMethodSlug );

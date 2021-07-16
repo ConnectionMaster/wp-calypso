@@ -51,7 +51,7 @@ const setLocalizedWpComPath = (
 	url.pathname = prefix + url.pathname;
 
 	if ( validLocales.includes( localeSlug ) && localeSlug !== 'en' ) {
-		url.pathname = ( localesToSubdomains[ localeSlug ] || localeSlug ) + url.pathname;
+		url.pathname = localeSlug + url.pathname;
 	}
 	return url;
 };
@@ -67,7 +67,7 @@ const prefixLocalizedUrlPath = (
 	}
 
 	if ( validLocales.includes( localeSlug ) && localeSlug !== 'en' ) {
-		url.pathname = ( localesToSubdomains[ localeSlug ] || localeSlug ) + url.pathname;
+		url.pathname = localeSlug + url.pathname;
 	}
 	return url;
 };
@@ -80,12 +80,15 @@ interface UrlLocalizationMapping {
 
 const urlLocalizationMapping: UrlLocalizationMapping = {
 	'wordpress.com/support/': prefixLocalizedUrlPath( supportSiteLocales ),
+	'wordpress.com/forums/': prefixLocalizedUrlPath( forumLocales ),
 	'wordpress.com/blog/': prefixLocalizedUrlPath( localesWithBlog, /^\/blog\/?$/ ),
-	'wordpress.com/tos/': setLocalizedUrlHost( 'wordpress.com', magnificentNonEnLocales ),
+	'wordpress.com/tos/': prefixLocalizedUrlPath( magnificentNonEnLocales ),
+	'wordpress.com/wp-admin/': setLocalizedUrlHost( 'wordpress.com', magnificentNonEnLocales ),
+	'wordpress.com/wp-login.php': setLocalizedUrlHost( 'wordpress.com', magnificentNonEnLocales ),
 	'jetpack.com': setLocalizedUrlHost( 'jetpack.com', jetpackComLocales ),
 	'en.support.wordpress.com': setLocalizedWpComPath( '/support', supportSiteLocales ),
 	'en.blog.wordpress.com': setLocalizedWpComPath( '/blog', localesWithBlog, /^\/$/ ),
-	'en.forums.wordpress.com': setLocalizedUrlHost( 'forums.wordpress.com', forumLocales ),
+	'en.forums.wordpress.com': setLocalizedWpComPath( '/forums', forumLocales ),
 	'automattic.com/privacy/': prefixLocalizedUrlPath( localesWithPrivacyPolicy ),
 	'automattic.com/cookies/': prefixLocalizedUrlPath( localesWithCookiePolicy ),
 	'wordpress.com/help/contact/': ( url: URL, localeSlug: Locale, isLoggedIn: boolean ) => {
@@ -95,7 +98,23 @@ const urlLocalizationMapping: UrlLocalizationMapping = {
 		url.pathname = url.pathname.replace( /\/help\//, '/support/' );
 		return prefixLocalizedUrlPath( supportSiteLocales )( url, localeSlug );
 	},
-	'wordpress.com': setLocalizedUrlHost( 'wordpress.com', magnificentNonEnLocales ),
+	'wordpress.com': ( url: URL, localeSlug: Locale ) => {
+		// Don't rewrite checkout and me URLs.
+		if ( /^\/(checkout|me)(\/|$)/.test( url.pathname ) ) {
+			return url;
+		}
+		// Don't rewrite Calypso URLs that have the URL at the end.
+		if ( /\/([a-z0-9-]+\.)+[a-z]{2,}\/?$/.test( url.pathname ) ) {
+			return url;
+		}
+		return prefixLocalizedUrlPath( magnificentNonEnLocales )( url, localeSlug );
+	},
+	'wordpress.com/theme/': ( url: URL, localeSlug: Locale, isLoggedIn: boolean ) => {
+		return isLoggedIn ? url : prefixLocalizedUrlPath( magnificentNonEnLocales )( url, localeSlug );
+	},
+	'wordpress.com/themes/': ( url: URL, localeSlug: Locale, isLoggedIn: boolean ) => {
+		return isLoggedIn ? url : prefixLocalizedUrlPath( magnificentNonEnLocales )( url, localeSlug );
+	},
 };
 
 export function localizeUrl( fullUrl: string, locale: Locale, isLoggedIn = true ): string {
@@ -117,25 +136,22 @@ export function localizeUrl( fullUrl: string, locale: Locale, isLoggedIn = true 
 	url.hostname = '';
 
 	if ( ! url.pathname.endsWith( '.php' ) ) {
+		// Essentially a trailingslashit.
 		url.pathname = ( url.pathname + '/' ).replace( /\/+$/, '/' );
 	}
 
-	if ( ! locale || 'en' === locale ) {
-		if ( 'en.wordpress.com' === url.host ) {
-			url.host = 'wordpress.com';
-			return url.href;
-		}
-	}
+	const firstPathSegment = url.pathname.substr( 0, 1 + url.pathname.indexOf( '/', 1 ) );
 
 	if ( 'en.wordpress.com' === url.host ) {
 		url.host = 'wordpress.com';
 	}
 
-	const lookup = [
-		url.host,
-		url.host + url.pathname,
-		url.host + url.pathname.substr( 0, 1 + url.pathname.indexOf( '/', 1 ) ),
-	];
+	if ( '/' + locale + '/' === firstPathSegment ) {
+		return fullUrl;
+	}
+
+	// Lookup is checked back to front.
+	const lookup = [ url.host, url.host + firstPathSegment, url.host + url.pathname ];
 
 	for ( let i = lookup.length - 1; i >= 0; i-- ) {
 		if ( lookup[ i ] in urlLocalizationMapping ) {

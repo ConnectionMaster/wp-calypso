@@ -1,6 +1,3 @@
-/**
- * Internal dependencies
- */
 import { wpcomRequest } from '../wpcom-request-controls';
 import { createActions } from './actions';
 import type { WpcomClientCredentials } from '../shared-types';
@@ -23,7 +20,7 @@ export function createResolvers( clientCreds: WpcomClientCredentials ) {
 			return receiveCurrentUser( window.currentUser );
 		}
 		try {
-			const currentUser = yield wpcomRequest( {
+			const currentUser: CurrentUser = yield wpcomRequest( {
 				path: '/me',
 				apiVersion: '1.1',
 			} );

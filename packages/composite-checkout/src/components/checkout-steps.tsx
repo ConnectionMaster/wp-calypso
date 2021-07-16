@@ -1,6 +1,6 @@
-/**
- * External dependencies
- */
+import { useI18n } from '@wordpress/react-i18n';
+import debugFactory from 'debug';
+import PropTypes from 'prop-types';
 import React, {
 	Dispatch,
 	SetStateAction,
@@ -9,21 +9,10 @@ import React, {
 	useEffect,
 	useState,
 } from 'react';
-import debugFactory from 'debug';
-import PropTypes from 'prop-types';
-import { useI18n } from '@automattic/react-i18n';
-
-/**
- * Internal dependencies
- */
-import joinClasses from '../lib/join-classes';
-import CheckoutErrorBoundary from './checkout-error-boundary';
 import { useFormStatus } from '../lib/form-status';
-import LoadingContent from './loading-content';
-import CheckoutSubmitButton from './checkout-submit-button';
-import Button from './button';
-import { CheckIcon } from './shared-icons';
-import CheckoutNextStepButton from './checkout-next-step-button';
+import joinClasses from '../lib/join-classes';
+import styled from '../lib/styled';
+import { Theme } from '../lib/theme';
 import {
 	getDefaultOrderReviewStep,
 	getDefaultOrderSummary,
@@ -32,9 +21,13 @@ import {
 	useEvents,
 	usePaymentMethod,
 } from '../public-api';
-import styled from '../lib/styled';
-import { Theme } from '../lib/theme';
 import { FormStatus, CheckoutStepProps } from '../types';
+import Button from './button';
+import CheckoutErrorBoundary from './checkout-error-boundary';
+import CheckoutNextStepButton from './checkout-next-step-button';
+import CheckoutSubmitButton from './checkout-submit-button';
+import LoadingContent from './loading-content';
+import { CheckIcon } from './shared-icons';
 
 const debug = debugFactory( 'composite-checkout:checkout' );
 
@@ -210,7 +203,7 @@ export function Checkout( {
 	children,
 	className,
 }: {
-	children: React.ReactChildren;
+	children: React.ReactNode;
 	className?: string;
 } ): JSX.Element {
 	const { isRTL } = useI18n();
@@ -226,6 +219,9 @@ export function Checkout( {
 
 	const getDefaultCheckoutSteps = () => <DefaultCheckoutSteps />;
 
+	// Note: the composite-checkout class name is also used by FullStory to avoid recording
+	// WordPress.com checkout session activity. If this class name is changed or removed, we
+	// will also need to adjust this FullStory configuration.
 	const classNames = joinClasses( [
 		'composite-checkout',
 		...( className ? [ className ] : [] ),
@@ -580,6 +576,14 @@ export function CheckoutStepBody( {
 	onError,
 }: CheckoutStepBodyProps ): JSX.Element {
 	const { __ } = useI18n();
+
+	// Since both the active and inactive step content can be mounted at the same
+	// time (by design so that both may hold state in form elements), these
+	// test-ids can be used for tests to differentiate which version of a step is
+	// currently visible.
+	const activeStepTestId = isStepActive ? `${ stepId }--visible` : `${ stepId }--invisible`;
+	const completeStepTestId = isStepActive ? `${ stepId }--invisible` : `${ stepId }--visible`;
+
 	return (
 		<CheckoutErrorBoundary
 			errorMessage={ errorMessage || __( 'There was an error with this step.' ) }
@@ -600,7 +604,11 @@ export function CheckoutStepBody( {
 					editButtonText={ editButtonText || __( 'Edit' ) }
 					editButtonAriaLabel={ editButtonAriaLabel || __( 'Edit this step' ) }
 				/>
-				<StepContentWrapper isVisible={ isStepActive } className="checkout-steps__step-content">
+				<StepContentWrapper
+					data-testid={ activeStepTestId }
+					isVisible={ isStepActive }
+					className="checkout-steps__step-content"
+				>
 					{ activeStepContent }
 					{ goToNextStep && isStepActive && (
 						<CheckoutNextStepButton
@@ -623,6 +631,7 @@ export function CheckoutStepBody( {
 				</StepContentWrapper>
 				{ isStepComplete && completeStepContent ? (
 					<StepSummaryWrapper
+						data-testid={ completeStepTestId }
 						isVisible={ ! isStepActive }
 						className="checkout-steps__step-complete-content"
 					>

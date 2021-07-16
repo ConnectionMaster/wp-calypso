@@ -14,10 +14,9 @@ import Gridicon from 'calypso/components/gridicon';
 import { withLocalizedMoment } from 'calypso/components/localized-moment';
 import { gaRecordEvent } from 'calypso/lib/analytics/ga';
 import { canRemoveFromCart } from 'calypso/lib/cart-values';
-import { getIncludedDomain } from 'calypso/lib/cart-values/cart-items';
 import {
 	isCredits,
-	isGoogleApps,
+	isGSuiteOrExtraLicenseOrGoogleWorkspace,
 	isTheme,
 	isMonthly,
 	isYearly,
@@ -25,14 +24,15 @@ import {
 	isPlan,
 	isBundled,
 	isDomainProduct,
-} from 'calypso/lib/products-values';
+	calculateMonthlyPriceForPlan,
+	getBillingMonthsForPlan,
+} from '@automattic/calypso-products';
 import { isGSuiteOrGoogleWorkspaceProductSlug } from 'calypso/lib/gsuite';
 import {
 	GOOGLE_WORKSPACE_BUSINESS_STARTER_YEARLY,
 	GSUITE_BASIC_SLUG,
 	GSUITE_BUSINESS_SLUG,
 } from 'calypso/lib/gsuite/constants';
-import { calculateMonthlyPriceForPlan, getBillingMonthsForPlan } from 'calypso/lib/plans';
 
 export class CartItem extends React.Component {
 	removeFromCart = ( event ) => {
@@ -186,14 +186,12 @@ export class CartItem extends React.Component {
 			( selectedSite && selectedSite.domain );
 		let info = null;
 
-		if ( isGoogleApps( cartItem ) && cartItem.extra.google_apps_users ) {
+		if ( isGSuiteOrExtraLicenseOrGoogleWorkspace( cartItem ) && cartItem.extra.google_apps_users ) {
 			info = cartItem.extra.google_apps_users.map( ( user ) => (
 				<div key={ `user-${ user.email }` }>{ user.email }</div>
 			) );
 		} else if ( isCredits( cartItem ) ) {
 			info = null;
-		} else if ( getIncludedDomain( cartItem ) ) {
-			info = getIncludedDomain( cartItem );
 		} else if ( isTheme( cartItem ) ) {
 			info = selectedSite && selectedSite.domain;
 		} else {

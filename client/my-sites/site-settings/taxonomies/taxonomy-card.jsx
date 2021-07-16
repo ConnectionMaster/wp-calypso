@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { connect } from 'react-redux';
-import { get, isUndefined } from 'lodash';
+import { get } from 'lodash';
 import classNames from 'classnames';
 import { localize } from 'i18n-calypso';
 import Gridicon from 'calypso/components/gridicon';
@@ -33,7 +33,7 @@ const TaxonomyCard = ( {
 	bumpStat: recordMCStat,
 } ) => {
 	const settingsLink = site ? `/settings/taxonomies/${ taxonomy }/${ site.slug }` : null;
-	const isLoading = ! labels.name || isUndefined( count );
+	const isLoading = ! labels.name || typeof count === 'undefined';
 	const classes = classNames( 'taxonomies__card-title', {
 		'is-loading': isLoading,
 	} );
@@ -43,6 +43,11 @@ const TaxonomyCard = ( {
 		recordMCStat( 'taxonomy_manager', `manage_${ taxonomy }` );
 	};
 
+	let label;
+	if ( ! isLoading ) {
+		label = count === 1 ? labels.singular_name : labels.name;
+	}
+
 	return (
 		<CompactCard onClick={ recordAnalytics } href={ settingsLink }>
 			{ site && <QuerySiteSettings siteId={ site.ID } /> }
@@ -50,7 +55,7 @@ const TaxonomyCard = ( {
 			<h2 className={ classes }>{ labels.name }</h2>
 			{ ! isLoading && (
 				<div className="taxonomies__card-content">
-					<Gridicon icon="tag" size={ 18 } /> { count } { labels.name }
+					<Gridicon icon="tag" size={ 18 } /> { count } { label }
 					{ defaultTerm && (
 						<span>
 							, { translate( 'default category:' ) } { decodeEntities( defaultTerm.name ) }

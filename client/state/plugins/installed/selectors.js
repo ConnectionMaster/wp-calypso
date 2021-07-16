@@ -1,12 +1,12 @@
 /**
  * External dependencies
  */
-import { every, filter, find, get, pick, reduce, some, sortBy, values } from 'lodash';
+import { filter, find, get, pick, reduce, some, sortBy } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import createSelector from 'calypso/lib/create-selector';
+import { createSelector } from '@automattic/state-utils';
 import {
 	getSite,
 	getSiteTitle,
@@ -35,7 +35,7 @@ const _filters = {
 	},
 	updates: function ( plugin ) {
 		return some( plugin.sites, function ( site ) {
-			return site.update;
+			return site.update && ! site.update.recentlyUpdated;
 		} );
 	},
 	isEqual: function ( pluginSlug, plugin ) {
@@ -89,7 +89,7 @@ export function getPlugins( state, siteIds, pluginFilter ) {
 		pluginList = filter( pluginList, _filters[ pluginFilter ] );
 	}
 
-	return values( sortBy( pluginList, ( item ) => item.slug.toLowerCase() ) );
+	return sortBy( pluginList, ( item ) => item.slug.toLowerCase() );
 }
 
 export function getPluginsWithUpdates( state, siteIds ) {
@@ -98,6 +98,14 @@ export function getPluginsWithUpdates( state, siteIds ) {
 		version: plugin?.update?.new_version,
 		type: 'plugin',
 	} ) );
+}
+
+export function getPluginsOnSites( state, plugins ) {
+	return Object.values( plugins ).reduce( ( acc, plugin ) => {
+		const siteIds = Object.keys( plugin.sites );
+		acc[ plugin.slug ] = getPluginOnSites( state, siteIds, plugin.slug );
+		return acc;
+	}, {} );
 }
 
 export function getPluginOnSites( state, siteIds, pluginSlug ) {
@@ -140,7 +148,7 @@ export function getSitesWithoutPlugin( state, siteIds, pluginSlug ) {
 			return false;
 		}
 
-		return every( installedOnSiteIds, function ( installedOnSiteId ) {
+		return installedOnSiteIds.every( function ( installedOnSiteId ) {
 			return installedOnSiteId !== siteId;
 		} );
 	} );
@@ -200,6 +208,19 @@ export function isPluginActionStatus( state, siteId, pluginId, action, status ) 
  */
 export function isPluginActionInProgress( state, siteId, pluginId, action ) {
 	return isPluginActionStatus( state, siteId, pluginId, action, 'inProgress' );
+}
+
+/**
+ * Whether the plugin's status for one or more recent actions is completed.
+ *
+ * @param  {object}       state    Global state tree
+ * @param  {number}       siteId   ID of the site
+ * @param  {string}       pluginId ID of the plugin
+ * @param  {string|Array} action   Action, or array of actions of interest
+ * @returns {boolean}              True if one or more specified actions are completed, false otherwise.
+ */
+export function isPluginActionCompleted( state, siteId, pluginId, action ) {
+	return isPluginActionStatus( state, siteId, pluginId, action, 'completed' );
 }
 
 /**

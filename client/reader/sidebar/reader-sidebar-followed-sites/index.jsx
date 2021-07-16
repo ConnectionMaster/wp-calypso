@@ -41,11 +41,7 @@ export class ReaderSidebarFollowedSites extends Component {
 
 	renderAll() {
 		const { path, translate, sites } = this.props;
-		// have a selector
-		const sum = sites.reduce( ( acc, item ) => {
-			acc = acc + item.unseen_count;
-			return acc;
-		}, 0 );
+		const sum = sites.reduce( ( acc, { unseen_count } ) => acc + ( unseen_count | 0 ), 0 );
 		return (
 			<SidebarItem
 				className={ ReaderSidebarHelper.itemLinkClass( '/read', path, {
@@ -69,7 +65,7 @@ export class ReaderSidebarFollowedSites extends Component {
 	}
 
 	render() {
-		const { sites, translate } = this.props;
+		const { path, sites, translate } = this.props;
 
 		if ( ! sites ) {
 			return null;
@@ -80,6 +76,15 @@ export class ReaderSidebarFollowedSites extends Component {
 				title={ translate( 'Followed Sites' ) }
 				onClick={ this.props.toggleReaderSidebarFollowing }
 				materialIcon="check_circle"
+				disableFlyout={ true }
+				className={
+					( '/read' === path ||
+						sites.some(
+							( site ) =>
+								`/read/feeds/${ site.feed_ID }` === path || `/read/blogs/${ site.blog_ID }` === path
+						) ) &&
+					'sidebar__menu--selected'
+				}
 			>
 				{ this.renderAll() }
 				{ this.renderSites() }

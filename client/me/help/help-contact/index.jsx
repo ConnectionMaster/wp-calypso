@@ -12,7 +12,7 @@ import debugFactory from 'debug';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import Main from 'calypso/components/main';
 import { Card } from '@automattic/components';
 import Notice from 'calypso/components/notice';
@@ -21,7 +21,6 @@ import ActiveTicketsNotice from 'calypso/me/help/active-tickets-notice';
 import HelpContactConfirmation from 'calypso/me/help/help-contact-confirmation';
 import HeaderCake from 'calypso/components/header-cake';
 import wpcomLib from 'calypso/lib/wp';
-import notices from 'calypso/notices';
 import ChatHolidayClosureNotice from 'calypso/me/help/contact-form-notice/chat-holiday-closure';
 import { recordTracksEvent } from 'calypso/lib/analytics/tracks';
 import getHappychatUserInfo from 'calypso/state/happychat/selectors/get-happychat-userinfo';
@@ -34,6 +33,7 @@ import {
 import HappychatConnection from 'calypso/components/happychat/connection-connected';
 import QueryTicketSupportConfiguration from 'calypso/components/data/query-ticket-support-configuration';
 import QuerySupportHistory from 'calypso/components/data/query-support-history';
+import { withoutHttp } from 'calypso/lib/url';
 import HelpUnverifiedWarning from '../help-unverified-warning';
 import {
 	sendMessage as sendHappychatMessage,
@@ -71,7 +71,8 @@ import getInlineHelpSupportVariation, {
 	SUPPORT_TICKET,
 	SUPPORT_UPWORK_TICKET,
 } from 'calypso/state/selectors/get-inline-help-support-variation';
-import { getPlanTermLabel } from 'calypso/lib/plans';
+import { errorNotice } from 'calypso/state/notices/actions';
+import { getPlanTermLabel } from '@automattic/calypso-products';
 
 /**
  * Style dependencies
@@ -193,7 +194,7 @@ class HelpContact extends React.Component {
 		const { currentUserLocale, supportVariation } = this.props;
 		let plan = 'N/A';
 		if ( site ) {
-			plan = `${ site.plan.product_name_short } (${ getPlanTermLabel(
+			plan = `${ site.plan.product_id } - ${ site.plan.product_name_short } (${ getPlanTermLabel(
 				site.plan.product_slug,
 				( val ) => val // Passing an identity function instead of `translate` to always return the English string
 			) })`;
@@ -219,7 +220,7 @@ class HelpContact extends React.Component {
 			( error ) => {
 				if ( error ) {
 					// TODO: bump a stat here
-					notices.error( error.message );
+					this.props.errorNotice( error.message );
 
 					this.setState( { isSubmitting: false } );
 					return;
@@ -230,8 +231,8 @@ class HelpContact extends React.Component {
 					confirmation: {
 						title: this.props.translate( "We're on it!" ),
 						message: this.props.translate(
-							'We normally reply within 24-48 hours but are experiencing longer delays ' +
-								'right now. We appreciate your patience and will respond as soon as we can.'
+							"We've received your message, and you'll hear back from " +
+								'one of our Happiness Engineers shortly.'
 						),
 					},
 				} );
@@ -255,22 +256,82 @@ class HelpContact extends React.Component {
 		this.clearSavedContactForm();
 	};
 
+	translateForForums = ( message, args ) => {
+		const { currentUserLocale, translate } = this.props;
+
+		if ( config( 'forum_locales' ).includes( currentUserLocale ) ) {
+			return translate( message, args );
+		}
+
+		return args ? message.replace( '%s', args.args[ 0 ] ) : message;
+	};
+
 	submitSupportForumsTopic = ( contactForm ) => {
-		const { subject, message } = contactForm;
-		const { currentUserLocale } = this.props;
+		const {
+			helpSiteIsJetpack,
+			helpSiteIsNotWpCom,
+			helpSiteIsWpCom,
+			site,
+			subject,
+			message,
+			userDeclaresNoSite,
+			userDeclaredUrl,
+			userRequestsHidingUrl,
+		} = contactForm;
+		const { currentUserLocale, translate } = this.props;
 
 		this.setState( { isSubmitting: true } );
 		this.recordCompactSubmit( 'forums' );
 
+		let blogHelpMessage = this.translateForForums(
+			"I don't have a site linked to this WordPress.com account"
+		);
+
+		if ( userDeclaresNoSite ) {
+			blogHelpMessage = this.translateForForums( "I don't have a site with WordPress.com yet" );
+		}
+
+		if ( site || userDeclaredUrl ) {
+			const siteUrl = userDeclaredUrl ? userDeclaredUrl.trim() : site.URL;
+
+			blogHelpMessage = this.translateForForums( 'Site: %s.', {
+				args: [ userRequestsHidingUrl ? 'help@' + withoutHttp( siteUrl ) : siteUrl ],
+			} );
+
+			if ( helpSiteIsWpCom ) {
+				blogHelpMessage += '\n' + this.translateForForums( 'WP.com: Yes' );
+			}
+
+			if ( helpSiteIsNotWpCom ) {
+				const jetpackMessage = helpSiteIsJetpack
+					? this.translateForForums( 'Yes' )
+					: this.translateForForums( 'Unknown' );
+
+				blogHelpMessage += '\n' + this.translateForForums( 'WP.com: Unknown \nJetpack: %s', {
+					args: [ jetpackMessage ],
+				} );
+			}
+
+			const correctAccountMessage = userDeclaredUrl
+				? this.translateForForums( 'Unknown' )
+				: this.translateForForums( 'Yes' );
+
+			blogHelpMessage += '\n' + this.translateForForums( 'Correct account: %s', {
+				args: [ correctAccountMessage ],
+			} );
+		}
+
+		const forumMessage = message + '\n\n' + blogHelpMessage;
+
 		wpcom.submitSupportForumsTopic(
 			subject,
-			message,
+			forumMessage,
 			currentUserLocale,
 			this.props.clientSlug,
 			( error, data ) => {
 				if ( error ) {
 					// TODO: bump a stat here
-					notices.error( error.message );
+					this.props.errorNotice( error.message );
 
 					this.setState( { isSubmitting: false } );
 					return;
@@ -459,7 +520,9 @@ class HelpContact extends React.Component {
 					showSubjectField: true,
 					showHowCanWeHelpField: false,
 					showHowYouFeelField: false,
-					showSiteField: false,
+					showSiteField: true,
+					showAlternativeSiteOptionsField: true,
+					showHidingUrlOption: true,
 					showQASuggestions: true,
 				};
 		}
@@ -609,18 +672,31 @@ class HelpContact extends React.Component {
 				{ isUserAffectedByLiveChatClosure && (
 					<>
 						<ChatHolidayClosureNotice
-							holidayName="Christmas"
+							holidayName={ translate( 'Easter', {
+								context: 'Holiday name',
+							} ) }
 							compact={ compact }
-							displayAt="2020-12-17 00:00Z"
-							closesAt="2020-12-24 00:00Z"
-							reopensAt="2020-12-26 07:00Z"
+							displayAt="2021-03-28 00:00Z"
+							closesAt="2021-04-04 00:00Z"
+							reopensAt="2021-04-05 06:00Z"
 						/>
 						<ChatHolidayClosureNotice
-							holidayName="New Year's Day"
+							holidayName={ translate( 'Christmas', {
+								context: 'Holiday name',
+							} ) }
 							compact={ compact }
-							displayAt="2020-12-26 07:00Z"
-							closesAt="2020-12-31 00:00Z"
-							reopensAt="2021-01-02 07:00Z"
+							displayAt="2021-12-17 00:00Z"
+							closesAt="2021-12-24 00:00Z"
+							reopensAt="2021-12-26 07:00Z"
+						/>
+						<ChatHolidayClosureNotice
+							holidayName={ translate( "New Year's Day", {
+								context: 'Holiday name',
+							} ) }
+							compact={ compact }
+							displayAt="2021-12-26 07:00Z"
+							closesAt="2021-12-31 00:00Z"
+							reopensAt="2022-01-02 07:00Z"
 						/>
 					</>
 				) }
@@ -691,6 +767,7 @@ export default connect(
 	},
 	{
 		askDirectlyQuestion,
+		errorNotice,
 		initializeDirectly,
 		openHappychat,
 		recordTracksEventAction,

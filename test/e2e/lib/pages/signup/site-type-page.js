@@ -1,14 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper.js';
-
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper.js';
 
 export default class SiteTypePage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -16,8 +8,8 @@ export default class SiteTypePage extends AsyncBaseContainer {
 	}
 
 	async _selectType( type ) {
-		const typeButtonSelector = By.css( `button.site-type__option[data-e2e-title='${ type }']` );
-		return await driverHelper.clickWhenClickable( this.driver, typeButtonSelector );
+		const typeButtonLocator = By.css( `button.site-type__option[data-e2e-title='${ type }']` );
+		return await driverHelper.clickWhenClickable( this.driver, typeButtonLocator );
 	}
 
 	async selectBlogType() {

@@ -3,11 +3,12 @@
  */
 import React from 'react';
 import { connect } from 'react-redux';
-import { groupBy, head, isEmpty, map, noop, size, values } from 'lodash';
+import { groupBy, isEmpty, map, size, values } from 'lodash';
 import PropTypes from 'prop-types';
 import page from 'page';
 import classnames from 'classnames';
 import { localize } from 'i18n-calypso';
+import { withMobileBreakpoint } from '@automattic/viewport-react';
 
 /**
  * Internal dependencies
@@ -23,6 +24,7 @@ import {
 	ValidationErrors as MediaValidationErrors,
 	MEDIA_IMAGE_RESIZER,
 	MEDIA_IMAGE_THUMBNAIL,
+	SCALE_TOUCH_GRID,
 } from 'calypso/lib/media/constants';
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
 import { getSiteSlug } from 'calypso/state/sites/selectors';
@@ -37,13 +39,34 @@ import {
 import { pauseGuidedTour, resumeGuidedTour } from 'calypso/state/guided-tours/actions';
 import { deleteKeyringConnection } from 'calypso/state/sharing/keyring/actions';
 import { getGuidedTourState } from 'calypso/state/guided-tours/selectors';
-import { withoutNotice } from 'calypso/state/notices/actions';
 import { clearMediaErrors, changeMediaSource } from 'calypso/state/media/actions';
+import { localizeUrl } from 'calypso/lib/i18n-utils';
+import { getPreference } from 'calypso/state/preferences/selectors';
 
 /**
  * Style dependencies
  */
 import './content.scss';
+
+const noop = () => {};
+const first = ( arr ) => arr[ 0 ];
+
+function getMediaScalePreference( state, isMobile ) {
+	const mediaScale = getPreference( state, 'mediaScale' );
+
+	// On mobile viewport, return the media scale value of 0.323 (3 columns per row)
+	// regardless of stored preference value, if it's not 1.
+	if ( isMobile && mediaScale !== 1 ) {
+		return SCALE_TOUCH_GRID;
+	}
+	// On non-mobile viewport, return the media scale value of 0.323 if the stored
+	// preference value is greater than 0.323.
+	if ( ! isMobile && mediaScale > SCALE_TOUCH_GRID ) {
+		return SCALE_TOUCH_GRID;
+	}
+
+	return mediaScale;
+}
 
 export class MediaLibraryContent extends React.Component {
 	static propTypes = {
@@ -58,9 +81,10 @@ export class MediaLibraryContent extends React.Component {
 		scrollable: PropTypes.bool,
 		onAddMedia: PropTypes.func,
 		onMediaScaleChange: PropTypes.func,
-		onEditItem: PropTypes.func,
 		postId: PropTypes.number,
 		isConnected: PropTypes.bool,
+		isBreakpointActive: PropTypes.bool,
+		mediaScale: PropTypes.number,
 	};
 
 	static defaultProps = {
@@ -135,7 +159,10 @@ export class MediaLibraryContent extends React.Component {
 			let status = 'is-error';
 			let upgradeNudgeName = undefined;
 			let upgradeNudgeFeature = undefined;
+			let actionText = undefined;
+			let actionLink = undefined;
 			let tryAgain = false;
+			let externalAction = false;
 
 			switch ( errorType ) {
 				case MediaValidationErrors.FILE_TYPE_NOT_IN_PLAN:
@@ -154,6 +181,9 @@ export class MediaLibraryContent extends React.Component {
 						'%d files could not be uploaded because their file types are unsupported.',
 						i18nOptions
 					);
+					actionText = translate( 'See supported file types' );
+					actionLink = localizeUrl( 'https://support.wordpress.com/accepted-filetypes' );
+					externalAction = true;
 					break;
 				case MediaValidationErrors.UPLOAD_VIA_URL_404:
 					message = translate(
@@ -215,6 +245,11 @@ export class MediaLibraryContent extends React.Component {
 			return (
 				<Notice key={ errorType } status={ status } text={ message } onDismissClick={ onDismiss }>
 					{ this.renderNoticeAction( upgradeNudgeName, upgradeNudgeFeature ) }
+					{ actionText && (
+						<NoticeAction href={ actionLink } external={ externalAction }>
+							{ actionText }
+						</NoticeAction>
+					) }
 					{ tryAgain && this.renderTryAgain() }
 				</Notice>
 			);
@@ -351,6 +386,7 @@ export class MediaLibraryContent extends React.Component {
 				<MediaLibraryList
 					key="list-loading"
 					filterRequiresUpgrade={ this.props.filterRequiresUpgrade }
+					mediaScale={ this.props.mediaScale }
 				/>
 			);
 		}
@@ -385,7 +421,7 @@ export class MediaLibraryContent extends React.Component {
 					thumbnailType={ this.getThumbnailType() }
 					single={ this.props.single }
 					scrollable={ this.props.scrollable }
-					onEditItem={ this.props.onEditItem }
+					mediaScale={ this.props.mediaScale }
 				/>
 			</MediaListData>
 		);
@@ -403,12 +439,14 @@ export class MediaLibraryContent extends React.Component {
 					site={ this.props.site }
 					visible={ ! this.props.isRequesting }
 					canCopy={ this.props.postId === undefined }
+					postId={ this.props.postId }
 					source={ this.props.source }
 					onSourceChange={ this.props.onSourceChange }
 					selectedItems={ this.props.selectedItems }
 					sticky={ ! this.props.scrollable }
 					hasAttribution={ 'pexels' === this.props.source }
 					hasRefreshButton={ 'pexels' !== this.props.source }
+					mediaScale={ this.props.mediaScale }
 				/>
 			);
 		}
@@ -425,6 +463,7 @@ export class MediaLibraryContent extends React.Component {
 					onViewDetails={ this.props.onViewDetails }
 					onDeleteItem={ this.props.onDeleteItem }
 					sticky={ ! this.props.scrollable }
+					mediaScale={ this.props.mediaScale }
 				/>
 			);
 		}
@@ -447,37 +486,33 @@ export class MediaLibraryContent extends React.Component {
 	}
 }
 
-export default connect(
-	( state, ownProps ) => {
-		const guidedTourState = getGuidedTourState( state );
-		const mediaValidationErrorTypes = values( ownProps.mediaValidationErrors ).map( head );
-		const shouldPauseGuidedTour =
-			! isEmpty( guidedTourState.tour ) && 0 < size( mediaValidationErrorTypes );
-		const googleConnection = getKeyringConnectionsByName( state, 'google_photos' );
+export default withMobileBreakpoint(
+	connect(
+		( state, ownProps ) => {
+			const guidedTourState = getGuidedTourState( state );
+			const mediaValidationErrorTypes = values( ownProps.mediaValidationErrors ).map( first );
+			const shouldPauseGuidedTour =
+				! isEmpty( guidedTourState.tour ) && 0 < size( mediaValidationErrorTypes );
+			const googleConnection = getKeyringConnectionsByName( state, 'google_photos' );
 
-		return {
-			siteSlug: ownProps.site ? getSiteSlug( state, ownProps.site.ID ) : '',
-			isRequesting: isKeyringConnectionsFetching( state ),
-			displayUploadMediaButton: canCurrentUser( state, ownProps.site.ID, 'publish_posts' ),
-			mediaValidationErrorTypes,
-			shouldPauseGuidedTour,
-			googleConnection: googleConnection.length === 1 ? googleConnection[ 0 ] : null, // There can be only one
-			selectedItems: getMediaLibrarySelectedItems( state, ownProps.site?.ID ),
-		};
-	},
-	{
-		toggleGuidedTour: ( shouldPause ) => ( dispatch ) => {
-			dispatch( shouldPause ? pauseGuidedTour() : resumeGuidedTour() );
+			return {
+				siteSlug: ownProps.site ? getSiteSlug( state, ownProps.site.ID ) : '',
+				isRequesting: isKeyringConnectionsFetching( state ),
+				displayUploadMediaButton: canCurrentUser( state, ownProps.site.ID, 'publish_posts' ),
+				mediaValidationErrorTypes,
+				shouldPauseGuidedTour,
+				googleConnection: googleConnection.length === 1 ? googleConnection[ 0 ] : null, // There can be only one
+				selectedItems: getMediaLibrarySelectedItems( state, ownProps.site?.ID ),
+				mediaScale: getMediaScalePreference( state, ownProps.isBreakpointActive ),
+			};
 		},
-		deleteKeyringConnection: ( connection ) => ( dispatch ) => {
-			// We don't want this to trigger a global notice - a notice is shown inline
-			const deleteKeyring = withoutNotice( () => deleteKeyringConnection( connection ) );
-
-			dispatch( deleteKeyring() );
-		},
-		clearMediaErrors,
-		changeMediaSource,
-	},
-	null,
-	{ pure: false }
-)( localize( MediaLibraryContent ) );
+		{
+			toggleGuidedTour: ( shouldPause ) => ( dispatch ) => {
+				dispatch( shouldPause ? pauseGuidedTour() : resumeGuidedTour() );
+			},
+			deleteKeyringConnection,
+			clearMediaErrors,
+			changeMediaSource,
+		}
+	)( localize( MediaLibraryContent ) )
+);

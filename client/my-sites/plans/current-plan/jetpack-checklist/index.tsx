@@ -4,7 +4,6 @@
 import { isDesktop } from '@automattic/viewport';
 import React, { Fragment, PureComponent } from 'react';
 import { connect } from 'react-redux';
-import { get, includes, minBy } from 'lodash';
 import { localize, LocalizeProps } from 'i18n-calypso';
 import moment from 'moment';
 
@@ -34,14 +33,15 @@ import { URL } from 'calypso/types';
 import { hasFeature, getSitePlanSlug } from 'calypso/state/sites/plans/selectors';
 import getJetpackWpAdminUrl from 'calypso/state/selectors/get-jetpack-wp-admin-url';
 import {
+	FEATURE_VIDEO_UPLOADS_JETPACK_PRO,
+	JETPACK_BACKUP_PRODUCTS,
+	isJetpackAntiSpam,
+	isJetpackBackupSlug,
 	isBusinessPlan,
 	isPremiumPlan,
 	isJetpackOfferResetPlan,
 	planHasFeature,
-} from 'calypso/lib/plans';
-import { FEATURE_VIDEO_UPLOADS_JETPACK_PRO } from 'calypso/lib/plans/constants';
-import { isJetpackAntiSpam, isJetpackBackupSlug } from 'calypso/lib/products-values';
-import { JETPACK_BACKUP_PRODUCTS } from 'calypso/lib/products-values/constants';
+} from '@automattic/calypso-products';
 import withTrackingTool from 'calypso/lib/analytics/with-tracking-tool';
 import { Button, Card } from '@automattic/components';
 import JetpackProductInstall from 'calypso/my-sites/plans/current-plan/jetpack-product-install';
@@ -96,16 +96,15 @@ class JetpackChecklist extends PureComponent< Props & LocalizeProps > {
 			includesJetpackBackup( sitePurchase.productSlug )
 		);
 
-		const earliestPurchaseWithJetpackBackup = minBy( purchasesWithJetpackBackup, ( purchase ) =>
-			moment( purchase.subscribedDate )
-		);
+		const earliestJetpackBackupSubscribeDate = purchasesWithJetpackBackup
+			.map( ( purchase ) => moment( purchase.subscribedDate ) )
+			.sort( ( a, b ) => a.valueOf() - b.valueOf() )?.[ 0 ];
 
-		return (
-			!! earliestPurchaseWithJetpackBackup &&
-			moment( earliestPurchaseWithJetpackBackup.subscribedDate ).isAfter(
-				moment().subtract( 5, 'minutes' )
-			)
-		);
+		if ( ! earliestJetpackBackupSubscribeDate ) {
+			return false;
+		}
+
+		return earliestJetpackBackupSubscribeDate.isAfter( moment().subtract( 5, 'minutes' ) );
 	}
 
 	isComplete( taskId: string ): boolean {
@@ -232,7 +231,6 @@ class JetpackChecklist extends PureComponent< Props & LocalizeProps > {
 							href={ settingsPath( siteSlug ) }
 							onClick={ this.handleTaskStart( {
 								taskId: CHECKLIST_KNOWN_TASKS.JETPACK_BACKUPS,
-								tourId: isRewindActive ? undefined : 'jetpackBackupsRewind',
 							} ) }
 						/>
 					) }
@@ -398,7 +396,7 @@ function mapStateToProps( state ) {
 
 	const siteId = getSelectedSiteId( state );
 	const productInstallStatus = getJetpackProductInstallStatus( state, siteId );
-	const rewindState = get( getRewindState( state, siteId ), 'state', 'uninitialized' );
+	const rewindState = getRewindState( state, siteId ).state;
 	const isMinimumVersion =
 		siteId && isJetpackMinimumVersion( state, siteId, OFFER_RESET_VIDEO_MINIMUM_JETPACK_VERSION );
 
@@ -418,7 +416,7 @@ function mapStateToProps( state ) {
 		akismetFinished: productInstallStatus && productInstallStatus.akismet_status === 'installed',
 		vaultpressFinished:
 			productInstallStatus &&
-			includes( [ 'installed', 'skipped' ], productInstallStatus.vaultpress_status ),
+			[ 'installed', 'skipped' ].includes( productInstallStatus.vaultpress_status ),
 		widgetCustomizerPaneUrl: siteId ? getCustomizerUrl( state, siteId, 'widgets' ) : null,
 		isPaidPlan,
 		hasAntiSpam,
@@ -426,7 +424,7 @@ function mapStateToProps( state ) {
 		productInstallStatus,
 		siteId,
 		siteSlug: getSiteSlug( state, siteId ),
-		taskStatuses: get( getSiteChecklist( state, siteId ), 'tasks' ),
+		taskStatuses: getSiteChecklist( state, siteId )?.tasks,
 		wpAdminUrl,
 		hasVideoHosting:
 			siteId &&

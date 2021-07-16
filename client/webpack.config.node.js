@@ -1,29 +1,22 @@
 /**
- * **** WARNING: No ES6 modules here. Not transpiled! ****
+ * WARNING: No ES6 modules here. Not transpiled! *
  */
 
 /* eslint-disable import/no-nodejs-modules */
 
-/**
- * External dependencies
- */
 const path = require( 'path' );
+const FileConfig = require( '@automattic/calypso-build/webpack/file-loader' );
+const TranspileConfig = require( '@automattic/calypso-build/webpack/transpile' );
+const { shouldTranspileDependency } = require( '@automattic/calypso-build/webpack/util' );
 const webpack = require( 'webpack' );
-
-/**
- * Internal dependencies
- */
+const { BundleAnalyzerPlugin } = require( 'webpack-bundle-analyzer' );
+const nodeExternals = require( 'webpack-node-externals' );
 const cacheIdentifier = require( '../build-tools/babel/babel-loader-cache-identifier' );
+const { packagesInMonorepo } = require( '../build-tools/lib/monorepo' );
+const ExternalModulesWriter = require( './server/bundler/external-modules' );
 const config = require( './server/config' );
 const bundleEnv = config( 'env' );
 const { workerCount } = require( './webpack.common' );
-const TranspileConfig = require( '@automattic/calypso-build/webpack/transpile' );
-const FileConfig = require( '@automattic/calypso-build/webpack/file-loader' );
-const { shouldTranspileDependency } = require( '@automattic/calypso-build/webpack/util' );
-const nodeExternals = require( 'webpack-node-externals' );
-const { BundleAnalyzerPlugin } = require( 'webpack-bundle-analyzer' );
-const ExternalModulesWriter = require( './server/bundler/external-modules' );
-const { packagesInMonorepo } = require( '../build-tools/lib/monorepo' );
 
 /**
  * Internal variables
@@ -36,7 +29,9 @@ const shouldConcatenateModules = process.env.CONCATENATE_MODULES !== 'false';
 const cacheDirectory = path.resolve( '.cache', 'babel-server' );
 
 const fileLoader = FileConfig.loader( {
-	publicPath: isDevelopment ? `/calypso/${ devTarget }/images/` : '/calypso/images/',
+	// The final URL of the image is `${publicPath}${outputPath}/${fileName}` (note the slashes)
+	publicPath: isDevelopment ? `/calypso/${ devTarget }/` : '/calypso/',
+	outputPath: 'images/',
 	emitFile: false, // On the server side, don't actually copy files
 } );
 
@@ -113,6 +108,7 @@ const webpackConfig = {
 				configFile: path.resolve( 'babel.config.js' ),
 				cacheDirectory,
 				cacheIdentifier,
+				cacheCompression: false,
 				exclude: /node_modules\//,
 			} ),
 			TranspileConfig.loader( {
@@ -120,6 +116,7 @@ const webpackConfig = {
 				presets: [ require.resolve( '@automattic/calypso-build/babel/dependencies' ) ],
 				cacheDirectory,
 				cacheIdentifier,
+				cacheCompression: false,
 				include: shouldTranspileDependency,
 			} ),
 			fileLoader,
@@ -134,7 +131,7 @@ const webpackConfig = {
 		mainFields: [ 'calypso:src', 'module', 'main' ],
 		modules: [ path.join( __dirname, 'extensions' ), 'node_modules' ],
 		alias: {
-			'calypso/config': 'calypso/server/config',
+			'@automattic/calypso-config': 'calypso/server/config',
 		},
 	},
 	node: {
@@ -163,19 +160,9 @@ const webpackConfig = {
 			COMMIT_SHA: JSON.stringify( commitSha ),
 			'process.env.NODE_ENV': JSON.stringify( bundleEnv ),
 		} ),
-		new webpack.NormalModuleReplacementPlugin(
-			/^calypso[/\\]my-sites[/\\]themes[/\\]theme-upload$/,
-			'calypso/components/empty-component'
-		), // Depends on BOM
 		new webpack.IgnorePlugin( { resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ } ),
 		! isDevelopment && new ExternalModulesWriter(),
 	].filter( Boolean ),
 };
-
-if ( ! config.isEnabled( 'desktop' ) ) {
-	webpackConfig.plugins.push(
-		new webpack.NormalModuleReplacementPlugin( /^calypso[/\\]lib[/\\]desktop$/, 'lodash/noop' )
-	);
-}
 
 module.exports = webpackConfig;

@@ -2,8 +2,9 @@
  * External dependencies
  */
 import { Dialog } from '@automattic/components';
-import { useI18n } from '@automattic/react-i18n';
-import type { I18nReact } from '@automattic/react-i18n';
+import { useI18n } from '@wordpress/react-i18n';
+import { sprintf } from '@wordpress/i18n';
+import type { I18n } from '@wordpress/i18n';
 import LanguagePicker, { createLanguageGroups } from '@automattic/language-picker';
 import type { Language, LocalizedLanguageNames } from '@automattic/language-picker';
 import React, { useState } from 'react';
@@ -57,7 +58,7 @@ type Props = {
 
 type IncompleteLocaleNoticeMessageProps = {
 	language: CalypsoLanguage | undefined;
-	__: I18nReact[ '__' ];
+	__: I18n[ '__' ];
 	getIncompleteLocaleNoticeMessage: ( ( l: CalypsoLanguage ) => JSX.Element ) | undefined;
 };
 
@@ -88,7 +89,13 @@ function IncompleteLocaleNoticeMessage( {
 			}
 		>
 			<div className="language-picker__modal-incomplete-locale-notice-info">
-				{ __( `(${ languageName } is only ${ percentTranslated }% translated)` ) }
+				{
+					/* translators: %(languageName)s is a localized language name, %(percentTranslated)d%% is a percentage number (0-100), followed by an escaped percent sign %%. */
+					sprintf( __( '(%(languageName)s is only %(percentTranslated)d%% translated)' ), {
+						languageName,
+						percentTranslated,
+					} )
+				}
 				<Icon icon={ info } size={ 20 } />
 			</div>
 		</Tooltip>

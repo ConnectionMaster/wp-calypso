@@ -1,25 +1,25 @@
 /**
  * External dependencies
  */
-
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import { translate } from 'i18n-calypso';
-import { has, identity, mapValues, pickBy } from 'lodash';
+import { localize } from 'i18n-calypso';
+import { has, mapValues, pickBy, flowRight as compose } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
+import { localizeThemesPath } from 'calypso/my-sites/themes/helpers';
 import {
 	activate as activateAction,
 	tryAndCustomize as tryAndCustomizeAction,
 	confirmDelete,
 	showThemePreview as themePreview,
-	showAutoLoadingHomepageWarning as showAutoLoadingHomepageWarningAction,
 } from 'calypso/state/themes/actions';
 import {
 	getJetpackUpgradeUrlIfPremiumTheme,
+	getTheme,
 	getThemeDetailsUrl,
 	getThemeHelpUrl,
 	getThemePurchaseUrl,
@@ -36,7 +36,9 @@ import { isJetpackSite, isJetpackSiteMultiSite } from 'calypso/state/sites/selec
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
 import { getCurrentUser } from 'calypso/state/current-user/selectors';
 
-function getAllThemeOptions() {
+const identity = ( theme ) => theme;
+
+function getAllThemeOptions( { translate } ) {
 	const purchase = config.isEnabled( 'upgrades/checkout' )
 		? {
 				label: translate( 'Purchase', {
@@ -100,6 +102,7 @@ function getAllThemeOptions() {
 		hideForTheme: ( state, themeId, siteId, origin ) =>
 			! isJetpackSite( state, siteId ) ||
 			origin === 'wpcom' ||
+			! getTheme( state, siteId, themeId ) ||
 			isThemeActive( state, themeId, siteId ),
 	};
 
@@ -140,10 +143,6 @@ function getAllThemeOptions() {
 			comment: 'label for previewing the theme demo website',
 		} ),
 		action: themePreview,
-	};
-
-	const showAutoLoadingHomepageWarning = {
-		action: showAutoLoadingHomepageWarningAction,
 	};
 
 	const signupLabel = translate( 'Pick this design', {
@@ -194,24 +193,28 @@ function getAllThemeOptions() {
 		info,
 		support,
 		help,
-		showAutoLoadingHomepageWarning,
 	};
 }
-export const connectOptions = connect(
-	( state, { siteId, origin = siteId } ) => {
+
+const connectOptionsHoc = connect(
+	( state, props ) => {
+		const { siteId, origin = siteId, locale } = props;
+		const isLoggedOut = ! getCurrentUser( state );
 		let mapGetUrl = identity;
 		let mapHideForTheme = identity;
 
 		/* eslint-disable wpcalypso/redux-no-bound-selectors */
 		if ( siteId ) {
-			mapGetUrl = ( getUrl ) => ( t ) => getUrl( state, t, siteId );
+			mapGetUrl = ( getUrl ) => ( t ) =>
+				localizeThemesPath( getUrl( state, t, siteId ), locale, isLoggedOut );
 			mapHideForTheme = ( hideForTheme ) => ( t ) => hideForTheme( state, t, siteId, origin );
 		} else {
-			mapGetUrl = ( getUrl ) => ( t, s ) => getUrl( state, t, s );
+			mapGetUrl = ( getUrl ) => ( t, s ) =>
+				localizeThemesPath( getUrl( state, t, s ), locale, isLoggedOut );
 			mapHideForTheme = ( hideForTheme ) => ( t, s ) => hideForTheme( state, t, s, origin );
 		}
 
-		return mapValues( getAllThemeOptions(), ( option ) =>
+		return mapValues( getAllThemeOptions( props ), ( option ) =>
 			Object.assign(
 				{},
 				option,
@@ -221,8 +224,9 @@ export const connectOptions = connect(
 		);
 		/* eslint-enable wpcalypso/redux-no-bound-selectors */
 	},
-	( dispatch, { siteId, source = 'unknown' } ) => {
-		const options = pickBy( getAllThemeOptions(), 'action' );
+	( dispatch, props ) => {
+		const { siteId, source = 'unknown' } = props;
+		const options = pickBy( getAllThemeOptions( props ), 'action' );
 		let mapAction;
 
 		if ( siteId ) {
@@ -255,3 +259,5 @@ export const connectOptions = connect(
 		};
 	}
 );
+
+export const connectOptions = compose( localize, connectOptionsHoc );

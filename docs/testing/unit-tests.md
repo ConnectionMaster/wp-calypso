@@ -177,11 +177,11 @@ Because we're passing the list as an argument, we can pass mock `validValuesList
 
 Often our code will use methods and properties from imported external and internal libraries in multiple places, which makes passing around arguments messy and impracticable. For these cases `jest.mock` offers a neat way to stub these dependencies.
 
-For instance, in Calypso, we use the ['config'](https://github.com/Automattic/wp-calypso/tree/HEAD/client/config) module to control a great deal of functionality via feature flags.
+For instance, in Calypso, we use the ['config'](https://github.com/Automattic/wp-calypso/tree/HEAD/config) module to control a great deal of functionality via feature flags.
 
 ```javascript
 // bilbo.js
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 export const isBilboVisible = () => ( config.isEnabled( 'the-ring' ) ? false : true );
 ```
 
@@ -189,7 +189,7 @@ To test the behaviour under each condition, we stub the config object and use a 
 
 ```javascript
 // test/bilbo.js
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import { isBilboVisible } from '../bilbo';
 
 jest.mock( 'config', () => ( {

@@ -4,29 +4,27 @@
  */
 import type { TranslateResult } from 'i18n-calypso';
 import type { ReactNode, ReactElement } from 'react';
-import type { TERM_ANNUALLY, TERM_MONTHLY } from 'calypso/lib/plans/constants';
+import type { TERM_ANNUALLY, TERM_MONTHLY } from '@automattic/calypso-products';
 import type { Purchase } from 'calypso/lib/purchases/types';
-import type {
-	ALL,
-	PERFORMANCE,
-	SECURITY,
-	PRODUCTS_WITH_OPTIONS,
-	ITEM_TYPE_PLAN,
-	ITEM_TYPE_BUNDLE,
-	ITEM_TYPE_PRODUCT,
-} from './constants';
+import type { ITEM_TYPE_PLAN, ITEM_TYPE_PRODUCT } from './constants';
+import type { PlanRecommendation } from './plan-upgrade/types';
 
 export type Duration = typeof TERM_ANNUALLY | typeof TERM_MONTHLY;
 export type DurationString = 'annual' | 'monthly';
-export type ProductType = typeof ALL | typeof PERFORMANCE | typeof SECURITY;
-export type ItemType = typeof ITEM_TYPE_PLAN | typeof ITEM_TYPE_BUNDLE | typeof ITEM_TYPE_PRODUCT;
+export type ItemType = typeof ITEM_TYPE_PLAN | typeof ITEM_TYPE_PRODUCT;
 
 export interface QueryArgs {
 	[ key: string ]: string;
 }
 
 export type PurchaseCallback = ( arg0: SelectorProduct, arg1?: boolean, arg2?: Purchase ) => void;
+export type PurchaseURLCallback = (
+	arg0: SelectorProduct,
+	arg1?: boolean,
+	arg2?: Purchase
+) => string | undefined;
 export type DurationChangeCallback = ( arg0: Duration ) => void;
+export type ScrollCardIntoViewCallback = ( arg0: HTMLDivElement, arg1: string ) => void;
 
 interface BasePageProps {
 	rootUrl: string;
@@ -38,13 +36,18 @@ interface BasePageProps {
 export interface SelectorPageProps extends BasePageProps {
 	defaultDuration?: Duration;
 	siteSlug?: string;
+	planRecommendation?: PlanRecommendation;
+	highlightedProducts?: string[];
 }
 
 export interface ProductsGridProps {
 	duration: Duration;
-	onSelectProduct: PurchaseCallback;
 	urlQueryArgs: QueryArgs;
+	planRecommendation?: PlanRecommendation;
+	onSelectProduct: PurchaseCallback;
 	onDurationChange?: DurationChangeCallback;
+	scrollCardIntoView: ScrollCardIntoViewCallback;
+	createButtonURL?: PurchaseURLCallback;
 }
 
 export type PlanGridProducts = {
@@ -54,13 +57,13 @@ export type PlanGridProducts = {
 };
 
 export interface JetpackFreeProps {
+	fullWidth?: boolean;
 	urlQueryArgs: QueryArgs;
 	siteId: number | null;
 }
 
-export type SelectorProductSlug = typeof PRODUCTS_WITH_OPTIONS[ number ];
-
 export type SelectorProductCost = {
+	isFree?: boolean;
 	cost?: number;
 	discountCost?: number;
 	loadingCost?: boolean;
@@ -87,10 +90,6 @@ export type SelectorProductFeaturesSection = {
 
 export type SelectorProductFeatures = {
 	items: SelectorProductFeaturesItem[] | SelectorProductFeaturesSection[];
-	more?: {
-		url: string;
-		label: TranslateResult;
-	};
 };
 
 export interface SelectorProduct extends SelectorProductCost {
@@ -109,7 +108,6 @@ export interface SelectorProduct extends SelectorProductCost {
 	term: Duration;
 	buttonLabel?: TranslateResult;
 	features: SelectorProductFeatures;
-	subtypes: string[];
 	infoText?: TranslateResult | ReactNode;
 	legacy?: boolean;
 	hidePrice?: boolean;
@@ -118,6 +116,7 @@ export interface SelectorProduct extends SelectorProductCost {
 	displayPrice?: number;
 	displayCurrency?: string;
 	displayFrom?: boolean;
+	belowPriceText?: TranslateResult;
 }
 
 export type SiteProduct = {

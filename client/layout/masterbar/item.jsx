@@ -1,13 +1,13 @@
 /**
  * External dependencies
  */
-
 import PropTypes from 'prop-types';
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import classNames from 'classnames';
-import { isFunction, noop } from 'lodash';
 import Gridicon from 'calypso/components/gridicon';
 import TranslatableString from 'calypso/components/translatable/proptype';
+
+const noop = () => {};
 
 class MasterbarItem extends Component {
 	static propTypes = {
@@ -25,16 +25,29 @@ class MasterbarItem extends Component {
 		icon: '',
 		onClick: noop,
 		hasUnseen: false,
+		url: '',
 	};
 
 	_preloaded = false;
 
 	preload = () => {
-		if ( ! this._preloaded && isFunction( this.props.preloadSection ) ) {
+		if ( ! this._preloaded && typeof this.props.preloadSection === 'function' ) {
 			this._preloaded = true;
 			this.props.preloadSection();
 		}
 	};
+
+	renderChildren() {
+		return (
+			<Fragment>
+				{ this.props.hasUnseen && (
+					<span className="masterbar__item-bubble" aria-label="You have unseen content" />
+				) }
+				{ !! this.props.icon && <Gridicon icon={ this.props.icon } size={ 24 } /> }
+				<span className="masterbar__item-content">{ this.props.children }</span>
+			</Fragment>
+		);
+	}
 
 	render() {
 		const itemClasses = classNames( 'masterbar__item', this.props.className, {
@@ -42,23 +55,24 @@ class MasterbarItem extends Component {
 			'has-unseen': this.props.hasUnseen,
 		} );
 
-		return (
-			<a
-				data-tip-target={ this.props.tipTarget }
-				href={ this.props.url }
-				onClick={ this.props.onClick }
-				title={ this.props.tooltip }
-				className={ itemClasses }
-				onTouchStart={ this.preload }
-				onMouseEnter={ this.preload }
-			>
-				{ this.props.hasUnseen && (
-					<span className="masterbar__item-bubble" aria-label="You have unseen content" />
-				) }
-				{ !! this.props.icon && <Gridicon icon={ this.props.icon } size={ 24 } /> }
-				<span className="masterbar__item-content">{ this.props.children }</span>
-			</a>
-		);
+		const attributes = {
+			'data-tip-target': this.props.tipTarget,
+			onClick: this.props.onClick,
+			title: this.props.tooltip,
+			className: itemClasses,
+			onTouchStart: this.preload,
+			onMouseEnter: this.preload,
+		};
+
+		if ( this.props.url ) {
+			return (
+				<a { ...attributes } href={ this.props.url }>
+					{ this.renderChildren() }
+				</a>
+			);
+		}
+
+		return <button { ...attributes }>{ this.renderChildren() }</button>;
 	}
 }
 

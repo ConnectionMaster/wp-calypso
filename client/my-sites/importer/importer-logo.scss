@@ -22,16 +22,17 @@
 		background-color: var( --color-blogger );
 	}
 
-	&.godaddy-gocentral {
-		background-color: var( --color-godaddy );
-	}
-
 	&.wix-logo {
 		background-color: var( --color-wix );
 	}
 
 	&.squarespace {
 		background-color: var( --color-squarespace );
+	}
+
+	&.substack-logo {
+		padding: 8px;
+		background-color: var( --color-substack );
 	}
 
 	@include breakpoint-deprecated( '>960px' ) {

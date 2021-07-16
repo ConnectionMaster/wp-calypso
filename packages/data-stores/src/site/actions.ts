@@ -1,6 +1,6 @@
-/**
- * Internal dependencies
- */
+import { wpcomRequest } from '../wpcom-request-controls';
+import { SiteLaunchError } from './types';
+import type { WpcomClientCredentials } from '../shared-types';
 import type {
 	CreateSiteParams,
 	NewSiteErrorResponse,
@@ -11,9 +11,6 @@ import type {
 	Domain,
 	SiteLaunchError as SiteLaunchErrorType,
 } from './types';
-import type { WpcomClientCredentials } from '../shared-types';
-import { wpcomRequest } from '../wpcom-request-controls';
-import { SiteLaunchError } from './types';
 
 export function createActions( clientCreds: WpcomClientCredentials ) {
 	const fetchSite = () => ( {
@@ -55,7 +52,7 @@ export function createActions( clientCreds: WpcomClientCredentials ) {
 				validate: false,
 			};
 
-			const newSite = yield wpcomRequest( {
+			const newSite: NewSiteSuccessResponse = yield wpcomRequest( {
 				path: '/sites/new',
 				apiVersion: '1.1',
 				method: 'post',
@@ -129,7 +126,7 @@ export function createActions( clientCreds: WpcomClientCredentials ) {
 
 	// TODO: move getCart and setCart to a 'cart' data-store
 	function* getCart( siteId: number ) {
-		const success = yield wpcomRequest( {
+		const success: Cart = yield wpcomRequest( {
 			path: '/me/shopping-cart/' + siteId,
 			apiVersion: '1.1',
 			method: 'GET',
@@ -144,7 +141,7 @@ export function createActions( clientCreds: WpcomClientCredentials ) {
 	} );
 
 	function* setCart( siteId: number, cartData: Cart ) {
-		const success = yield wpcomRequest( {
+		const success: Cart = yield wpcomRequest( {
 			path: '/me/shopping-cart/' + siteId,
 			apiVersion: '1.1',
 			method: 'POST',

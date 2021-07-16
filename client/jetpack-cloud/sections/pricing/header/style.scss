@@ -1,5 +1,5 @@
-@import '~@wordpress/base-styles/breakpoints';
-@import '~@wordpress/base-styles/mixins';
+@import '@wordpress/base-styles/breakpoints';
+@import '@wordpress/base-styles/mixins';
 
 .header {
 	text-align: center;
@@ -14,9 +14,8 @@
 	}
 }
 
-/* I5 specifics */
 .is-group-jetpack-cloud.is-section-jetpack-cloud-pricing
-	.header.i5
+	.header
 	.header__main-title
 	.formatted-header__title {
 	max-width: 280px;

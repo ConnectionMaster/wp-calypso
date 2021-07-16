@@ -7,6 +7,7 @@ import classNames from 'classnames';
 import { includes, isEqual, some } from 'lodash';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
+import { FEATURE_VIDEO_UPLOADS } from '@automattic/calypso-products';
 
 /**
  * Internal dependencies
@@ -24,8 +25,11 @@ import {
 	isKeyringConnectionsFetching,
 	getKeyringConnections,
 } from 'calypso/state/sharing/keyring/selectors';
+import { isJetpackSite } from 'calypso/state/sites/selectors';
+import isAtomicSite from 'calypso/state/selectors/is-site-automated-transfer';
 import { requestKeyringConnections } from 'calypso/state/sharing/keyring/actions';
-import { setMediaLibrarySelectedItems } from 'calypso/state/media/actions';
+import { selectMediaItems } from 'calypso/state/media/actions';
+import { hasSiteFeature } from 'calypso/lib/site/utils';
 
 /**
  * Style dependencies
@@ -59,7 +63,6 @@ class MediaLibrary extends Component {
 		onSourceChange: PropTypes.func,
 		onSearch: PropTypes.func,
 		onScaleChange: PropTypes.func,
-		onEditItem: PropTypes.func,
 		fullScreenDropZone: PropTypes.bool,
 		containerWidth: PropTypes.number,
 		single: PropTypes.bool,
@@ -121,24 +124,28 @@ class MediaLibrary extends Component {
 		}
 
 		if ( ! isEqual( selectedItems, filteredItems ) ) {
-			this.props.setMediaLibrarySelectedItems( this.props.site.ID, filteredItems );
+			this.props.selectMediaItems( this.props.site.ID, filteredItems );
 		}
 
 		this.props.onAddMedia();
 	};
 
 	filterRequiresUpgrade() {
-		const { filter, site, source } = this.props;
+		const { filter, site, source, isJetpack, isAtomic, hasVideoUploadFeature } = this.props;
 		if ( source ) {
 			return false;
 		}
 
 		switch ( filter ) {
 			case 'audio':
-				return ! ( ( site && site.options.upgraded_filetypes_enabled ) || site.jetpack );
+				return ! ( ( site && site.options.upgraded_filetypes_enabled ) || isJetpack );
 
 			case 'videos':
-				return ! ( ( site && site.options.videopress_enabled ) || site.jetpack );
+				return ! (
+					( site && site.options.videopress_enabled ) ||
+					( isJetpack && ! isAtomic ) ||
+					( isAtomic && hasVideoUploadFeature )
+				);
 		}
 
 		return false;
@@ -200,7 +207,6 @@ class MediaLibrary extends Component {
 					onMediaScaleChange={ this.props.onScaleChange }
 					onSourceChange={ this.props.onSourceChange }
 					onDeleteItem={ this.props.onDeleteItem }
-					onEditItem={ this.props.onEditItem }
 					onViewDetails={ this.props.onViewDetails }
 					postId={ this.props.postId }
 					mediaValidationErrors={ this.props.site ? this.props.mediaValidationErrors : undefined }
@@ -216,9 +222,12 @@ export default connect(
 		mediaValidationErrors: getMediaErrors( state, site?.ID ),
 		needsKeyring: needsKeyring( state, source ),
 		selectedItems: getMediaLibrarySelectedItems( state, site?.ID ),
+		isJetpack: isJetpackSite( state, site?.ID ),
+		isAtomic: isAtomicSite( state, site?.ID ),
+		hasVideoUploadFeature: hasSiteFeature( site, FEATURE_VIDEO_UPLOADS ),
 	} ),
 	{
 		requestKeyringConnections,
-		setMediaLibrarySelectedItems,
+		selectMediaItems,
 	}
 )( MediaLibrary );

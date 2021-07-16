@@ -1,18 +1,10 @@
-/**
- * External dependencies
- */
-import { By as by, until } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../driver-helper.js';
-
+import { By } from 'selenium-webdriver';
 import AsyncBaseContainer from '../async-base-container.js';
+import * as driverHelper from '../driver-helper.js';
 
 export default class PaymentButtonFrontEndComponent extends AsyncBaseContainer {
 	constructor( driver ) {
-		super( driver, by.css( '.jetpack-simple-payments-wrapper' ) );
+		super( driver, By.css( '.jetpack-simple-payments-wrapper' ) );
 	}
 
 	async _preInit() {
@@ -22,14 +14,12 @@ export default class PaymentButtonFrontEndComponent extends AsyncBaseContainer {
 	}
 
 	async clickPaymentButton() {
-		const payPalPayButtonSelector = by.css( '.paypal-button-card' );
-		await this.driver.wait(
-			until.ableToSwitchToFrame( by.css( '.xcomponent-component-frame,.zoid-component-frame' ) ),
-			this.explicitWaitMS,
-			'Could not locate the payment button iFrame.'
+		const payPalPayButtonLocator = By.css( '.paypal-button-card' );
+		await driverHelper.waitUntilAbleToSwitchToFrame(
+			this.driver,
+			By.css( '.xcomponent-component-frame,.zoid-component-frame' )
 		);
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, payPalPayButtonSelector );
-		await driverHelper.clickWhenClickable( this.driver, payPalPayButtonSelector );
-		return await this.driver.switchTo().defaultContent();
+		await driverHelper.clickWhenClickable( this.driver, payPalPayButtonLocator );
+		await this.driver.switchTo().defaultContent();
 	}
 }

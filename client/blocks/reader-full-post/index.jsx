@@ -7,7 +7,7 @@ import { connect } from 'react-redux';
 import { translate } from 'i18n-calypso';
 import classNames from 'classnames';
 import { get, startsWith, pickBy } from 'lodash';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 
 /**
  * Internal dependencies
@@ -36,7 +36,7 @@ import {
 import Comments from 'calypso/blocks/comments';
 import scrollTo from 'calypso/lib/scroll-to';
 import PostExcerptLink from 'calypso/reader/post-excerpt-link';
-import { getSiteName, isEligibleForUnseen } from 'calypso/reader/get-helpers';
+import { canBeMarkedAsSeen, getSiteName, isEligibleForUnseen } from 'calypso/reader/get-helpers';
 import KeyboardShortcuts from 'calypso/lib/keyboard-shortcuts';
 import ReaderPostActions from 'calypso/blocks/reader-post-actions';
 import {
@@ -83,7 +83,7 @@ import { getReaderTeams } from 'calypso/state/teams/selectors';
 import QueryReaderTeams from 'calypso/components/data/query-reader-teams';
 import isSiteWPForTeams from 'calypso/state/selectors/is-site-wpforteams';
 import isFeedWPForTeams from 'calypso/state/selectors/is-feed-wpforteams';
-import { isFollowing } from 'calypso/state/reader/follows/selectors';
+import WPiFrameResize from 'calypso/blocks/reader-full-post/wp-iframe-resize';
 
 /**
  * Style dependencies
@@ -96,13 +96,13 @@ export class FullPostView extends React.Component {
 		onClose: PropTypes.func.isRequired,
 		referralPost: PropTypes.object,
 		referralStream: PropTypes.string,
-		isFollowingItem: PropTypes.bool,
 		isWPForTeamsItem: PropTypes.bool,
 		teams: PropTypes.array,
 	};
 
 	hasScrolledToCommentAnchor = false;
 	commentsWrapper = React.createRef();
+	postContentWrapper = React.createRef();
 
 	componentDidMount() {
 		KeyboardShortcuts.on( 'close-full-post', this.handleBack );
@@ -121,6 +121,10 @@ export class FullPostView extends React.Component {
 		if ( this.hasCommentAnchor && ! this.hasScrolledToCommentAnchor ) {
 			this.scrollToComments();
 		}
+
+		// Adds WPiFrameResize listener for setting the corect height in embedded iFrames.
+		this.stopResize =
+			this.postContentWrapper.current && WPiFrameResize( this.postContentWrapper.current );
 	}
 
 	componentDidUpdate( prevProps ) {
@@ -153,6 +157,8 @@ export class FullPostView extends React.Component {
 		KeyboardShortcuts.off( 'like-selection', this.handleLike );
 		KeyboardShortcuts.off( 'move-selection-down', this.goToNextPost );
 		KeyboardShortcuts.off( 'move-selection-up', this.goToPreviousPost );
+		// Remove WPiFrameResize listener.
+		this.stopResize?.();
 	}
 
 	handleBack = ( event ) => {
@@ -263,7 +269,7 @@ export class FullPostView extends React.Component {
 	};
 
 	attemptToSendPageView = () => {
-		const { post, site, teams, isWPForTeamsItem, isFollowingItem } = this.props;
+		const { post, site, teams, isWPForTeamsItem } = this.props;
 
 		if (
 			post &&
@@ -281,7 +287,7 @@ export class FullPostView extends React.Component {
 		}
 
 		if ( ! this.hasLoaded && post && post._state !== 'pending' ) {
-			if ( isEligibleForUnseen( { teams, isFollowingItem, isWPForTeamsItem } ) ) {
+			if ( isEligibleForUnseen( { teams, isWPForTeamsItem } ) && canBeMarkedAsSeen( { post } ) ) {
 				this.markAsSeen();
 			}
 
@@ -383,7 +389,6 @@ export class FullPostView extends React.Component {
 			postId,
 			teams,
 			isWPForTeamsItem,
-			isFollowingItem,
 		} = this.props;
 
 		if ( post.is_error ) {
@@ -484,7 +489,8 @@ export class FullPostView extends React.Component {
 								/>
 							) }
 
-							{ isEligibleForUnseen( { teams, isFollowingItem, isWPForTeamsItem } ) &&
+							{ isEligibleForUnseen( { teams, isWPForTeamsItem } ) &&
+								canBeMarkedAsSeen( { post } ) &&
 								this.renderMarkAsSenButton() }
 						</div>
 					</div>
@@ -502,6 +508,7 @@ export class FullPostView extends React.Component {
 								<EmbedContainer>
 									<AutoDirection>
 										<div
+											ref={ this.postContentWrapper }
 											className="reader-full-post__story-content"
 											dangerouslySetInnerHTML={ { __html: post.content } }
 										/>
@@ -598,7 +605,6 @@ export default connect(
 		const { site_ID: siteId, is_external: isExternal } = post;
 
 		const props = {
-			isFollowingItem: isFollowing( state, { blogId, feedId } ),
 			isWPForTeamsItem: isSiteWPForTeams( state, blogId ) || isFeedWPForTeams( state, feedId ),
 			teams: getReaderTeams( state ),
 			post,

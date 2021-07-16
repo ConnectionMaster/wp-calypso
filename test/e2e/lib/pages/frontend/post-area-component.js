@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper';
 
 export default class PostAreaComponent extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -15,8 +8,8 @@ export default class PostAreaComponent extends AsyncBaseContainer {
 	}
 
 	async getPostHTML() {
-		const postSelector = By.css( '.post .entry-content' );
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, postSelector );
-		return await this.driver.findElement( postSelector ).getAttribute( 'innerHTML' );
+		const postLocator = By.css( '.post .entry-content' );
+		await driverHelper.waitUntilElementLocatedAndVisible( this.driver, postLocator );
+		return await this.driver.findElement( postLocator ).getAttribute( 'innerHTML' );
 	}
 }

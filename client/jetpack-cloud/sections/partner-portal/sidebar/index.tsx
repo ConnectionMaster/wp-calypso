@@ -2,10 +2,9 @@
  * External dependencies
  */
 import React, { Component } from 'react';
-import { AnyAction } from 'redux';
 import { connect } from 'react-redux';
-import { memoize } from 'lodash';
 import { localize, translate as TranslateType } from 'i18n-calypso';
+import config from '@automattic/calypso-config';
 
 /**
  * Internal dependencies
@@ -21,25 +20,20 @@ import { itemLinkMatches } from 'calypso/my-sites/sidebar/utils';
  * Style dependencies
  */
 import 'calypso/components/jetpack/sidebar/style.scss';
-// We import these styles from here because this is the only section that gets always
-// loaded when a user visits Jetpack Cloud. We might have to find a better place for
-// this in the future.
-import 'calypso/jetpack-cloud/style.scss';
 
 interface Props {
 	path: string;
-	dispatchRecordTracksEvent: ( name: string, properties: any ) => AnyAction;
-	translate: TranslateType;
+	dispatchRecordTracksEvent: typeof recordTracksEvent;
+	translate: typeof TranslateType;
 }
-
 class PartnerPortalSidebar extends Component< Props > {
-	onNavigate = memoize( ( menuItem ) => () => {
+	onNavigate = ( menuItem: string ) => () => {
 		this.props.dispatchRecordTracksEvent( 'calypso_jetpack_sidebar_menu_click', {
 			menu_item: menuItem,
 		} );
 
 		window.scrollTo( 0, 0 );
-	} );
+	};
 
 	render() {
 		const { translate, path } = this.props;
@@ -49,14 +43,45 @@ class PartnerPortalSidebar extends Component< Props > {
 				<SidebarRegion>
 					<SidebarMenu>
 						<SidebarItem
-							icon="next-page"
-							label={ translate( 'Partner Portal', {
+							materialIcon={
+								config.isEnabled( 'jetpack/partner-portal-payment' )
+									? 'attach_money'
+									: 'credit_card'
+							}
+							materialIconStyle={
+								config.isEnabled( 'jetpack/partner-portal-payment' ) ? 'filled' : 'outline'
+							}
+							label={ translate( 'Billing', {
 								comment: 'Jetpack sidebar navigation item',
 							} ) }
-							link="/partner-portal"
-							onNavigate={ this.onNavigate }
-							selected={ itemLinkMatches( [ '/partner-portal' ], path ) }
+							link="/partner-portal/billing"
+							onNavigate={ this.onNavigate( 'Jetpack Cloud / Partner Portal' ) }
+							selected={ path === '/partner-portal/billing' }
 						/>
+
+						<SidebarItem
+							materialIcon="vpn_key"
+							materialIconStyle="filled"
+							label={ translate( 'Licenses', {
+								comment: 'Jetpack sidebar navigation item',
+							} ) }
+							link="/partner-portal/licenses"
+							onNavigate={ this.onNavigate( 'Jetpack Cloud / Partner Portal / Licenses' ) }
+							selected={ itemLinkMatches( [ '/partner-portal/licenses' ], path ) }
+						/>
+
+						{ config.isEnabled( 'jetpack/partner-portal-payment' ) && (
+							<SidebarItem
+								materialIcon="credit_card"
+								materialIconStyle="outline"
+								label={ translate( 'Payment Method', {
+									comment: 'Jeptack sidebar navigation item',
+								} ) }
+								link="/partner-portal/payment-method"
+								onNavigate={ this.onNavigate( 'Jetpack Cloud / Partner Portal / Payment Method' ) }
+								selected={ itemLinkMatches( [ '/partner-portal/payment-method' ], path ) }
+							/>
+						) }
 					</SidebarMenu>
 				</SidebarRegion>
 			</Sidebar>

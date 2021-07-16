@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { find, identity } from 'lodash';
+import { find } from 'lodash';
 
 /**
  * Internal dependencies
@@ -18,7 +18,6 @@ import { themes } from 'calypso/lib/signup/themes-data';
 import { getCurrentUser } from 'calypso/state/current-user/selectors';
 import { getSurveyVertical } from 'calypso/state/signup/steps/survey/selectors';
 import { getDesignType } from 'calypso/state/signup/steps/design-type/selectors';
-import { isEnabled } from 'calypso/config';
 import { getSignupDependencyStore } from 'calypso/state/signup/dependency-store/selectors';
 import { submitSignupStep } from 'calypso/state/signup/progress/actions';
 
@@ -40,7 +39,6 @@ class ThemeSelectionStep extends Component {
 
 	static defaultProps = {
 		useHeadstart: true,
-		translate: identity,
 	};
 
 	pickTheme = ( themeId ) => {
@@ -89,10 +87,7 @@ class ThemeSelectionStep extends Component {
 	isStoreSignup() {
 		const { signupDependencies = {} } = this.props;
 
-		return (
-			isEnabled( 'signup/atomic-store-flow' ) &&
-			( this.props.designType === 'store' || signupDependencies.designType === 'store' )
-		);
+		return this.props.designType === 'store' || signupDependencies.designType === 'store';
 	}
 
 	headerText() {

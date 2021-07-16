@@ -17,21 +17,17 @@ import {
 
 import { getPlanDiscountedRawPrice } from 'calypso/state/sites/plans/selectors';
 import { getPlanRawPrice } from 'calypso/state/plans/selectors';
-import { TERM_MONTHLY, TERM_ANNUALLY } from 'calypso/lib/plans/constants';
-const plans = require( 'calypso/lib/plans' );
-
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
-} ) );
+import { getPlan, TERM_MONTHLY, TERM_ANNUALLY } from '@automattic/calypso-products';
 
 jest.mock( 'calypso/state/sites/plans/selectors', () => ( {
 	getPlanDiscountedRawPrice: jest.fn(),
 } ) );
 
-plans.applyTestFiltersToPlansList = jest.fn( ( x ) => x );
-plans.getPlan = jest.fn();
-
-const { getPlan } = plans;
+jest.mock( '@automattic/calypso-products', () => ( {
+	...jest.requireActual( '@automattic/calypso-products' ),
+	applyTestFiltersToPlansList: jest.fn( ( x ) => x ),
+	getPlan: jest.fn(),
+} ) );
 
 jest.mock( 'calypso/state/plans/selectors', () => ( {
 	getPlanRawPrice: jest.fn(),
@@ -130,7 +126,7 @@ describe( 'selectors', () => {
 	} );
 
 	describe( '#computeFullAndMonthlyPricesForPlan()', () => {
-		test( 'Should return shape { priceFull, priceMonthly }', () => {
+		test( 'Should return shape { priceFull }', () => {
 			getPlanDiscountedRawPrice.mockImplementation( ( a, b, c, { isMonthly } ) =>
 				isMonthly ? 10 : 120
 			);
@@ -138,20 +134,16 @@ describe( 'selectors', () => {
 
 			const plan = { getStoreSlug: () => 'abc', getProductId: () => 'def' };
 			expect( computeFullAndMonthlyPricesForPlan( {}, 1, plan, 0, {} ) ).toEqual( {
-				priceFullBeforeDiscount: 150,
 				priceFull: 120,
 				priceFinal: 120,
-				priceMonthly: 10,
 			} );
 		} );
 
 		test( 'Should return proper priceFinal if couponDiscounts are provided', () => {
 			const plan = { getStoreSlug: () => 'abc', getProductId: () => 'def' };
 			expect( computeFullAndMonthlyPricesForPlan( {}, 1, plan, 0, { def: 60 } ) ).toEqual( {
-				priceFullBeforeDiscount: 150,
 				priceFull: 120,
 				priceFinal: 60,
-				priceMonthly: 10, // The monthly price is without discounts applied
 			} );
 		} );
 	} );
@@ -186,7 +178,7 @@ describe( 'selectors', () => {
 			getPlan.mockImplementation( ( slug ) => testPlans[ slug ] );
 		} );
 
-		test( 'Should return list of shapes { priceFull, priceFullBeforeDiscount, priceMonthly, plan, product, planSlug }', () => {
+		test( 'Should return list of shapes { priceFull, plan, product, planSlug }', () => {
 			const state = {
 				productsList: {
 					items: {
@@ -201,19 +193,15 @@ describe( 'selectors', () => {
 					planSlug: 'plan1',
 					plan: testPlans.plan1,
 					product: state.productsList.items.plan1,
-					priceFullBeforeDiscount: 150,
 					priceFull: 120,
 					priceFinal: 120,
-					priceMonthly: 10,
 				},
 				{
 					planSlug: 'plan2',
 					plan: testPlans.plan2,
 					product: state.productsList.items.plan2,
-					priceFullBeforeDiscount: 150,
 					priceFull: 240,
 					priceFinal: 240,
-					priceMonthly: 20,
 				},
 			] );
 		} );
@@ -235,19 +223,15 @@ describe( 'selectors', () => {
 					planSlug: 'plan1',
 					plan: testPlans.plan1,
 					product: state.productsList.items.plan1,
-					priceFullBeforeDiscount: 150,
 					priceFull: 120,
 					priceFinal: 60,
-					priceMonthly: 10,
 				},
 				{
 					planSlug: 'plan2',
 					plan: testPlans.plan2,
 					product: state.productsList.items.plan2,
-					priceFullBeforeDiscount: 150,
 					priceFull: 240,
 					priceFinal: 120,
-					priceMonthly: 20,
 				},
 			] );
 		} );
@@ -267,10 +251,8 @@ describe( 'selectors', () => {
 					planSlug: 'plan1',
 					plan: testPlans.plan1,
 					product: state.productsList.items.plan1,
-					priceFullBeforeDiscount: 150,
 					priceFinal: 120,
 					priceFull: 120,
-					priceMonthly: 10,
 				},
 			] );
 		} );
@@ -289,10 +271,8 @@ describe( 'selectors', () => {
 					planSlug: 'plan1',
 					plan: testPlans.plan1,
 					product: state.productsList.items.plan1,
-					priceFullBeforeDiscount: 150,
 					priceFull: 120,
 					priceFinal: 120,
-					priceMonthly: 10,
 				},
 			] );
 		} );
@@ -323,10 +303,8 @@ describe( 'selectors', () => {
 					planSlug: 'plan1',
 					plan: testPlans.plan1,
 					product: state.productsList.items.plan1,
-					priceFullBeforeDiscount: 150,
 					priceFull: 120,
 					priceFinal: 120,
-					priceMonthly: 10,
 				},
 			] );
 		} );

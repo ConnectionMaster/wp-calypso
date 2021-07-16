@@ -30,11 +30,9 @@ import accept from 'calypso/lib/accept';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import searchUrl from 'calypso/lib/search-url';
 import { editMedia, deleteMedia } from 'calypso/state/media/thunks';
-import {
-	setMediaLibrarySelectedItems,
-	changeMediaSource,
-	clearSite,
-} from 'calypso/state/media/actions';
+import { selectMediaItems, changeMediaSource, clearSite } from 'calypso/state/media/actions';
+import ScreenOptionsTab from 'calypso/components/screen-options-tab';
+import config from '@automattic/calypso-config';
 
 /**
  * Style dependencies
@@ -81,7 +79,7 @@ class Media extends Component {
 		}
 
 		if ( this.props.selectedSite ) {
-			this.props.setMediaLibrarySelectedItems( this.props.selectedSite.ID, [] );
+			this.props.selectMediaItems( this.props.selectedSite.ID, [] );
 		}
 
 		if ( this.props.currentRoute !== redirect ) {
@@ -89,13 +87,6 @@ class Media extends Component {
 		}
 
 		page( redirect );
-	};
-
-	openDetailsModalForASingleImage = ( image ) => {
-		this.setState( {
-			currentDetail: 0,
-			selectedItems: [ image ],
-		} );
 	};
 
 	openDetailsModalForAllSelected = () => {
@@ -213,6 +204,25 @@ class Media extends Component {
 		this.props.editMedia( siteId, { ID: item.ID, media_url: item.guid } );
 		this.setState( { currentDetail: null, editedImageItem: null, selectedItems: [] } );
 		this.maybeRedirectToAll();
+	};
+
+	updateItem = ( itemId, detail ) => {
+		const { selectedItems } = this.state;
+		const index = selectedItems.findIndex( ( item ) => item.ID === itemId );
+
+		if ( index === -1 ) {
+			return;
+		}
+
+		selectedItems.splice( index, 1, {
+			...selectedItems[ index ],
+			...detail,
+		} );
+
+		this.setState( {
+			...this.state,
+			selectedItems,
+		} );
 	};
 
 	setDetailSelectedIndex = ( index ) => {
@@ -356,6 +366,7 @@ class Media extends Component {
 
 		return (
 			<div ref={ this.containerRef } className="main main-column media" role="main">
+				<ScreenOptionsTab wpAdminPath="upload.php" />
 				{ mediaId && site && site.ID && <QueryMedia siteId={ site.ID } mediaId={ mediaId } /> }
 				<PageViewTracker path={ this.getAnalyticsPath() } title="Media" />
 				<DocumentHead title={ translate( 'Media' ) } />
@@ -364,7 +375,11 @@ class Media extends Component {
 					brandFont
 					className="media__page-heading"
 					headerText={ translate( 'Media' ) }
+					subHeaderText={ translate(
+						'Manage all the media on your site, including images, video, and more.'
+					) }
 					align="left"
+					hasScreenOptions={ config.isEnabled( 'nav-unification/switcher' ) }
 				/>
 				{ this.showDialog() && (
 					<EditorMediaModalDialog
@@ -385,6 +400,7 @@ class Media extends Component {
 								onEditImageItem={ this.editImage }
 								onEditVideoItem={ this.editVideo }
 								onRestoreItem={ this.restoreOriginalMedia }
+								onUpdateItem={ this.updateItem }
 								onSelectedIndexChange={ this.setDetailSelectedIndex }
 							/>
 						) }
@@ -414,7 +430,6 @@ class Media extends Component {
 						single={ false }
 						filter={ this.props.filter }
 						source={ this.state.source }
-						onEditItem={ this.openDetailsModalForASingleImage }
 						onViewDetails={ this.openDetailsModalForAllSelected }
 						onDeleteItem={ this.handleDeleteMediaEvent }
 						onSourceChange={ this.handleSourceChange }
@@ -442,7 +457,7 @@ const mapStateToProps = ( state, { mediaId } ) => {
 export default connect( mapStateToProps, {
 	editMedia,
 	deleteMedia,
-	setMediaLibrarySelectedItems,
+	selectMediaItems,
 	changeMediaSource,
 	clearSite,
 } )( localize( Media ) );

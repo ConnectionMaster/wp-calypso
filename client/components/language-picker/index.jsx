@@ -6,12 +6,12 @@ import PropTypes from 'prop-types';
 import React, { Fragment, PureComponent } from 'react';
 import classNames from 'classnames';
 import { localize } from 'i18n-calypso';
-import { find, isString, noop } from 'lodash';
+import { find } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import LanguagePickerModal from './modal';
 import { getLanguageCodeLabels } from './utils';
 
@@ -19,6 +19,8 @@ import { getLanguageCodeLabels } from './utils';
  * Style dependencies
  */
 import './style.scss';
+
+const noop = () => {};
 
 export class LanguagePicker extends PureComponent {
 	static propTypes = {
@@ -82,7 +84,7 @@ export class LanguagePicker extends PureComponent {
 			return lang[ valueKey ] == value; // eslint-disable-line eqeqeq
 		} );
 		//if an unsupported language is provided return it without a display name
-		if ( isString( value ) && ! language ) {
+		if ( typeof value === 'string' && ! language ) {
 			return {
 				langSlug: value,
 				name: translate( 'Unsupported language' ),

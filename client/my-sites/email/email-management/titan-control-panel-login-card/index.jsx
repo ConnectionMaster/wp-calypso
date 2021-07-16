@@ -9,7 +9,7 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import { errorNotice } from 'calypso/state/notices/actions';
 import { Button, CompactCard } from '@automattic/components';
 import SectionHeader from 'calypso/components/section-header';
@@ -17,8 +17,7 @@ import {
 	fetchTitanAutoLoginURL,
 	fetchTitanIframeURL,
 } from 'calypso/my-sites/email/email-management/titan-functions';
-import { getTitanMailOrderId } from 'calypso/lib/titan/get-titan-mail-order-id';
-import { getTitanProductName } from 'calypso/lib/titan/get-titan-product-name';
+import { getTitanMailOrderId, getTitanProductName } from 'calypso/lib/titan';
 
 /**
  * Style dependencies
@@ -34,7 +33,9 @@ class TitanControlPanelLoginCard extends React.Component {
 	componentDidMount() {
 		this._mounted = true;
 
-		fetchTitanIframeURL( getTitanMailOrderId( this.props.domain ) ).then(
+		const { context, domain } = this.props;
+
+		fetchTitanIframeURL( getTitanMailOrderId( domain ), context ).then(
 			( { error, iframeURL } ) => {
 				if ( error ) {
 					this.props.errorNotice(
@@ -56,19 +57,21 @@ class TitanControlPanelLoginCard extends React.Component {
 			return;
 		}
 
-		const { domain, translate } = this.props;
+		const { context, domain, translate } = this.props;
 		this.setState( { isFetchingAutoLoginLink: true } );
 
-		fetchTitanAutoLoginURL( getTitanMailOrderId( domain ) ).then( ( { error, loginURL } ) => {
-			this.setState( { isFetchingAutoLoginLink: false } );
-			if ( error ) {
-				this.props.errorNotice(
-					error ?? translate( 'An unknown error occurred. Please try again later.' )
-				);
-			} else {
-				window.location.href = loginURL;
+		fetchTitanAutoLoginURL( getTitanMailOrderId( domain ), context ).then(
+			( { error, loginURL } ) => {
+				this.setState( { isFetchingAutoLoginLink: false } );
+				if ( error ) {
+					this.props.errorNotice(
+						error ?? translate( 'An unknown error occurred. Please try again later.' )
+					);
+				} else {
+					window.location.href = loginURL;
+				}
 			}
-		} );
+		);
 	};
 
 	renderAutoLogin() {
@@ -79,12 +82,14 @@ class TitanControlPanelLoginCard extends React.Component {
 				productName: getTitanProductName(),
 			},
 			comment:
-				'%(domainName)s is a domain name, e.g. example.com; %(productName)s is the product name, either Email or Titan Mail',
+				'%(domainName)s is a domain name, e.g. example.com; %(productName)s is the product name, which should be "Professional Email" translated',
 		};
 		const sectionHeaderLabel = translate( '%(productName)s: %(domainName)s', translateArgs );
-		const buttonCtaText = isEnabled( 'titan/phase-2' )
-			? translate( 'Log in to the Email control panel' )
-			: translate( "Log in to Titan's control panel" );
+		const buttonCtaText = translate( 'Log in to your %(productName)s control panel', {
+			args: { productName: getTitanProductName() },
+			comment:
+				'%(productName)s is the product name, which will be the translated version of "Professional Email"',
+		} );
 		const cardText = translate(
 			'Go to the %(productName)s control panel to manage email for %(domainName)s.',
 			translateArgs
@@ -115,7 +120,7 @@ class TitanControlPanelLoginCard extends React.Component {
 				productName: getTitanProductName(),
 			},
 			comment:
-				'%(domainName)s is a domain name, e.g. example.com; %(productName)s is the product name, either Email or Titan Mail',
+				'%(domainName)s is a domain name, e.g. example.com; %(productName)s is the product name, which should be "Professional Email" translated',
 		};
 		const sectionHeaderLabel = translate( '%(productName)s: %(domainName)s', translateArgs );
 
@@ -125,10 +130,16 @@ class TitanControlPanelLoginCard extends React.Component {
 				<CompactCard>
 					{ this.state.iframeURL ? (
 						<iframe
-							title={ translate( 'Email Control Panel' ) }
+							title={ translate( '%(titanProductName)s Control Panel', {
+								args: {
+									titanProductName: getTitanProductName(),
+								},
+								comment:
+									'%(titanProductName) is the name of the product, which should be "Professional Email" translated',
+							} ) }
 							src={ this.state.iframeURL }
 							width="100%"
-							height="650px"
+							height="1200px"
 						/>
 					) : (
 						<div>{ translate( 'Loading the control panel…' ) }</div>
@@ -148,6 +159,7 @@ class TitanControlPanelLoginCard extends React.Component {
 }
 
 TitanControlPanelLoginCard.propTypes = {
+	context: PropTypes.string,
 	domain: PropTypes.object.isRequired,
 };
 

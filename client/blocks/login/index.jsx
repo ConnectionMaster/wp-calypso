@@ -13,7 +13,7 @@ import classNames from 'classnames';
  * Internal dependencies
  */
 import Gridicon from 'calypso/components/gridicon';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { sendEmailLogin } from 'calypso/state/auth/actions';
 import {
 	getAuthAccountType,
@@ -95,9 +95,7 @@ class Login extends Component {
 	componentDidMount() {
 		if ( ! this.props.twoFactorEnabled && this.props.twoFactorAuthType ) {
 			// Disallow access to the 2FA pages unless the user has 2FA enabled
-			page(
-				login( { isNative: true, isJetpack: this.props.isJetpack, locale: this.props.locale } )
-			);
+			page( login( { isJetpack: this.props.isJetpack, locale: this.props.locale } ) );
 		}
 
 		window.scrollTo( 0, 0 );
@@ -135,7 +133,7 @@ class Login extends Component {
 			! socialConnect &&
 			! privateSite &&
 			! oauth2Client &&
-			! ( config.isEnabled( 'jetpack/connect/woocommerce' ) && isJetpackWooCommerceFlow ) &&
+			! isJetpackWooCommerceFlow &&
 			! isJetpack &&
 			! fromSite &&
 			! twoFactorEnabled &&
@@ -150,7 +148,6 @@ class Login extends Component {
 		} else {
 			page(
 				login( {
-					isNative: true,
 					isJetpack: this.props.isJetpack,
 					isGutenboarding: this.props.isGutenboarding,
 					// If no notification is sent, the user is using the authenticator for 2FA by default
@@ -165,13 +162,7 @@ class Login extends Component {
 		if ( this.props.onSocialConnectStart ) {
 			this.props.onSocialConnectStart();
 		} else {
-			page(
-				login( {
-					isNative: true,
-					socialConnect: true,
-					locale: this.props.locale,
-				} )
-			);
+			page( login( { socialConnect: true, locale: this.props.locale } ) );
 		}
 	};
 
@@ -280,11 +271,7 @@ class Login extends Component {
 				);
 			}
 
-			if (
-				config.isEnabled( 'woocommerce/onboarding-oauth' ) &&
-				isWooOAuth2Client( oauth2Client ) &&
-				wccomFrom
-			) {
+			if ( isWooOAuth2Client( oauth2Client ) && wccomFrom ) {
 				preHeader = (
 					<Fragment>
 						{ 'cart' === wccomFrom ? (
@@ -342,7 +329,7 @@ class Login extends Component {
 					},
 				} );
 			}
-		} else if ( config.isEnabled( 'jetpack/connect/woocommerce' ) && isJetpackWooCommerceFlow ) {
+		} else if ( isJetpackWooCommerceFlow ) {
 			headerText = translate( 'Log in to your WordPress.com account' );
 			preHeader = (
 				<div className="login__jetpack-logo">
@@ -364,7 +351,10 @@ class Login extends Component {
 				</p>
 			);
 		} else if ( isJetpack ) {
-			headerText = translate( 'Log in or create a WordPress.com account to set up Jetpack' );
+			const isJetpackMagicLinkSignUpFlow = config.isEnabled( 'jetpack/magic-link-signup' );
+			headerText = isJetpackMagicLinkSignUpFlow
+				? translate( 'Log in or create a WordPress.com account to get started with Jetpack' )
+				: translate( 'Log in or create a WordPress.com account to set up Jetpack' );
 			preHeader = (
 				<div className="login__jetpack-logo">
 					<AsyncLoad
@@ -444,6 +434,7 @@ class Login extends Component {
 			disableAutoFocus,
 			locale,
 			userEmail,
+			handleUsernameChange,
 		} = this.props;
 
 		if ( socialConnect ) {
@@ -487,6 +478,7 @@ class Login extends Component {
 				isGutenboarding={ isGutenboarding }
 				locale={ locale }
 				userEmail={ userEmail }
+				handleUsernameChange={ handleUsernameChange }
 			/>
 		);
 	}
@@ -553,6 +545,7 @@ export default connect(
 				redirectTo: stateProps.redirectTo,
 				loginFormFlow: true,
 				showGlobalNotices: true,
+				flow: ownProps.isJetpack ? 'jetpack' : null,
 			} ),
 	} )
 )( localize( Login ) );

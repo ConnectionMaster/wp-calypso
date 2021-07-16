@@ -7,21 +7,24 @@ import i18n from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { CONTACT, GOOGLE_APPS_LEARNING_CENTER } from 'calypso/lib/url/support';
+import { CONTACT, GSUITE_LEARNING_CENTER } from 'calypso/lib/url/support';
 import PurchaseDetail from 'calypso/components/purchase-detail';
 import { useSelector } from 'react-redux';
 import { getCurrentUserEmail } from 'calypso/state/current-user/selectors';
-import { isGoogleApps } from 'calypso/lib/products-values';
+import { isGoogleWorkspaceExtraLicence } from 'calypso/lib/purchases';
+import { isGSuiteOrExtraLicenseOrGoogleWorkspace } from '@automattic/calypso-products';
 import { getGoogleMailServiceFamily, isGSuiteExtraLicenseProductSlug } from 'calypso/lib/gsuite';
 
 const GoogleAppsDetails = ( { purchases } ) => {
 	const email = useSelector( getCurrentUserEmail );
 
-	const purchase = purchases.find( isGoogleApps );
-	const productName = purchase.productName;
+	const purchase = purchases.find( isGSuiteOrExtraLicenseOrGoogleWorkspace );
 	const productFamily = getGoogleMailServiceFamily( purchase.productSlug );
 
-	if ( isGSuiteExtraLicenseProductSlug( purchase.productSlug ) ) {
+	if (
+		isGoogleWorkspaceExtraLicence( purchase ) ||
+		isGSuiteExtraLicenseProductSlug( purchase.productSlug )
+	) {
 		return (
 			<PurchaseDetail
 				icon="mail"
@@ -29,7 +32,7 @@ const GoogleAppsDetails = ( { purchases } ) => {
 					'Keep an eye on your email to finish setting up your new email addresses'
 				) }
 				description={ i18n.translate(
-					'We are setting up your new G Suite users but {{strong}}this process can take several minutes' +
+					'We are setting up your new %(productFamily)s users but {{strong}}this process can take several minutes' +
 						'{{/strong}}. We will email you at %(email)s with login information once they are ready but if ' +
 						"you still haven't received anything after a few hours, do not hesitate to {{link}}contact support{{/link}}.",
 					{
@@ -46,13 +49,17 @@ const GoogleAppsDetails = ( { purchases } ) => {
 						},
 						args: {
 							email,
+							productFamily,
 						},
+						comment: '%(productFamily)s can be either "G Suite" or "Google Workspace"',
 					}
 				) }
 				isRequired
 			/>
 		);
 	}
+
+	const productName = purchase.productName;
 
 	return (
 		<PurchaseDetail
@@ -112,7 +119,7 @@ const GoogleAppsDetails = ( { purchases } ) => {
 				},
 				comment: '%(productFamily)s can be either "G Suite" or "Google Workspace"',
 			} ) }
-			href={ GOOGLE_APPS_LEARNING_CENTER }
+			href={ GSUITE_LEARNING_CENTER }
 			target="_blank"
 			rel="noopener noreferrer"
 			requiredText={ i18n.translate( 'Almost done! One step remaining…' ) }

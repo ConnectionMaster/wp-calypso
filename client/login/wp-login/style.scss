@@ -1,9 +1,9 @@
 @import 'jetpack-connect/colors.scss';
 @import 'woocommerce/components/text-control/style.scss';
-@import '~@automattic/onboarding/styles/mixins';
-@import '~@automattic/typography/styles/fonts';
-@import '~@wordpress/base-styles/breakpoints';
-@import '~@wordpress/base-styles/mixins';
+@import '@automattic/onboarding/styles/mixins';
+@import '@automattic/typography/styles/fonts';
+@import '@wordpress/base-styles/breakpoints';
+@import '@wordpress/base-styles/mixins';
 
 $image-height: 47px;
 
@@ -346,8 +346,8 @@ $image-height: 47px;
 
 		&:hover,
 		&:active {
-			background: #72aee6;
-			border-color: #72aee6;
+			background: var( --studio-blue-20 );
+			border-color: var( --studio-blue-20 );
 			color: #fff;
 			outline-color: transparent;
 			box-shadow: none;

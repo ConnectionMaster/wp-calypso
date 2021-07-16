@@ -13,8 +13,7 @@ import i18n from 'i18n-calypso';
 import { recordTracksEvent } from 'calypso/lib/analytics/tracks';
 import CustomDomainPurchaseDetail from './custom-domain-purchase-detail';
 import GoogleAppsDetails from './google-apps-details';
-import { isEnabled } from 'calypso/config';
-import { isEcommerce, isGoogleApps } from 'calypso/lib/products-values';
+import { isEcommerce, isGSuiteOrExtraLicenseOrGoogleWorkspace } from '@automattic/calypso-products';
 import PurchaseDetail from 'calypso/components/purchase-detail';
 
 /**
@@ -30,7 +29,7 @@ function trackOnboardingButtonClick() {
 
 const EcommercePlanDetails = ( { selectedSite, sitePlans, selectedFeature, purchases } ) => {
 	const plan = find( sitePlans.data, isEcommerce );
-	const googleAppsWasPurchased = purchases.some( isGoogleApps );
+	const googleAppsWasPurchased = purchases.some( isGSuiteOrExtraLicenseOrGoogleWorkspace );
 
 	return (
 		<div>
@@ -53,7 +52,7 @@ const EcommercePlanDetails = ( { selectedSite, sitePlans, selectedFeature, purch
 				onClick={ trackOnboardingButtonClick }
 			/>
 
-			{ ! selectedFeature && isEnabled( 'manage/plugins/upload' ) && (
+			{ ! selectedFeature && (
 				<PurchaseDetail
 					icon={ <img alt="" src={ updatesImage } /> }
 					title={ i18n.translate( 'Add a Plugin' ) }

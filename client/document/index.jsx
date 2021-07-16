@@ -9,11 +9,11 @@ import path from 'path';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import Head from 'calypso/components/head';
 import EnvironmentBadge, {
-	TestHelper,
 	Branch,
+	AuthHelper,
 	DevDocsLink,
 	PreferencesHelper,
 	FeaturesHelper,
@@ -27,6 +27,7 @@ class Document extends React.Component {
 	render() {
 		const {
 			app,
+			authHelper,
 			chunkFiles,
 			commitSha,
 			buildTimestamp,
@@ -45,7 +46,6 @@ class Document extends React.Component {
 			clientData,
 			env,
 			badge,
-			abTestHelper,
 			preferencesHelper,
 			branchName,
 			commitChecksum,
@@ -84,9 +84,7 @@ class Document extends React.Component {
 			`var installedChunks = ${ jsonStringifyForHtml( installedChunks ) };\n`;
 
 		const isJetpackWooCommerceFlow =
-			config.isEnabled( 'jetpack/connect/woocommerce' ) &&
-			'jetpack-connect' === sectionName &&
-			'woocommerce-onboarding' === requestFrom;
+			'jetpack-connect' === sectionName && 'woocommerce-onboarding' === requestFrom;
 
 		const isJetpackWooDnaFlow = 'jetpack-connect' === sectionName && isWooDna;
 
@@ -122,6 +120,7 @@ class Document extends React.Component {
 						[ 'is-group-' + sectionGroup ]: sectionGroup,
 						[ 'is-section-' + sectionName ]: sectionName,
 						'is-white-signup': sectionName === 'signup',
+						'is-mobile-app-view': app?.isWpMobileApp,
 					} ) }
 				>
 					{ /* eslint-disable wpcalypso/jsx-classname-namespace, react/no-danger */ }
@@ -154,12 +153,12 @@ class Document extends React.Component {
 					{ badge && (
 						<EnvironmentBadge badge={ badge } feedbackURL={ feedbackURL }>
 							{ preferencesHelper && <PreferencesHelper /> }
-							{ abTestHelper && <TestHelper /> }
+							{ featuresHelper && <FeaturesHelper /> }
+							{ authHelper && <AuthHelper /> }
 							{ branchName && (
 								<Branch branchName={ branchName } commitChecksum={ commitChecksum } />
 							) }
 							{ devDocs && <DevDocsLink url={ devDocsURL } /> }
-							{ featuresHelper && <FeaturesHelper /> }
 						</EnvironmentBadge>
 					) }
 
@@ -203,12 +202,7 @@ class Document extends React.Component {
 					 * this lets us have the performance benefit in prod, without breaking HMR in dev
 					 * since the manifest needs to be updated on each save
 					 */ }
-					{ env === 'development' && (
-						<>
-							<script src={ `/calypso/${ target }/manifest.js` } />
-							<script src={ `/calypso/${ target }/runtime.js` } />
-						</>
-					) }
+					{ env === 'development' && <script src={ `/calypso/${ target }/runtime.js` } /> }
 					{ env !== 'development' &&
 						manifests.map( ( manifest ) => (
 							<script

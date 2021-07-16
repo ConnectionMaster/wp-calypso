@@ -2,8 +2,9 @@
  * External dependencies
  */
 import * as React from 'react';
-import { useI18n } from '@automattic/react-i18n';
-import type { DomainSuggestions, WPCOMFeatures } from '@automattic/data-stores';
+import { useSelect } from '@wordpress/data';
+import { useI18n } from '@wordpress/react-i18n';
+import type { DomainSuggestions, WPCOMFeatures, Plans } from '@automattic/data-stores';
 import { Title } from '@automattic/onboarding';
 import debugFactory from 'debug';
 
@@ -19,6 +20,9 @@ import type {
 	DisabledPlansMap,
 	PopularBadgeVariation,
 } from '../plans-table/types';
+import PlansIntervalToggle from '../plans-interval-toggle';
+import { useSupportedPlans } from '../hooks';
+import { PLANS_STORE } from '../stores';
 
 /**
  * Style dependencies
@@ -45,6 +49,7 @@ export interface Props {
 	customTagLines?: CustomTagLinesMap;
 	hidePlansComparison?: boolean;
 	defaultAllPlansExpanded?: boolean;
+	onBillingPeriodChange?: ( billingPeriod: Plans.PlanBillingPeriod ) => void;
 }
 
 const PlansGrid: React.FunctionComponent< Props > = ( {
@@ -63,14 +68,38 @@ const PlansGrid: React.FunctionComponent< Props > = ( {
 	customTagLines,
 	hidePlansComparison = false,
 	defaultAllPlansExpanded = false,
+	onBillingPeriodChange,
 } ) => {
 	const { __ } = useI18n();
+
+	const selectedPlanBillingPeriod = useSelect(
+		( select ) => select( PLANS_STORE ).getPlanProductById( currentPlanProductId )?.billingPeriod
+	);
+
+	const [ billingPeriod, setBillingPeriod ] = React.useState< Plans.PlanBillingPeriod >(
+		selectedPlanBillingPeriod || 'ANNUALLY'
+	);
+
+	React.useEffect( () => {
+		if ( onBillingPeriodChange ) {
+			onBillingPeriodChange( billingPeriod );
+		}
+	}, [ billingPeriod, onBillingPeriodChange ] );
+
+	const { maxAnnualDiscount } = useSupportedPlans( locale, billingPeriod );
 
 	isAccordion && debug( 'PlansGrid accordion version is active' );
 
 	return (
 		<div className="plans-grid">
 			{ header && <div className="plans-grid__header">{ header }</div> }
+
+			<PlansIntervalToggle
+				intervalType={ billingPeriod }
+				onChange={ setBillingPeriod }
+				maxMonthlyDiscountPercentage={ maxAnnualDiscount }
+				className="plans-grid__toggle"
+			/>
 
 			<div className="plans-grid__table">
 				<div className="plans-grid__table-container">
@@ -83,6 +112,7 @@ const PlansGrid: React.FunctionComponent< Props > = ( {
 							onPickDomainClick={ onPickDomainClick }
 							disabledPlans={ disabledPlans }
 							locale={ locale }
+							billingPeriod={ billingPeriod }
 						></PlansAccordion>
 					) : (
 						<PlansTable
@@ -97,6 +127,7 @@ const PlansGrid: React.FunctionComponent< Props > = ( {
 							locale={ locale }
 							showTaglines={ showPlanTaglines }
 							defaultAllPlansExpanded={ defaultAllPlansExpanded }
+							billingPeriod={ billingPeriod }
 						></PlansTable>
 					) }
 				</div>
@@ -107,7 +138,11 @@ const PlansGrid: React.FunctionComponent< Props > = ( {
 						<Title tagName="h2">{ __( 'Detailed comparison', __i18n_text_domain__ ) }</Title>
 					</div>
 					<div className="plans-grid__details-container">
-						<PlansDetails onSelect={ onPlanSelect } locale={ locale } />
+						<PlansDetails
+							onSelect={ onPlanSelect }
+							locale={ locale }
+							billingPeriod={ billingPeriod }
+						/>
 					</div>
 				</div>
 			) }

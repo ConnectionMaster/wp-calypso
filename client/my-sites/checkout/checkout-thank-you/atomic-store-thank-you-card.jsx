@@ -14,13 +14,15 @@ import PlanThankYouCard from 'calypso/blocks/plan-thank-you-card';
 import { Interval, EVERY_FIVE_SECONDS } from 'calypso/lib/interval';
 import { getSelectedSite, getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getCurrentPlan } from 'calypso/state/sites/plans/selectors';
-import { getPlanClass } from 'calypso/lib/plans';
+import { getPlanClass } from '@automattic/calypso-products';
 import {
 	getCurrentUserEmail,
 	isCurrentUserEmailVerified,
 } from 'calypso/state/current-user/selectors';
 import { errorNotice, removeNotice } from 'calypso/state/notices/actions';
-import user from 'calypso/lib/user';
+import { fetchCurrentUser } from 'calypso/state/current-user/actions';
+import wpcom from 'calypso/lib/wp';
+import { showMasterbar } from 'calypso/state/ui/masterbar-visibility/actions';
 
 const VERIFY_EMAIL_ERROR_NOTICE = 'ecommerce-verify-email-error';
 const RESEND_ERROR = 'RESEND_ERROR';
@@ -41,7 +43,7 @@ class AtomicStoreThankYouCard extends Component {
 		}
 	}
 
-	checkVerification = () => user().fetch();
+	checkVerification = () => this.props.fetchCurrentUser();
 
 	resendEmail = () => {
 		const { translate } = this.props;
@@ -55,21 +57,24 @@ class AtomicStoreThankYouCard extends Component {
 
 		this.setState( { resendStatus: RESEND_PENDING } );
 
-		user().sendVerificationEmail( ( error ) => {
-			if ( error ) {
-				this.props.errorNotice(
-					translate( "Couldn't resend verification email. Please try again." ),
-					{
-						id: VERIFY_EMAIL_ERROR_NOTICE,
-					}
-				);
+		wpcom
+			.undocumented()
+			.me()
+			.sendVerificationEmail( ( error ) => {
+				if ( error ) {
+					this.props.errorNotice(
+						translate( "Couldn't resend verification email. Please try again." ),
+						{
+							id: VERIFY_EMAIL_ERROR_NOTICE,
+						}
+					);
 
-				this.setState( { resendStatus: RESEND_ERROR } );
-				return;
-			}
+					this.setState( { resendStatus: RESEND_ERROR } );
+					return;
+				}
 
-			this.setState( { resendStatus: RESEND_SUCCESS } );
-		} );
+				this.setState( { resendStatus: RESEND_SUCCESS } );
+			} );
 	};
 
 	resendButtonText = () => {
@@ -179,5 +184,5 @@ export default connect(
 			planClass,
 		};
 	},
-	{ errorNotice, removeNotice }
+	{ errorNotice, fetchCurrentUser, removeNotice, showMasterbar }
 )( localize( AtomicStoreThankYouCard ) );

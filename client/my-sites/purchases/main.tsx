@@ -26,11 +26,12 @@ import {
 } from './paths';
 import { getChangeOrAddPaymentMethodUrlFor } from './utils';
 import ChangePaymentMethod from 'calypso/me/purchases/manage-purchase/change-payment-method';
+import titles from 'calypso/me/purchases/titles';
 import { getSelectedSiteSlug } from 'calypso/state/ui/selectors';
 import PurchasesNavigation from 'calypso/my-sites/purchases/navigation';
 import SiteLevelPurchasesErrorBoundary from 'calypso/my-sites/purchases/site-level-purchases-error-boundary';
 import { logToLogstash } from 'calypso/state/logstash/actions';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 
 function useLogPurchasesError( message: string ) {
 	const reduxDispatch = useDispatch();
@@ -50,7 +51,7 @@ function useLogPurchasesError( message: string ) {
 				} )
 			);
 		},
-		[ reduxDispatch ]
+		[ reduxDispatch, message ]
 	);
 }
 
@@ -60,16 +61,19 @@ export function Purchases(): JSX.Element {
 	const logPurchasesError = useLogPurchasesError( 'site level purchases load error' );
 
 	return (
-		<Main className="purchases is-wide-layout">
+		<Main wideLayout className="purchases">
 			<MySitesSidebarNavigation />
-			<DocumentHead title={ translate( 'Billing' ) } />
+			<DocumentHead title={ titles.sectionTitle } />
 			<FormattedHeader
 				brandFont
 				className="purchases__page-heading"
-				headerText={ translate( 'Billing' ) }
+				headerText={ titles.sectionTitle }
+				subHeaderText={ translate(
+					'View, manage, or cancel your WordPress.com plan and other purchases.'
+				) }
 				align="left"
 			/>
-			<PurchasesNavigation sectionTitle={ 'Purchases' } siteSlug={ siteSlug } />
+			<PurchasesNavigation sectionTitle={ 'Active Upgrades' } siteSlug={ siteSlug } />
 
 			<SiteLevelPurchasesErrorBoundary
 				errorMessage={ translate( 'Sorry, there was an error loading this page.' ) }
@@ -92,12 +96,12 @@ export function PurchaseDetails( {
 	const logPurchasesError = useLogPurchasesError( 'site level purchase details load error' );
 
 	return (
-		<Main className="purchases is-wide-layout">
-			<DocumentHead title={ translate( 'Billing' ) } />
+		<Main wideLayout className="purchases">
+			<DocumentHead title={ titles.managePurchase } />
 			<FormattedHeader
 				brandFont
 				className="purchases__page-heading"
-				headerText={ translate( 'Billing' ) }
+				headerText={ titles.sectionTitle }
 				align="left"
 			/>
 			<PageViewTracker
@@ -110,7 +114,7 @@ export function PurchaseDetails( {
 				onError={ logPurchasesError }
 			>
 				<ManagePurchase
-					cardTitle={ translate( 'Purchase Settings' ) }
+					cardTitle={ titles.managePurchase }
 					purchaseId={ purchaseId }
 					siteSlug={ siteSlug }
 					showHeader={ false }
@@ -137,12 +141,12 @@ export function PurchaseCancel( {
 	const logPurchasesError = useLogPurchasesError( 'site level purchase cancel load error' );
 
 	return (
-		<Main className="purchases is-wide-layout">
-			<DocumentHead title={ translate( 'Cancel purchase' ) } />
+		<Main wideLayout className="purchases">
+			<DocumentHead title={ titles.cancelPurchase } />
 			<FormattedHeader
 				brandFont
 				className="purchases__page-heading"
-				headerText={ translate( 'Billing' ) }
+				headerText={ titles.sectionTitle }
 				align="left"
 			/>
 
@@ -177,12 +181,12 @@ export function PurchaseChangePaymentMethod( {
 	);
 
 	return (
-		<Main className="purchases is-wide-layout">
-			<DocumentHead title={ translate( 'Billing' ) } />
+		<Main wideLayout className="purchases">
+			<DocumentHead title={ titles.changePaymentMethod } />
 			<FormattedHeader
 				brandFont
 				className="purchases__page-heading"
-				headerText={ translate( 'Billing' ) }
+				headerText={ titles.sectionTitle }
 				align="left"
 			/>
 
@@ -214,12 +218,12 @@ export function PurchaseCancelDomain( {
 	const logPurchasesError = useLogPurchasesError( 'site level purchase cancel domain load error' );
 
 	return (
-		<Main className="purchases is-wide-layout">
-			<DocumentHead title={ translate( 'Cancel domain' ) } />
+		<Main wideLayout className="purchases">
+			<DocumentHead title={ titles.confirmCancelDomain } />
 			<FormattedHeader
 				brandFont
 				className="purchases__page-heading"
-				headerText={ translate( 'Billing' ) }
+				headerText={ titles.sectionTitle }
 				align="left"
 			/>
 

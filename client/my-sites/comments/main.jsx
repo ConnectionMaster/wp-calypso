@@ -10,7 +10,7 @@ import { localize } from 'i18n-calypso';
  * Internal dependencies
  */
 import EmptyContent from 'calypso/components/empty-content';
-import getSiteId from 'calypso/state/selectors/get-site-id';
+import { getSiteId } from 'calypso/state/sites/selectors';
 import Main from 'calypso/components/main';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import DocumentHead from 'calypso/components/data/document-head';
@@ -20,8 +20,9 @@ import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
 import FormattedHeader from 'calypso/components/formatted-header';
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
 import { preventWidows } from 'calypso/lib/formatting';
-import { isEnabled } from 'calypso/config';
+import config, { isEnabled } from '@automattic/calypso-config';
 import { NEWEST_FIRST } from './constants';
+import ScreenOptionsTab from 'calypso/components/screen-options-tab';
 
 /**
  * Style dependencies
@@ -70,6 +71,7 @@ export class CommentsManagement extends Component {
 
 		return (
 			<Main className="comments" wideLayout>
+				<ScreenOptionsTab wpAdminPath="edit-comments.php" />
 				<PageViewTracker path={ analyticsPath } title="Comments" />
 				<DocumentHead title={ translate( 'Comments' ) } />
 				<SidebarNavigation />
@@ -78,7 +80,11 @@ export class CommentsManagement extends Component {
 						brandFont
 						className="comments__page-heading"
 						headerText={ translate( 'Comments' ) }
+						subHeaderText={ translate(
+							'View, reply to, and manage all the comments across your site.'
+						) }
 						align="left"
+						hasScreenOptions={ config.isEnabled( 'nav-unification/switcher' ) }
 					/>
 				) }
 				{ showPermissionError && (

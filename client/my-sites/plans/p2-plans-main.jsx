@@ -3,14 +3,13 @@
  */
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { get } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
  * Internal dependencies
  */
 import PlanFeatures from 'calypso/my-sites/plan-features';
-import { PLAN_P2_FREE, PLAN_P2_PLUS } from 'calypso/lib/plans/constants';
+import { PLAN_P2_FREE, PLAN_P2_PLUS } from '@automattic/calypso-products';
 import QueryPlans from 'calypso/components/data/query-plans';
 import QuerySites from 'calypso/components/data/query-sites';
 import QuerySitePlans from 'calypso/components/data/query-site-plans';
@@ -39,10 +38,6 @@ export class P2PlansMain extends Component {
 	}
 }
 
-export default connect( ( state, props ) => {
-	const siteId = get( props.site, [ 'ID' ] );
-
-	return {
-		siteId,
-	};
-} )( localize( P2PlansMain ) );
+export default connect( ( state, props ) => ( {
+	siteId: props.site?.ID,
+} ) )( localize( P2PlansMain ) );

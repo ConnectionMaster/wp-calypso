@@ -54,7 +54,6 @@ class ActionButtons extends Component {
 		const buttonsClassName = classNames( {
 			'action-header__actions': true,
 			'is-dropdown': this.state.isDropdown,
-			'is-open': this.state.isDropdownOpen,
 		} );
 
 		return (
@@ -69,24 +68,21 @@ class ActionButtons extends Component {
 	getButtonWidths = () => {
 		let totalWidth = 0;
 
-		React.Children.forEach(
-			this.props.children,
-			function ( child, index ) {
-				if ( ! child ) {
-					return;
-				}
-				/* eslint-disable react/no-string-refs */
-				const node = ReactDom.findDOMNode( this.refs[ 'button-' + index ] );
-				/* eslint-enable react/no-string-refs */
+		React.Children.forEach( this.props.children, ( child, index ) => {
+			if ( ! child ) {
+				return;
+			}
+			/* eslint-disable react/no-string-refs */
+			const node = ReactDom.findDOMNode( this.refs[ 'button-' + index ] );
+			/* eslint-enable react/no-string-refs */
 
-				if ( ! node ) {
-					return;
-				}
+			if ( ! node ) {
+				return;
+			}
 
-				const buttonWidth = node.offsetWidth;
-				totalWidth += buttonWidth;
-			}.bind( this )
-		);
+			const buttonWidth = node.offsetWidth;
+			totalWidth += buttonWidth;
+		} );
 
 		this.buttonsWidth = Math.max( totalWidth, this.buttonsWidth || 0 );
 	};

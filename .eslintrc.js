@@ -1,15 +1,21 @@
 const { merge } = require( 'lodash' );
 const reactVersion = require( './client/package.json' ).dependencies.react;
+const path = require( 'path' );
 
 module.exports = {
 	root: true,
+	parserOptions: {
+		babelOptions: {
+			configFile: path.join( __dirname, './babel.config.js' ),
+		},
+	},
 	extends: [
 		'plugin:wpcalypso/react',
 		'plugin:jsx-a11y/recommended',
 		'plugin:jest/recommended',
 		'plugin:prettier/recommended',
-		'prettier/react',
 		'plugin:md/prettier',
+		'plugin:@wordpress/eslint-plugin/i18n',
 	],
 	overrides: [
 		{
@@ -45,21 +51,9 @@ module.exports = {
 		{
 			files: [ 'packages/**/*' ],
 			rules: {
-				// These two rules are to ensure packages don't import form calypso by accident to avoid circular deps.
-				'no-restricted-imports': [
-					'error',
-					{
-						patterns: [ 'calypso/*' ],
-						message: "Packages shouldn't import from calypso",
-					},
-				],
-				'no-restricted-modules': [
-					'error',
-					{
-						patterns: [ 'calypso/*' ],
-						message: "Packages shouldn't import from calypso",
-					},
-				],
+				// These two rules are to ensure packages don't import from calypso by accident to avoid circular deps.
+				'no-restricted-imports': [ 'error', { patterns: [ 'calypso/*' ] } ],
+				'no-restricted-modules': [ 'error', { patterns: [ 'calypso/*' ] } ],
 			},
 		},
 		{
@@ -69,21 +63,6 @@ module.exports = {
 				'no-console': 'off',
 				'no-process-exit': 'off',
 				'valid-jsdoc': 'off',
-			},
-		},
-		{
-			files: [ 'test/e2e/**/*' ],
-			rules: {
-				'import/no-nodejs-modules': 'off',
-				'no-console': 'off',
-				// Disable all rules from "plugin:jest/recommended", as e2e tests use mocha
-				...Object.keys( require( 'eslint-plugin-jest' ).configs.recommended.rules ).reduce(
-					( disabledRules, key ) => ( { ...disabledRules, [ key ]: 'off' } ),
-					{}
-				),
-			},
-			globals: {
-				step: false,
 			},
 		},
 		merge(
@@ -101,7 +80,7 @@ module.exports = {
 					.overrides[ 0 ].rules,
 			},
 			// Prettier rules config
-			require( 'eslint-config-prettier/@typescript-eslint' ),
+			require( 'eslint-config-prettier' ),
 			// Our own overrides
 			{
 				files: [ '**/*.ts', '**/*.tsx' ],
@@ -150,6 +129,12 @@ module.exports = {
 					'@typescript-eslint/no-var-requires': 'off',
 					// REST API objects include underscores
 					'@typescript-eslint/camelcase': 'off',
+
+					// TypeScript compiler already takes care of these errors
+					'import/no-extraneous-dependencies': 'off',
+					'import/named': 'off',
+					'import/namespace': 'off',
+					'import/default': 'off',
 				},
 			}
 		),
@@ -190,6 +175,51 @@ module.exports = {
 				'@typescript-eslint/no-empty-function': 'off',
 			},
 		},
+		{
+			files: [
+				'client/sections-filter.js',
+				'client/sections-helper.js',
+				'client/sections-middleware.js',
+				'client/sections-preloaders.js',
+				'client/sections.js',
+				'client/support/**/*',
+				'client/types.ts',
+				'client/webpack.config.desktop.js',
+				'client/webpack.config.js',
+				'client/webpack.config.node.js',
+				'desktop/webpack.config.js',
+				'packages/accessible-focus/**/*',
+				'packages/babel-plugin-i18n-calypso/**/*',
+				'packages/calypso-config/**/*',
+				'packages/calypso-e2e/**/*',
+				'packages/calypso-products/**/*',
+				'packages/calypso-stripe/**/*',
+				'packages/components/**/*',
+				'packages/composite-checkout/**/*',
+				'packages/create-calypso-config/**/*',
+				'packages/data-stores/**/*',
+				'packages/js-utils/**/*',
+				'packages/launch/**/*',
+				'packages/mocha-debug-reporter/**/*',
+				'packages/spec-junit-reporter/**/*',
+				'packages/spec-xunit-reporter/**/*',
+				'packages/wpcom-checkout/**/*',
+				'test/e2e/**/*',
+			],
+			rules: {
+				'wpcalypso/import-docblock': 'off',
+				'import/order': [
+					'error',
+					{
+						'newlines-between': 'never',
+						alphabetize: {
+							order: 'asc',
+						},
+						groups: [ 'builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'type' ],
+					},
+				],
+			},
+		},
 	],
 	env: {
 		jest: true,
@@ -211,7 +241,7 @@ module.exports = {
 		// this is when Webpack last built the bundle
 		BUILD_TIMESTAMP: true,
 	},
-	plugins: [ 'import' ],
+	plugins: [ 'import', 'you-dont-need-lodash-underscore' ],
 	settings: {
 		react: {
 			version: reactVersion,
@@ -219,6 +249,7 @@ module.exports = {
 		jsdoc: {
 			mode: 'typescript',
 		},
+		'import/internal-regex': '^calypso/',
 	},
 	rules: {
 		// REST API objects include underscores
@@ -263,12 +294,14 @@ module.exports = {
 		// i18n-calypso translate triggers false failures
 		'jsx-a11y/anchor-has-content': 'off',
 
+		// Deprecated rule, the problems using <select> with keyboards this addressed don't appear to be an issue anymore
+		// https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/issues/398
+		'jsx-a11y/no-onchange': 'off',
+
 		'no-restricted-imports': [
 			2,
 			{
 				paths: [
-					// Error if any module depends on the data-observe mixin, which is deprecated.
-					'lib/mixins/data-observe',
 					// Prevent naked import of gridicons module. Use 'components/gridicon' instead.
 					{
 						name: 'gridicons',
@@ -304,8 +337,6 @@ module.exports = {
 			2,
 			{
 				paths: [
-					// Error if any module depends on the data-observe mixin, which is deprecated.
-					'lib/mixins/data-observe',
 					// Prevent naked import of gridicons module. Use 'components/gridicon' instead.
 					{
 						name: 'gridicons',
@@ -371,15 +402,76 @@ module.exports = {
 
 		// Force packages to declare their dependencies
 		'import/no-extraneous-dependencies': 'error',
+		'import/named': 'error',
+		'import/namespace': 'error',
+		'import/default': 'error',
+		'import/no-duplicates': 'error',
 
 		'wpcalypso/no-unsafe-wp-apis': [
 			'error',
 			{
-				'@wordpress/block-editor': [ '__experimentalBlock', '__experimentalInserterMenuExtension' ],
+				'@wordpress/block-editor': [
+					'__experimentalBlock',
+					// InserterMenuExtension has been made unstable in this PR: https://github.com/WordPress/gutenberg/pull/31417 / Gutenberg v10.7.0-rc.1.
+					// We need to support both symbols until we're sure Gutenberg < v10.7.x is not used anymore in WPCOM.
+					'__unstableInserterMenuExtension',
+					'__experimentalInserterMenuExtension',
+				],
 				'@wordpress/date': [ '__experimentalGetSettings' ],
 				'@wordpress/edit-post': [ '__experimentalMainDashboardButton' ],
 				'@wordpress/components': [ '__experimentalNavigationBackButton' ],
 			},
 		],
+
+		// Disabled, because in packages we are using globally defined `__i18n_text_domain__` constant at compile time
+		'@wordpress/i18n-text-domain': 'off',
+
+		// Disable Lodash methods that we've already migrated away from, see p4TIVU-9Bf-p2 for more details.
+		'you-dont-need-lodash-underscore/all': 'error',
+		'you-dont-need-lodash-underscore/any': 'error',
+		'you-dont-need-lodash-underscore/assign': 'error',
+		'you-dont-need-lodash-underscore/bind': 'error',
+		'you-dont-need-lodash-underscore/cast-array': 'error',
+		'you-dont-need-lodash-underscore/collect': 'error',
+		'you-dont-need-lodash-underscore/contains': 'error',
+		'you-dont-need-lodash-underscore/detect': 'error',
+		'you-dont-need-lodash-underscore/drop': 'error',
+		'you-dont-need-lodash-underscore/drop-right': 'error',
+		'you-dont-need-lodash-underscore/each': 'error',
+		'you-dont-need-lodash-underscore/ends-with': 'error',
+		'you-dont-need-lodash-underscore/entries': 'error',
+		'you-dont-need-lodash-underscore/every': 'error',
+		'you-dont-need-lodash-underscore/extend-own': 'error',
+		'you-dont-need-lodash-underscore/fill': 'error',
+		'you-dont-need-lodash-underscore/first': 'error',
+		'you-dont-need-lodash-underscore/foldl': 'error',
+		'you-dont-need-lodash-underscore/foldr': 'error',
+		'you-dont-need-lodash-underscore/index-of': 'error',
+		'you-dont-need-lodash-underscore/inject': 'error',
+		'you-dont-need-lodash-underscore/is-array': 'error',
+		'you-dont-need-lodash-underscore/is-finite': 'error',
+		'you-dont-need-lodash-underscore/is-function': 'error',
+		'you-dont-need-lodash-underscore/is-integer': 'error',
+		'you-dont-need-lodash-underscore/is-nan': 'error',
+		'you-dont-need-lodash-underscore/is-nil': 'error',
+		'you-dont-need-lodash-underscore/is-null': 'error',
+		'you-dont-need-lodash-underscore/is-string': 'error',
+		'you-dont-need-lodash-underscore/is-undefined': 'error',
+		'you-dont-need-lodash-underscore/join': 'error',
+		'you-dont-need-lodash-underscore/last-index-of': 'error',
+		'you-dont-need-lodash-underscore/pad-end': 'error',
+		'you-dont-need-lodash-underscore/pad-start': 'error',
+		'you-dont-need-lodash-underscore/reduce-right': 'error',
+		'you-dont-need-lodash-underscore/repeat': 'error',
+		'you-dont-need-lodash-underscore/replace': 'error',
+		'you-dont-need-lodash-underscore/reverse': 'error',
+		'you-dont-need-lodash-underscore/select': 'error',
+		'you-dont-need-lodash-underscore/slice': 'error',
+		'you-dont-need-lodash-underscore/split': 'error',
+		'you-dont-need-lodash-underscore/take-right': 'error',
+		'you-dont-need-lodash-underscore/to-lower': 'error',
+		'you-dont-need-lodash-underscore/to-pairs': 'error',
+		'you-dont-need-lodash-underscore/to-upper': 'error',
+		'you-dont-need-lodash-underscore/uniq': 'error',
 	},
 };

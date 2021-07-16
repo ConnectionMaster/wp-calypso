@@ -4,7 +4,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { connect } from 'react-redux';
-import { isEqual, isEmpty, noop, times } from 'lodash';
+import { isEqual, isEmpty, times } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
@@ -20,6 +20,8 @@ import { getThemesBookmark } from 'calypso/state/themes/themes-ui/selectors';
  * Style dependencies
  */
 import './style.scss';
+
+const noop = () => {};
 
 export class ThemesList extends React.Component {
 	static propTypes = {
@@ -124,7 +126,6 @@ export class ThemesList extends React.Component {
 		return (
 			this.props.emptyContent || (
 				<EmptyContent
-					illustration="/calypso/images/illustrations/no-themes-drake.svg"
 					title={ this.props.translate( 'Sorry, no themes found.' ) }
 					line={ this.props.translate( 'Try a different search or more filters?' ) }
 				/>

@@ -6,7 +6,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { isEmpty, get, each, includes, union, find } from 'lodash';
+import { isEmpty, get, includes, find } from 'lodash';
 import page from 'page';
 
 /**
@@ -24,8 +24,7 @@ import { getHttpData, requestHttpData } from 'calypso/state/data-layer/http-data
 import { http } from 'calypso/state/data-layer/wpcom-http/actions';
 import { getStatusForPlugin } from 'calypso/state/plugins/installed/selectors';
 import { errorNotice, infoNotice, successNotice } from 'calypso/state/notices/actions';
-import { recordTracksEvent, withAnalytics } from 'calypso/state/analytics/actions';
-import { navigate } from 'calypso/state/ui/actions';
+import { recordTracksEvent } from 'calypso/state/analytics/actions';
 import { decodeEntities } from 'calypso/lib/formatting';
 
 /**
@@ -52,6 +51,8 @@ const isItemUpdating = ( updatables ) =>
  * @returns {boolean}   True if the plugin or theme is enqueued to be updated.
  */
 const isItemEnqueued = ( updateSlug, updateQueue ) => !! find( updateQueue, { slug: updateSlug } );
+
+const union = ( ...arrays ) => [ ...new Set( [].concat( ...arrays ) ) ];
 
 const MAX_UPDATED_TO_SHOW = 3;
 
@@ -276,7 +277,7 @@ class ActivityLogTasklist extends Component {
 
 		const { showErrorNotice, showSuccessNotice, siteName, translate } = this.props;
 
-		each( itemsWithUpdate, ( item ) => {
+		itemsWithUpdate.forEach( ( item ) => {
 			const { slug, updateStatus, type, name } = item;
 			// Finds in prevProps.pluginWithUpdate, prevProps.themeWithUpdate or prevpros.coreWithUpdate
 			const prevItemWithUpdate = find( prevProps[ `${ type }WithUpdate` ], { slug } );
@@ -598,25 +599,18 @@ const mapDispatchToProps = ( dispatch, { siteId } ) => ( {
 		dispatch( recordTracksEvent( 'calypso_activitylog_tasklist_dismiss_all' ) ),
 	trackDismiss: ( { type, slug } ) =>
 		dispatch( recordTracksEvent( `calypso_activitylog_tasklist_dismiss_${ type }`, { slug } ) ),
-	goManagePlugins: ( siteSlug ) =>
-		dispatch(
-			withAnalytics(
-				recordTracksEvent( 'calypso_activitylog_tasklist_manage_plugins' ),
-				navigate( `/plugins/manage/${ siteSlug }` )
-			)
-		),
-	goToPage: ( slug, type, siteSlug ) =>
-		dispatch(
+	goManagePlugins: ( siteSlug ) => {
+		dispatch( recordTracksEvent( 'calypso_activitylog_tasklist_manage_plugins' ) );
+		page( `/plugins/manage/${ siteSlug }` );
+	},
+	goToPage: ( slug, type, siteSlug ) => {
+		const tracksEvent =
 			'plugin' === type
-				? withAnalytics(
-						recordTracksEvent( 'calypso_activitylog_tasklist_manage_single_plugin' ),
-						navigate( `/plugins/${ slug }/${ siteSlug }` )
-				  )
-				: withAnalytics(
-						recordTracksEvent( 'calypso_activitylog_tasklist_manage_single_theme' ),
-						navigate( `/theme/${ slug }/${ siteSlug }` )
-				  )
-		),
+				? 'calypso_activitylog_tasklist_manage_single_plugin'
+				: 'calypso_activitylog_tasklist_manage_single_theme';
+		dispatch( recordTracksEvent( tracksEvent ) );
+		page( `/plugins/${ slug }/${ siteSlug }` );
+	},
 } );
 
 export default WithItemsToUpdate(

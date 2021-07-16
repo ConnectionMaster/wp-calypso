@@ -4,6 +4,8 @@
 import React from 'react';
 import { useTranslate } from 'i18n-calypso';
 import { useShoppingCart } from '@automattic/shopping-cart';
+import type { DomainContactDetails as DomainContactDetailsData } from '@automattic/shopping-cart';
+import type { DomainContactDetailsErrors } from '@automattic/wpcom-checkout';
 
 /**
  * Internal dependencies
@@ -16,10 +18,6 @@ import {
 import { getTopLevelOfTld } from 'calypso/lib/domains';
 import ManagedContactDetailsFormFields from 'calypso/components/domains/contact-details-form-fields/managed-contact-details-form-fields';
 import RegistrantExtraInfoForm from 'calypso/components/domains/registrant-extra-info';
-import type {
-	DomainContactDetails as DomainContactDetailsData,
-	DomainContactDetailsErrors,
-} from '../types/backend/domain-contact-details-components';
 
 export default function DomainContactDetails( {
 	domainNames,
@@ -29,6 +27,7 @@ export default function DomainContactDetails( {
 	shouldShowContactDetailsValidationErrors,
 	isDisabled,
 	isLoggedOutCart,
+	emailOnly,
 }: {
 	domainNames: string[];
 	contactDetails: DomainContactDetailsData;
@@ -37,6 +36,7 @@ export default function DomainContactDetails( {
 	shouldShowContactDetailsValidationErrors: boolean;
 	isDisabled: boolean;
 	isLoggedOutCart: boolean;
+	emailOnly?: boolean;
 } ): JSX.Element {
 	const translate = useTranslate();
 	const { responseCart } = useShoppingCart();
@@ -60,6 +60,7 @@ export default function DomainContactDetails( {
 				onContactDetailsChange={ updateDomainContactFields }
 				getIsFieldDisabled={ getIsFieldDisabled }
 				isLoggedOutCart={ isLoggedOutCart }
+				emailOnly={ emailOnly }
 			/>
 			{ tlds.includes( 'ca' ) && (
 				<RegistrantExtraInfoForm
@@ -106,6 +107,8 @@ export default function DomainContactDetails( {
 		</React.Fragment>
 	);
 }
+
+DomainContactDetails.defaultProps = { emailOnly: false };
 
 function getAllTopLevelTlds( domainNames: string[] ): string[] {
 	return Array.from( new Set( domainNames.map( getTopLevelOfTld ) ) ).sort();

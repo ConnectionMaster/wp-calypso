@@ -1,13 +1,5 @@
-/**
- * External dependencies
- */
-import { By as by } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
+import { By } from 'selenium-webdriver';
 import AsyncBaseContainer from '../../async-base-container';
-
 import * as dataHelper from '../../data-helper';
 import * as driverHelper from '../../driver-helper';
 
@@ -16,7 +8,7 @@ export default class NewPage extends AsyncBaseContainer {
 		if ( ! url ) {
 			url = NewPage.getGutenboardingURL();
 		}
-		super( driver, by.css( '.is-section-gutenboarding' ), url );
+		super( driver, By.css( '.is-section-gutenboarding' ), url );
 	}
 
 	static getGutenboardingURL( { locale = 'en', query = '' } = {} ) {
@@ -34,10 +26,10 @@ export default class NewPage extends AsyncBaseContainer {
 		return dataHelper.getCalypsoURL( route, queryStrings );
 	}
 
-	async waitForBlock() {
-		return driverHelper.isEventuallyPresentAndDisplayed(
+	async isOnboardingBlockDisplayed() {
+		return await driverHelper.isElementEventuallyLocatedAndVisible(
 			this.driver,
-			by.css( '[data-type="automattic/onboarding"]' )
+			By.css( '[data-type="automattic/onboarding"]' )
 		);
 	}
 }

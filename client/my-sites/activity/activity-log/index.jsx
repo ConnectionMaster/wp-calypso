@@ -24,7 +24,7 @@ import ErrorBanner from '../activity-log-banner/error-banner';
 import Filterbar from '../filterbar';
 import UpgradeBanner from '../activity-log-banner/upgrade-banner';
 import IntroBanner from '../activity-log-banner/intro-banner';
-import { isFreePlan } from 'calypso/lib/plans';
+import { isFreePlan } from '@automattic/calypso-products';
 import JetpackColophon from 'calypso/components/jetpack-colophon';
 import Main from 'calypso/components/main';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
@@ -42,7 +42,10 @@ import FormattedHeader from 'calypso/components/formatted-header';
 import SuccessBanner from '../activity-log-banner/success-banner';
 import RewindUnavailabilityNotice from './rewind-unavailability-notice';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
-import { siteHasBackupProductPurchase } from 'calypso/state/purchases/selectors';
+import {
+	siteHasBackupProductPurchase,
+	siteHasScanProductPurchase,
+} from 'calypso/state/purchases/selectors';
 import { getCurrentPlan } from 'calypso/state/sites/plans/selectors';
 import { getSiteSlug, getSiteTitle, isJetpackSite } from 'calypso/state/sites/selectors';
 import {
@@ -565,7 +568,10 @@ export default connect(
 		const siteIsOnFreePlan =
 			isFreePlan( get( getCurrentPlan( state, siteId ), 'productSlug' ) ) &&
 			! isVipSite( state, siteId );
-		const siteHasNoLog = siteIsOnFreePlan && ! siteHasBackupProductPurchase( state, siteId );
+		const siteHasNoLog =
+			siteIsOnFreePlan &&
+			! siteHasBackupProductPurchase( state, siteId ) &&
+			! siteHasScanProductPurchase( state, siteId );
 		const isJetpack = isJetpackSite( state, siteId );
 
 		return {

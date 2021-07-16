@@ -2,10 +2,11 @@
  * Internal dependencies
  */
 import type { State } from './reducer';
-import { isGoodDefaultDomainQuery } from '../../lib/is-good-default-domain-query';
+import { isGoodDefaultDomainQuery } from '@automattic/domain-picker';
 
 export const getIsRedirecting = ( state: State ) => state.isRedirecting;
 export const getPlanProductId = ( state: State ) => state.planProductId;
+export const getLastLocation = ( state: State ) => state.lastLocation;
 export const getRandomizedDesigns = ( state: State ) => state.randomizedDesigns;
 export const getSelectedDesign = ( state: State ) => state.selectedDesign;
 export const getSelectedDomain = ( state: State ) => state.domain;
@@ -35,3 +36,8 @@ export const getDomainSearch = ( state: State ) =>
 	state.domainSearch ||
 	( isGoodDefaultDomainQuery( getSelectedSiteTitle( state ) ) && getSelectedSiteTitle( state ) ) ||
 	getSelectedVertical( state )?.label;
+
+export const hasSelectedDesign = ( state: State ) => !! state.selectedDesign;
+
+export const hasSelectedDesignWithoutFonts = ( state: State ) =>
+	hasSelectedDesign( state ) && ! state.selectedFonts;

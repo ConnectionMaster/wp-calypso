@@ -3,7 +3,6 @@
  */
 import React from 'react';
 import { connect } from 'react-redux';
-import { flowRight as compose } from 'lodash';
 
 /**
  * Internal dependencies
@@ -12,11 +11,8 @@ import Gridicon from './gridicons';
 import noticon2gridicon from '../utils/noticon2gridicon';
 import actions from '../state/actions';
 import ImagePreloader from './image-loader';
-
 import { html } from '../indices-to-html';
-
-const debug = require( 'debug' )( 'notifications:summary-in-list' );
-const { recordTracksEvent } = require( '../helpers/stats' );
+import { recordTracksEvent } from '../helpers/stats';
 
 export class SummaryInList extends React.Component {
 	handleClick = ( event ) => {
@@ -25,15 +21,13 @@ export class SummaryInList extends React.Component {
 
 		if ( event.metaKey || event.shiftKey ) {
 			window.open( this.props.note.url, '_blank' );
+		} else if ( this.props.currentNote === this.props.note.id ) {
+			this.props.unselectNote();
 		} else {
-			if ( this.props.currentNote == this.props.note.id ) {
-				this.props.unselectNote();
-			} else {
-				recordTracksEvent( 'calypso_notification_note_open', {
-					note_type: this.props.note.type,
-				} );
-				this.props.selectNote( this.props.note.id );
-			}
+			recordTracksEvent( 'calypso_notification_note_open', {
+				note_type: this.props.note.type,
+			} );
+			this.props.selectNote( this.props.note.id );
 		}
 	};
 
@@ -69,9 +63,9 @@ export class SummaryInList extends React.Component {
 	}
 }
 
-const mapDispatchToProps = ( dispatch ) => ( {
-	selectNote: compose( dispatch, actions.ui.selectNote ),
-	unselectNote: compose( dispatch, actions.ui.unselectNote ),
-} );
+const mapDispatchToProps = {
+	selectNote: actions.ui.selectNote,
+	unselectNote: actions.ui.unselectNote,
+};
 
-export default connect( null, mapDispatchToProps, null, { pure: false } )( SummaryInList );
+export default connect( null, mapDispatchToProps )( SummaryInList );

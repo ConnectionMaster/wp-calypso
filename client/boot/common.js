@@ -3,23 +3,20 @@
  */
 import debugFactory from 'debug';
 import page from 'page';
-import { startsWith } from 'lodash';
 import React from 'react';
 import ReactDom from 'react-dom';
 import Modal from 'react-modal';
 import store from 'store';
+import accessibleFocus from '@automattic/accessible-focus';
 
 /**
  * Internal dependencies
  */
 import { setupLocale } from './locale';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { ProviderWrappedLayout } from 'calypso/controller';
-import notices from 'calypso/notices';
 import { getToken } from 'calypso/lib/oauth-token';
 import emailVerification from 'calypso/components/email-verification';
-import { getSavedVariations } from 'calypso/lib/abtest'; // used by error logger
-import accessibleFocus from 'calypso/lib/accessible-focus';
 import Logger from 'calypso/lib/catch-js-errors';
 import { hasTouch } from 'calypso/lib/touch-detect';
 import { installPerfmonPageHandlers } from 'calypso/lib/perfmon';
@@ -35,7 +32,7 @@ import getSuperProps from 'calypso/lib/analytics/super-props';
 import { getSiteFragment, normalize } from 'calypso/lib/route';
 import { isLegacyRoute } from 'calypso/lib/route/legacy-routes';
 import { setCurrentUser } from 'calypso/state/current-user/actions';
-import { getCurrentUserId } from 'calypso/state/current-user/selectors';
+import { getCurrentUserId, isUserLoggedIn } from 'calypso/state/current-user/selectors';
 import { initConnection as initHappychatConnection } from 'calypso/state/happychat/connection/actions';
 import { requestHappychatEligibility } from 'calypso/state/happychat/user/actions';
 import { getHappychatAuth } from 'calypso/state/happychat/utils';
@@ -48,13 +45,16 @@ import { createReduxStore } from 'calypso/state';
 import initialReducer from 'calypso/state/reducer';
 import { getInitialState, persistOnChange, loadAllState } from 'calypso/state/initial-state';
 import detectHistoryNavigation from 'calypso/lib/detect-history-navigation';
-import userFactory from 'calypso/lib/user';
-import { getUrlParts, isOutsideCalypso } from 'calypso/lib/url';
+import { initializeCurrentUser } from 'calypso/lib/user/shared-utils';
+import { onDisablePersistence } from 'calypso/lib/user/store';
+import { isOutsideCalypso } from 'calypso/lib/url';
+import { getUrlParts } from '@automattic/calypso-url';
 import { setStore } from 'calypso/state/redux-store';
 import { requestUnseenStatus } from 'calypso/state/reader-ui/seen-posts/actions';
 import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
-import { inJetpackCloudOAuthOverride } from 'calypso/lib/jetpack/oauth-override';
 import { getLanguageSlugs } from 'calypso/lib/i18n-utils/utils';
+import DesktopListeners from 'calypso/lib/desktop-listeners';
+import { attachLogmein } from 'calypso/lib/logmein';
 
 const debug = debugFactory( 'calypso' );
 
@@ -101,7 +101,7 @@ const setupContextMiddleware = ( reduxStore ) => {
 		// Some paths live outside of Calypso and should be opened separately
 		// Examples: /support, /forums
 		if ( isOutsideCalypso( context.pathname ) ) {
-			window.location.href = context.pathname;
+			window.location.href = context.path;
 			return;
 		}
 
@@ -116,16 +116,53 @@ const setupContextMiddleware = ( reduxStore ) => {
 	} );
 };
 
+/**
+ * If the URL sets `flags=oauth` explicitly, persist that setting to session storage so
+ * that it persists across redirects and reloads. The `calypso-config` module will pick
+ * them up automatically on init.
+ */
+function saveOauthFlags() {
+	if ( ! window.location.search ) {
+		return;
+	}
+
+	const flags = new URLSearchParams( window.location.search ).get( 'flags' );
+	if ( ! flags ) {
+		return;
+	}
+
+	const oauthFlag = flags.split( ',' ).find( ( flag ) => /^[+-]?oauth$/.test( flag ) );
+	if ( ! oauthFlag ) {
+		return;
+	}
+
+	window.sessionStorage.setItem( 'flags', oauthFlag );
+}
+
+function authorizePath() {
+	const redirectUri = new URL(
+		isJetpackCloud() ? '/connect/oauth/token' : '/api/oauth/token',
+		window.location
+	);
+	redirectUri.search = new URLSearchParams( {
+		next: window.location.pathname + window.location.search,
+	} ).toString();
+
+	const authUri = new URL( 'https://public-api.wordpress.com/oauth2/authorize' );
+	authUri.search = new URLSearchParams( {
+		response_type: 'token',
+		client_id: config( 'oauth_client_id' ),
+		redirect_uri: redirectUri.toString(),
+		scope: 'global',
+		blog_id: 0,
+	} ).toString();
+
+	return authUri.toString();
+}
+
 const oauthTokenMiddleware = () => {
 	if ( config.isEnabled( 'oauth' ) ) {
-		const loggedOutRoutes = [
-			'/oauth-login',
-			'/oauth',
-			'/start',
-			'/authorize',
-			'/api/oauth/token',
-			'/connect',
-		];
+		const loggedOutRoutes = [ '/start', '/api/oauth/token', '/connect' ];
 
 		if ( config.isEnabled( 'jetpack-cloud/connect' ) ) {
 			loggedOutRoutes.push( '/jetpack/connect', '/plans' );
@@ -138,34 +175,11 @@ const oauthTokenMiddleware = () => {
 
 		// Forces OAuth users to the /login page if no token is present
 		page( '*', function ( context, next ) {
-			const isValidSection = loggedOutRoutes.some( ( route ) => startsWith( context.path, route ) );
+			const isValidSection = loggedOutRoutes.some( ( route ) => context.path.startsWith( route ) );
 
 			// Check we have an OAuth token, otherwise redirect to auth/login page
-			if (
-				getToken() === false &&
-				! isValidSection &&
-				! ( isJetpackCloud() && inJetpackCloudOAuthOverride() )
-			) {
-				const isDesktop = [ 'desktop', 'desktop-development' ].includes( config( 'env_id' ) );
-				const redirectPath = isDesktop || isJetpackCloud() ? config( 'login_url' ) : '/authorize';
-
-				const currentPath = window.location.pathname;
-				// In the context of Jetpack Cloud, if the user isn't authorized, we want
-				// to save the current path (/<product>/<site-slug>) so we can redirect
-				// the user back to it once the login flow is finished. We also set an expiration
-				// to this because we don't want to redirect by mistake a user with an old path
-				// stored in their session.
-				if ( isJetpackCloud() && currentPath !== '/' ) {
-					const EXPIRATION_IN_SECONDS = 300;
-					const SESSION_STORAGE_PATH_KEY = 'jetpack_cloud_redirect_path';
-					const SESSION_STORAGE_PATH_KEY_EXPIRES_IN = 'jetpack_cloud_redirect_path_expires_in';
-					window.sessionStorage.setItem( SESSION_STORAGE_PATH_KEY, currentPath );
-					window.sessionStorage.setItem(
-						SESSION_STORAGE_PATH_KEY_EXPIRES_IN,
-						parseInt( new Date().getTime() / 1000 ) + EXPIRATION_IN_SECONDS
-					);
-				}
-				page( redirectPath );
+			if ( getToken() === false && ! isValidSection ) {
+				window.location = authorizePath();
 				return;
 			}
 
@@ -180,11 +194,6 @@ const setRouteMiddleware = () => {
 
 		next();
 	} );
-};
-
-const clearNoticesMiddleware = () => {
-	//TODO: remove this one when notices are reduxified - it is for old notices
-	page( '*', notices.clearNoticesOnNavigation );
 };
 
 const unsavedFormsMiddleware = () => {
@@ -213,12 +222,9 @@ const utils = () => {
 const configureReduxStore = ( currentUser, reduxStore ) => {
 	debug( 'Executing Calypso configure Redux store.' );
 
-	if ( currentUser.get() ) {
+	if ( currentUser ) {
 		// Set current user in Redux store
-		reduxStore.dispatch( setCurrentUser( currentUser.get() ) );
-		currentUser.on( 'change', () => {
-			reduxStore.dispatch( setCurrentUser( currentUser.get() ) );
-		} );
+		reduxStore.dispatch( setCurrentUser( currentUser ) );
 	}
 
 	if ( config.isEnabled( 'network-connection' ) ) {
@@ -230,7 +236,7 @@ const configureReduxStore = ( currentUser, reduxStore ) => {
 	setSupportSessionReduxStore( reduxStore );
 	setReduxBridgeReduxStore( reduxStore );
 
-	if ( currentUser.get() ) {
+	if ( currentUser ) {
 		if ( config.isEnabled( 'push-notifications' ) ) {
 			// If the browser is capable, registers a service worker & exposes the API
 			reduxStore.dispatch( pushNotificationsInit() );
@@ -262,8 +268,6 @@ function setupErrorLogger( reduxStore ) {
 		};
 	} );
 
-	errorLogger.saveDiagnosticReducer( () => ( { tests: getSavedVariations() } ) );
-
 	tracksEvents.on( 'record-event', ( eventName, lastTracksEvent ) =>
 		errorLogger.saveExtraData( { lastTracksEvent } )
 	);
@@ -284,11 +288,10 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 	oauthTokenMiddleware();
 	setupRoutes();
 	setRouteMiddleware();
-	clearNoticesMiddleware();
 	unsavedFormsMiddleware();
 
 	// The analytics module requires user (when logged in) and superProps objects. Inject these here.
-	initializeAnalytics( currentUser ? currentUser.get() : undefined, getSuperProps( reduxStore ) );
+	initializeAnalytics( currentUser ? currentUser : undefined, getSuperProps( reduxStore ) );
 
 	setupErrorLogger( reduxStore );
 
@@ -330,7 +333,7 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 	} );
 
 	page( '*', function ( context, next ) {
-		if ( '/me/account' !== context.path && currentUser.get().phone_account ) {
+		if ( '/me/account' !== context.path && currentUser.phone_account ) {
 			page( '/me/account' );
 		}
 
@@ -340,11 +343,11 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 	page( '*', emailVerification );
 
 	// delete any lingering local storage data from signup
-	if ( ! startsWith( window.location.pathname, '/start' ) ) {
+	if ( ! window.location.pathname.startsWith( '/start' ) ) {
 		[ 'signupProgress', 'signupDependencies' ].forEach( ( item ) => store.remove( item ) );
 	}
 
-	if ( ! currentUser.get() ) {
+	if ( ! currentUser ) {
 		// Dead-end the sections the user can't access when logged out
 		page( '*', function ( context, next ) {
 			//see server/pages/index for prod redirect
@@ -381,16 +384,13 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 		setupGlobalKeyboardShortcuts();
 	}
 
-	if ( config.isEnabled( 'desktop' ) ) {
-		require( 'calypso/lib/desktop' ).default.init();
+	if ( window.electron ) {
+		DesktopListeners.init( reduxStore );
 	}
 
-	if (
-		config.isEnabled( 'dev/test-helper' ) &&
-		document.querySelector( '.environment.is-tests' )
-	) {
-		asyncRequire( 'calypso/lib/abtest/test-helper', ( testHelper ) => {
-			testHelper( document.querySelector( '.environment.is-tests' ) );
+	if ( config.isEnabled( 'dev/auth-helper' ) && document.querySelector( '.environment.is-auth' ) ) {
+		asyncRequire( 'calypso/lib/auth-helper', ( authHelper ) => {
+			authHelper( document.querySelector( '.environment.is-auth' ), reduxStore );
 		} );
 	}
 	if (
@@ -409,6 +409,11 @@ const setupMiddlewares = ( currentUser, reduxStore ) => {
 			featureHelper( document.querySelector( '.environment.is-features' ) );
 		} );
 	}
+
+	if ( config.isEnabled( 'logmein' ) && isUserLoggedIn( reduxStore.getState() ) ) {
+		// Attach logmein handler if we're currently logged in
+		attachLogmein( reduxStore );
+	}
 };
 
 function renderLayout( reduxStore ) {
@@ -422,13 +427,14 @@ function renderLayout( reduxStore ) {
 }
 
 const boot = ( currentUser, registerRoutes ) => {
+	saveOauthFlags();
 	utils();
 	loadAllState().then( () => {
-		const initialState = getInitialState( initialReducer );
+		const initialState = getInitialState( initialReducer, currentUser?.ID );
 		const reduxStore = createReduxStore( initialState, initialReducer );
 		setStore( reduxStore );
-		persistOnChange( reduxStore );
-		setupLocale( currentUser.get(), reduxStore );
+		onDisablePersistence( persistOnChange( reduxStore, currentUser?.ID ) );
+		setupLocale( currentUser, reduxStore );
 		configureReduxStore( currentUser, reduxStore );
 		setupMiddlewares( currentUser, reduxStore );
 		detectHistoryNavigation.start();
@@ -446,58 +452,8 @@ const boot = ( currentUser, registerRoutes ) => {
 	} );
 };
 
-function waitForCookieAuth( user ) {
-	const timeoutMs = 1500;
-	const loggedIn = user.get() !== false;
-
-	const promiseTimeout = ( ms, promise ) => {
-		const timeout = new Promise( ( _, reject ) => {
-			const id = setTimeout( () => {
-				clearTimeout( id );
-				reject( `Request timed out in ${ ms } ms` );
-			}, ms );
-		} );
-
-		return Promise.race( [ promise, timeout ] );
-	};
-
-	const renderPromise = () => {
-		return new Promise( function ( resolve ) {
-			const sendUserAuth = () => {
-				debug( 'Sending user info to desktop...' );
-				window.electron.send(
-					'user-auth',
-					{ id: user.data.ID, username: user.data.username },
-					getToken()
-				);
-			};
-
-			if ( loggedIn ) {
-				debug( 'Desktop user logged in, waiting on cookie authentication...' );
-				window.electron.receive( 'cookie-auth-complete', function () {
-					debug( 'Desktop cookies set, rendering main layout...' );
-					resolve();
-				} );
-				// Send user auth and wait on cookie-auth-complete
-				sendUserAuth();
-			} else {
-				debug( 'Desktop user logged out, rendering main layout...' );
-				// Send user auth and resolve immediately
-				sendUserAuth();
-				resolve();
-			}
-		} );
-	};
-
-	return promiseTimeout( timeoutMs, renderPromise() );
-}
-
 export const bootApp = async ( appName, registerRoutes ) => {
-	const user = userFactory();
-	await user.initialize();
-	if ( config.isEnabled( 'desktop' ) ) {
-		await waitForCookieAuth( user );
-	}
+	const user = await initializeCurrentUser();
 	debug( `Starting ${ appName }. Let's do this.` );
 	boot( user, registerRoutes );
 };

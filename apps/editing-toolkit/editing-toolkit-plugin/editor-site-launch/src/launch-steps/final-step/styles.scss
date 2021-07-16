@@ -1,5 +1,5 @@
-@import '~@automattic/typography/styles/variables';
-@import '~@automattic/onboarding/styles/mixins';
+@import '@automattic/typography/styles/variables';
+@import '@automattic/onboarding/styles/mixins';
 
 // TODO: This is former dark-gray-500 from @wordpress/base-styles.
 // Replace with a color from the standard palette.
@@ -34,6 +34,7 @@ ul.nux-launch__feature-item-group {
 		display: block;
 		margin-right: 6px;
 		margin-top: 2px;
+		flex-shrink: 0;
 	}
 
 	// the tick
@@ -84,5 +85,8 @@ ul.nux-launch__feature-item-group {
 		&.is-loading {
 			@include onboarding-placeholder();
 		}
+	}
+	&__domain-price {
+		font-size: $font-body-small;
 	}
 }

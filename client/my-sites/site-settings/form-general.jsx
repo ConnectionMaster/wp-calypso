@@ -16,7 +16,7 @@ import Notice from 'calypso/components/notice';
 import NoticeAction from 'calypso/components/notice/notice-action';
 import LanguagePicker from 'calypso/components/language-picker';
 import SettingsSectionHeader from 'calypso/my-sites/site-settings/settings-section-header';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import languages from '@automattic/languages';
 import FormInput from 'calypso/components/forms/form-text-input';
 import FormFieldset from 'calypso/components/forms/form-fieldset';
@@ -26,8 +26,7 @@ import FormSettingExplanation from 'calypso/components/forms/form-setting-explan
 import Timezone from 'calypso/components/timezone';
 import SiteIconSetting from './site-icon-setting';
 import UpsellNudge from 'calypso/blocks/upsell-nudge';
-import { isBusiness } from 'calypso/lib/products-values';
-import { FEATURE_NO_BRANDING, PLAN_BUSINESS } from 'calypso/lib/plans/constants';
+import { isBusiness, FEATURE_NO_BRANDING, PLAN_BUSINESS } from '@automattic/calypso-products';
 import QuerySiteSettings from 'calypso/components/data/query-site-settings';
 import { isJetpackSite, isCurrentPlanPaid } from 'calypso/state/sites/selectors';
 import isSiteComingSoon from 'calypso/state/selectors/is-site-coming-soon';
@@ -44,8 +43,10 @@ import isVipSite from 'calypso/state/selectors/is-vip-site';
 import { launchSite } from 'calypso/state/sites/launch/actions';
 import { getDomainsBySiteId } from 'calypso/state/sites/domains/selectors';
 import QuerySiteDomains from 'calypso/components/data/query-site-domains';
+import { domainManagementChangeSiteAddress } from 'calypso/my-sites/domains/paths';
 import FormInputCheckbox from 'calypso/components/forms/form-checkbox';
 import isSiteWPForTeams from 'calypso/state/selectors/is-site-wpforteams';
+import isSiteP2Hub from 'calypso/state/selectors/is-site-p2-hub';
 import isAtomicAndEditingToolkitPluginDeactivated from 'calypso/state/selectors/is-atomic-and-editing-toolkit-plugin-deactivated';
 import QueryJetpackPlugins from 'calypso/components/data/query-jetpack-plugins';
 
@@ -191,6 +192,12 @@ export class SiteSettingsFormGeneral extends Component {
 							},
 						}
 					) }
+					&nbsp;
+					{ site.domain.endsWith( '.wordpress.com' ) && (
+						<a href={ domainManagementChangeSiteAddress( siteSlug, site.domain ) }>
+							{ translate( 'You can change your site address in Domain Settings.' ) }
+						</a>
+					) }
 				</FormSettingExplanation>
 			);
 		}
@@ -284,7 +291,7 @@ export class SiteSettingsFormGeneral extends Component {
 				<FormSettingExplanation>
 					{ translate( "The site's primary language." ) }
 					&nbsp;
-					<a href={ config.isEnabled( 'me/account' ) ? '/me/account' : '/settings/account/' }>
+					<a href={ '/me/account' }>
 						{ translate( "You can also modify your interface's language in your profile." ) }
 					</a>
 				</FormSettingExplanation>
@@ -553,8 +560,12 @@ export class SiteSettingsFormGeneral extends Component {
 			handleSubmitForm,
 			isSavingSettings,
 			siteId,
+			isP2HubSite,
 		} = this.props;
 
+		if ( isP2HubSite ) {
+			return <></>;
+		}
 		return (
 			<>
 				{ siteId && <QueryJetpackPlugins siteIds={ [ siteId ] } /> }
@@ -571,28 +582,6 @@ export class SiteSettingsFormGeneral extends Component {
 				</Card>
 			</>
 		);
-	}
-
-	disablePrivacySettings = ( e ) => {
-		e.target.blur();
-	};
-
-	privacySettingsWrapper() {
-		if ( this.props.isUnlaunchedSite ) {
-			return (
-				<>
-					{ this.renderLaunchSite() }
-					<div
-						className="site-settings__disable-privacy-settings"
-						onFocus={ this.disablePrivacySettings }
-					>
-						{ this.privacySettings() }
-					</div>
-				</>
-			);
-		}
-
-		return <>{ this.privacySettings() }</>;
 	}
 
 	render() {
@@ -634,7 +623,7 @@ export class SiteSettingsFormGeneral extends Component {
 					</form>
 				</Card>
 
-				{ this.privacySettingsWrapper() }
+				{ this.props.isUnlaunchedSite ? this.renderLaunchSite() : this.privacySettings() }
 
 				{ ! isWPForTeamsSite && ! siteIsJetpack && (
 					<div className="site-settings__footer-credit-container">
@@ -688,32 +677,28 @@ const mapDispatchToProps = ( dispatch, ownProps ) => {
 	};
 };
 
-const connectComponent = connect(
-	( state ) => {
-		const siteId = getSelectedSiteId( state );
-		const siteIsJetpack = isJetpackSite( state, siteId );
-		const selectedSite = getSelectedSite( state );
+const connectComponent = connect( ( state ) => {
+	const siteId = getSelectedSiteId( state );
+	const siteIsJetpack = isJetpackSite( state, siteId );
+	const selectedSite = getSelectedSite( state );
 
-		return {
-			isUnlaunchedSite: isUnlaunchedSite( state, siteId ),
-			isComingSoon: isSiteComingSoon( state, siteId ),
-			siteIsJetpack,
-			siteIsVip: isVipSite( state, siteId ),
-			siteSlug: getSelectedSiteSlug( state ),
-			selectedSite,
-			isPaidPlan: isCurrentPlanPaid( state, siteId ),
-			siteDomains: getDomainsBySiteId( state, siteId ),
-			isWPForTeamsSite: isSiteWPForTeams( state, siteId ),
-			isAtomicAndEditingToolkitDeactivated: isAtomicAndEditingToolkitPluginDeactivated(
-				state,
-				siteId
-			),
-		};
-	},
-	mapDispatchToProps,
-	null,
-	{ pure: false }
-);
+	return {
+		isUnlaunchedSite: isUnlaunchedSite( state, siteId ),
+		isComingSoon: isSiteComingSoon( state, siteId ),
+		siteIsJetpack,
+		siteIsVip: isVipSite( state, siteId ),
+		siteSlug: getSelectedSiteSlug( state ),
+		selectedSite,
+		isPaidPlan: isCurrentPlanPaid( state, siteId ),
+		siteDomains: getDomainsBySiteId( state, siteId ),
+		isWPForTeamsSite: isSiteWPForTeams( state, siteId ),
+		isP2HubSite: isSiteP2Hub( state, siteId ),
+		isAtomicAndEditingToolkitDeactivated: isAtomicAndEditingToolkitPluginDeactivated(
+			state,
+			siteId
+		),
+	};
+}, mapDispatchToProps );
 
 const getFormSettings = ( settings ) => {
 	const defaultSettings = {

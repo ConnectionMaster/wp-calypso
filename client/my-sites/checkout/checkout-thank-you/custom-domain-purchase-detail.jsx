@@ -1,18 +1,15 @@
 /**
  * External dependencies
  */
-
 import PropTypes from 'prop-types';
 import React from 'react';
 import { localize } from 'i18n-calypso';
 import { connect } from 'react-redux';
-import { head } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import PurchaseDetail from 'calypso/components/purchase-detail';
-import { hasCustomDomain } from 'calypso/lib/site/utils';
 
 /**
  * Image dependencies
@@ -56,24 +53,6 @@ const CustomDomainPurchaseDetail = ( {
 				href={ `/domains/add/${ selectedSite.slug }` }
 			/>
 		);
-	} else if ( ! hasDomainCredit && hasCustomDomain( selectedSite ) ) {
-		const actionButton = {};
-		actionButton.buttonText = translate( 'Manage my domains' );
-		actionButton.href = `/domains/manage/${ selectedSite.slug }`;
-		return (
-			<PurchaseDetail
-				icon={ <img alt="" src={ customDomainIcon } /> }
-				title={ translate( 'Custom Domain' ) }
-				description={ translate(
-					'Your plan includes one year of your custom domain {{em}}%(siteDomain)s{{/em}}, your own personal corner of the web.',
-					{
-						args: { siteDomain: selectedSite.domain },
-						components: { em: <em /> },
-					}
-				) }
-				{ ...actionButton }
-			/>
-		);
 	} else if ( hasNonPrimaryDomainsFlag && registeredDomain ) {
 		const actionButton = {};
 		actionButton.buttonText = translate( 'Change primary domain' );
@@ -113,6 +92,6 @@ export default connect( ( state ) => {
 		hasNonPrimaryDomainsFlag: getCurrentUser( state )
 			? currentUserHasFlag( state, NON_PRIMARY_DOMAINS_TO_FREE_USERS )
 			: false,
-		registeredDomain: head( registeredDomains ),
+		registeredDomain: registeredDomains[ 0 ],
 	};
 } )( localize( CustomDomainPurchaseDetail ) );

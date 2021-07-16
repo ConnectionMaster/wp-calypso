@@ -2,11 +2,47 @@
 
 ## trunk
 
+- Breaking: Changed `webpack/file-loader` to internally use the new `asset/resource` modules (the former is deprecated in
+  webpack 5). The semantics of the options have changed, now the final asset URL is `${publichPath}${outputPath}/${fileName}`,
+  before it didn't include the `outputPath` part.
+- Switched from `node-sass` to `sass` (Dart Sass) for processing Sass files.
+  - Removed dependency `node-sass`
+  - Added dependency `sass ^1.32.13`
+- Updated dependencies
+  - autoprefixer to ^10.2.5
+  - css-loader to ^5.2.4
+  - mini-css-extract-plugin to ^1.6.0
+  - node-sass to ^6.0.0
+  - postcss to ^8.2.15
+  - postcss-loader to ^5.3.0
+  - sass-loader to ^11.1.1
+  - thread-loader to ^3.0.4
+
+## 8.0.0
+
+- Breaking: Drop option `postCssConfig` for Sass loader. The property `postCssOptions` will be passed as is
+  to `postcss-loader`. See the doc in <https://github.com/webpack-contrib/postcss-loader#postcssoptions>
+- Breaking: `calypso-build`, `transpile` and `webpack/minify` won't set `defaults` as browserslist environment anymore.
+  Instead they will fallback to the [default resolution methods from browserslist](https://github.com/browserslist/browserslist#queries)
+- Breaking: `webpack/minify` API has changed. Now it only accepts 4 options: `terserOptions`, `cssMinimizerOptions`, `parallel` and `extractComments`.
+- Added: `webpack/minify` will use CssMinimizerWebpackPlugin to minimize CSS files.
+- Added: option `cacheCompression` to toggle babel cache compression
+- Added: option `bugfixes` for `calypso-build/babel/default` preset to toggle <https://babeljs.io/docs/en/babel-preset-env#bugfixes>
+- Added dependencies:
+  - css-minimizer-webpack-plugin ^1.3.0
+  - postcss ^8.2.6 (peer dependency)
+- Updated dependencies:
+  - postcss-custom-properties to ^11.0.0
+  - postcss-loader to ^5.0.0
+  - @automattic/webpack-rtl-plugin to ^5.0.0
+
 ## 7.0.0
 
 - Breaking: drop support for wepback 4
 - Breaking: renamed option `output-jsonp-function` to `output-chunk-loading-global`
+- Changed: Use `contenthash` hash strategy instead of `chunkhash`
 - Added: support for webpack 5
+- Added: plugin to transform i18n imports to local variables
 - Updated dependencies
   - @wordpress/dependency-extraction-webpack-plugin to ^2.9.0
 

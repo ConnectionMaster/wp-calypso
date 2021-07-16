@@ -9,18 +9,12 @@ import React from 'react';
  */
 import { CheckoutThankYouHeader } from '../header';
 
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
+jest.unmock( '@automattic/calypso-products' );
+jest.mock( '@automattic/calypso-products', () => ( {
+	...jest.requireActual( '@automattic/calypso-products' ),
+	shouldFetchSitePlans: () => false,
+	isDotComPlan: jest.fn( () => false ),
 } ) );
-
-jest.unmock( 'calypso/lib/plans' );
-const plans = require( 'calypso/lib/plans' );
-plans.getFeatureByKey = () => null;
-plans.shouldFetchSitePlans = () => false;
-
-jest.unmock( 'calypso/lib/products-values' );
-const isDotComPlan = require( 'calypso/lib/products-values/is-dot-com-plan' );
-isDotComPlan.isDotComPlan = jest.fn( () => false );
 
 jest.mock( 'calypso/lib/analytics/tracks', () => ( {
 	recordTracksEvent: () => null,
@@ -35,9 +29,6 @@ jest.mock( 'calypso/components/happiness-support', () => 'HappinessSupport' );
 jest.mock( 'calypso/lib/rebrand-cities', () => ( {
 	isRebrandCitiesSiteUrl: jest.fn( () => false ),
 } ) );
-
-// Gets rid of warnings such as 'UnhandledPromiseRejectionWarning: Error: No available storage method found.'
-jest.mock( 'calypso/lib/user', () => () => {} );
 
 const translate = ( x ) => x;
 

@@ -2,6 +2,8 @@
  * External dependencies
  */
 import { useSelect } from '@wordpress/data';
+import { useLocale } from '@automattic/i18n-utils';
+import { isEnabled } from '@automattic/calypso-config';
 
 /**
  * Internal dependencies
@@ -12,7 +14,17 @@ import { PLANS_STORE } from '../stores/plans';
 import { usePlanFromPath } from './use-selected-plan';
 
 export default function useSteps(): Array< StepType > {
-	const { hasSiteTitle } = useSelect( ( select ) => select( ONBOARD_STORE ) );
+	const locale = useLocale();
+	const { hasSiteTitle, hasSelectedDesignWithoutFonts } = useSelect(
+		( select ) => {
+			const onboardSelect = select( ONBOARD_STORE );
+			return {
+				hasSiteTitle: onboardSelect.hasSiteTitle(),
+				hasSelectedDesignWithoutFonts: onboardSelect.hasSelectedDesignWithoutFonts(),
+			};
+		},
+		[ ONBOARD_STORE ]
+	);
 	const isAnchorFmSignup = useIsAnchorFm();
 
 	let steps: StepType[];
@@ -21,7 +33,7 @@ export default function useSteps(): Array< StepType > {
 	if ( isAnchorFmSignup ) {
 		steps = [ Step.IntentGathering, Step.DesignSelection, Step.Style ];
 		// If site title is skipped, we're showing Domains step before Features step. If not, we are showing Domains step next.
-	} else if ( hasSiteTitle() ) {
+	} else if ( hasSiteTitle ) {
 		steps = [
 			Step.IntentGathering,
 			Step.Domains,
@@ -41,13 +53,20 @@ export default function useSteps(): Array< StepType > {
 		];
 	}
 
+	// Remove the Style (fonts) step from the Site Editor flow.
+	if ( isEnabled( 'gutenboarding/site-editor' ) || hasSelectedDesignWithoutFonts ) {
+		steps = steps.filter( ( step ) => step !== Step.Style );
+	}
+
 	// Logic necessary to skip Domains or Plans steps
 	// General rule: if a step has been used already, don't remove it.
 	const { domain, hasUsedDomainsStep, hasUsedPlansStep } = useSelect( ( select ) =>
 		select( ONBOARD_STORE ).getState()
 	);
 	const planProductId = useSelect( ( select ) => select( ONBOARD_STORE ).getPlanProductId() );
-	const plan = useSelect( ( select ) => select( PLANS_STORE ).getPlanByProductId( planProductId ) );
+	const plan = useSelect( ( select ) =>
+		select( PLANS_STORE ).getPlanByProductId( planProductId, locale )
+	);
 	const hasPlanFromPath = !! usePlanFromPath();
 
 	if ( domain && ! hasUsedDomainsStep ) {

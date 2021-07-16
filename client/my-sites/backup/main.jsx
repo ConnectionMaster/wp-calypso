@@ -6,12 +6,11 @@ import { useSelector } from 'react-redux';
 import page from 'page';
 import classNames from 'classnames';
 import { useTranslate } from 'i18n-calypso';
-import { isArray } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import { useLocalizedMoment } from 'calypso/components/localized-moment';
 import useDateWithOffset from 'calypso/lib/jetpack/hooks/use-date-with-offset';
 import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
@@ -145,7 +144,7 @@ const BackupStatus = ( { selectedDate } ) => {
 	const siteId = useSelector( getSelectedSiteId );
 	const rewindCapabilities = useSelector( ( state ) => getRewindCapabilities( state, siteId ) );
 
-	if ( ! isArray( rewindCapabilities ) ) {
+	if ( ! Array.isArray( rewindCapabilities ) ) {
 		return <BackupPlaceholder showDatePicker={ false } />;
 	}
 

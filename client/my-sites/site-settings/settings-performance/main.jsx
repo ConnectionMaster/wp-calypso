@@ -31,6 +31,7 @@ import isSiteAutomatedTransfer from 'calypso/state/selectors/is-site-automated-t
 import isPrivateSite from 'calypso/state/selectors/is-private-site';
 import { getSelectedSite, getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getSiteSlug, isJetpackSite } from 'calypso/state/sites/selectors';
+import config from '@automattic/calypso-config';
 
 class SiteSettingsPerformance extends Component {
 	render() {
@@ -43,36 +44,47 @@ class SiteSettingsPerformance extends Component {
 			site,
 			siteId,
 			siteIsJetpack,
+			siteIsAtomic,
 			siteIsAtomicPrivate,
 			siteIsUnlaunched,
 			siteSlug,
+			showCloudflare,
 			submitForm,
 			translate,
 			trackEvent,
 			updateFields,
+			saveJetpackSettings,
+			activateModule,
 		} = this.props;
+		const siteIsJetpackNonAtomic = siteIsJetpack && ! siteIsAtomic;
 
 		return (
 			<Main className="settings-performance site-settings site-settings__performance-settings">
-				<DocumentHead title={ translate( 'Site Settings' ) } />
+				<DocumentHead title={ translate( 'Performance Settings' ) } />
 				<JetpackDevModeNotice />
 				<SidebarNavigation />
 				<FormattedHeader
 					brandFont
 					className="settings-performance__page-heading"
-					headerText={ translate( 'Settings' ) }
+					headerText={ translate( 'Performance Settings' ) }
+					subHeaderText={ translate( "Explore settings to improve your site's performance." ) }
 					align="left"
 				/>
 				<SiteSettingsNavigation site={ site } section="performance" />
 
 				<Search
 					handleAutosavingToggle={ handleAutosavingToggle }
+					updateFields={ updateFields }
+					submitForm={ submitForm }
+					saveJetpackSettings={ saveJetpackSettings }
 					isSavingSettings={ isSavingSettings }
 					isRequestingSettings={ isRequestingSettings }
 					fields={ fields }
+					trackEvent={ trackEvent }
+					activateModule={ activateModule }
 				/>
 
-				<Cloudflare />
+				{ showCloudflare && ! siteIsJetpackNonAtomic && <Cloudflare /> }
 
 				{ siteIsJetpack && (
 					<Fragment>
@@ -133,15 +145,18 @@ const connectComponent = connect( ( state ) => {
 	const site = getSelectedSite( state );
 	const siteId = getSelectedSiteId( state );
 	const siteIsJetpack = isJetpackSite( state, siteId );
-	const siteIsAtomicPrivate =
-		isSiteAutomatedTransfer( state, siteId ) && isPrivateSite( state, siteId );
+	const siteIsAtomic = isSiteAutomatedTransfer( state, siteId );
+	const siteIsAtomicPrivate = siteIsAtomic && isPrivateSite( state, siteId );
+	const showCloudflare = config.isEnabled( 'cloudflare' );
 
 	return {
 		site,
 		siteIsJetpack,
+		siteIsAtomic,
 		siteIsAtomicPrivate,
 		siteIsUnlaunched: isUnlaunchedSite( state, siteId ),
 		siteSlug: getSiteSlug( state, siteId ),
+		showCloudflare,
 	};
 } );
 

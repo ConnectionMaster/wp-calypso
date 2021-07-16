@@ -9,7 +9,7 @@
  */
 import { expect } from 'chai';
 import { mount } from 'enzyme';
-import { defer, toArray } from 'lodash';
+import { defer } from 'lodash';
 import React from 'react';
 import moment from 'moment';
 
@@ -25,7 +25,6 @@ import fixtures from './fixtures';
 const DUMMY_SITE_ID = 2916284;
 const mockSelectedItems = [];
 
-jest.mock( 'calypso/lib/user', () => () => {} );
 jest.mock( 'calypso/components/infinite-list', () =>
 	require( 'calypso/components/empty-component' )
 );
@@ -40,16 +39,16 @@ describe( 'MediaLibraryList item selection', () => {
 	let wrapper;
 	let mediaList;
 
-	const setMediaLibrarySelectedItems = jest.fn();
+	const selectMediaItems = jest.fn();
 
 	function toggleItem( itemIndex, shiftClick ) {
 		mediaList.toggleItem( fixtures.media[ itemIndex ], shiftClick );
 	}
 
-	function expectSelectedItems() {
+	function expectSelectedItems( ...args ) {
 		defer( function () {
 			expect( mockSelectedItems ).to.have.members(
-				toArray( arguments ).map( function ( arg ) {
+				args.map( function ( arg ) {
 					return fixtures.media[ arg ];
 				} )
 			);
@@ -70,7 +69,7 @@ describe( 'MediaLibraryList item selection', () => {
 					mediaScale={ 0.24 }
 					moment={ moment }
 					selectedItems={ [] }
-					setMediaLibrarySelectedItems={ setMediaLibrarySelectedItems }
+					selectMediaItems={ selectMediaItems }
 				/>
 			);
 			mediaList = wrapper.find( MediaList ).instance();
@@ -159,7 +158,7 @@ describe( 'MediaLibraryList item selection', () => {
 					moment={ moment }
 					single
 					selectedItems={ [] }
-					setMediaLibrarySelectedItems={ setMediaLibrarySelectedItems }
+					selectMediaItems={ selectMediaItems }
 				/>
 			);
 			mediaList = wrapper.find( MediaList ).instance();
@@ -202,7 +201,7 @@ describe( 'MediaLibraryList item selection', () => {
 					source={ source }
 					single
 					selectedItems={ [] }
-					setMediaLibrarySelectedItems={ setMediaLibrarySelectedItems }
+					selectMediaItems={ selectMediaItems }
 				/>
 			)
 				.find( MediaList )

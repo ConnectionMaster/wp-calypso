@@ -1,8 +1,11 @@
+export { canCurrentUserAddEmail } from './can-current-user-add-email';
+export { canCurrentUserCreateSiteFromDomainOnly } from './can-current-user-create-site-from-domain-only';
 export { canRedirect } from './can-redirect';
 export { checkAuthCode } from './check-auth-code';
 export { checkDomainAvailability } from './check-domain-availability';
 export { checkInboundTransferStatus } from './check-inbound-transfer-status';
 export { getAvailableTlds } from './get-available-tlds';
+export { getCurrentUserCannotAddEmailReason } from './get-current-user-cannot-add-email-reason';
 export { getDomainPrice } from './get-domain-price';
 export { getDomainProductSlug } from './get-domain-product-slug';
 export { getDomainSalePrice } from './get-domain-sale-price';

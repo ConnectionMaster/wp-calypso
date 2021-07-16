@@ -18,7 +18,6 @@ import PluginBrowser from './plugins-browser';
 import PluginUpload from './plugin-upload';
 import { getSelectedSite } from 'calypso/state/ui/selectors';
 import getSelectedOrAllSitesWithPlugins from 'calypso/state/selectors/get-selected-or-all-sites-with-plugins';
-
 /**
  * Module variables
  */
@@ -29,9 +28,6 @@ let lastPluginsQuerystring;
 
 function renderSinglePlugin( context, siteUrl ) {
 	const pluginSlug = decodeURIComponent( context.params.plugin );
-
-	// Scroll to the top
-	window.scrollTo( 0, 0 );
 
 	let prevPath;
 	if ( lastPluginsListVisited ) {

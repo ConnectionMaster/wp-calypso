@@ -10,7 +10,7 @@ import { flowRight, get, pick } from 'lodash';
  * Internal dependencies
  */
 import wrapSettingsForm from './wrap-settings-form';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import PressThis from './press-this';
 import QueryTaxonomies from 'calypso/components/data/query-taxonomies';
 import TaxonomyCard from './taxonomies/taxonomy-card';
@@ -29,6 +29,8 @@ import Widgets from './widgets';
 import PublishingTools from './publishing-tools';
 import QueryJetpackModules from 'calypso/components/data/query-jetpack-modules';
 import SettingsSectionHeader from 'calypso/my-sites/site-settings/settings-section-header';
+import isNavUnificationEnabled from 'calypso/state/selectors/is-nav-unification-enabled';
+import { getPreference } from 'calypso/state/preferences/selectors';
 
 class SiteSettingsFormWriting extends Component {
 	isMobile() {
@@ -54,7 +56,9 @@ class SiteSettingsFormWriting extends Component {
 			siteId,
 			siteIsJetpack,
 			translate,
+			siteIsAutomatedTransfer,
 			updateFields,
+			showAdvancedDashboard,
 		} = this.props;
 
 		return (
@@ -63,13 +67,16 @@ class SiteSettingsFormWriting extends Component {
 				onSubmit={ handleSubmitForm }
 				className="site-settings__writing-settings"
 			>
-				{ config.isEnabled( 'manage/site-settings/categories' ) && (
-					<div className="site-settings__taxonomies">
-						<QueryTaxonomies siteId={ siteId } postType="post" />
-						<TaxonomyCard taxonomy="category" postType="post" />
-						<TaxonomyCard taxonomy="post_tag" postType="post" />
-					</div>
-				) }
+				{
+					// Only show taxonomy management for non-advanced dashboard user setting
+					! showAdvancedDashboard && (
+						<div className="site-settings__taxonomies">
+							<QueryTaxonomies siteId={ siteId } postType="post" />
+							<TaxonomyCard taxonomy="category" postType="post" />
+							<TaxonomyCard taxonomy="post_tag" postType="post" />
+						</div>
+					)
+				}
 
 				<SettingsSectionHeader
 					disabled={ isRequestingSettings || isSavingSettings }
@@ -91,7 +98,7 @@ class SiteSettingsFormWriting extends Component {
 					updateFields={ updateFields }
 				/>
 
-				{ siteIsJetpack && (
+				{ siteIsJetpack && ! siteIsAutomatedTransfer && (
 					<div>
 						<SettingsSectionHeader
 							disabled={ isRequestingSettings || isSavingSettings }
@@ -195,6 +202,8 @@ const connectComponent = connect(
 		const siteIsJetpack = isJetpackSite( state, siteId );
 		const siteIsAutomatedTransfer = isSiteAutomatedTransfer( state, siteId );
 		const isPodcastingSupported = ! siteIsJetpack || siteIsAutomatedTransfer;
+		const isNavUnification = isNavUnificationEnabled( state );
+		const showAdvancedDashboard = isNavUnification && getPreference( state, 'linkDestination' );
 
 		return {
 			siteIsJetpack,
@@ -204,11 +213,11 @@ const connectComponent = connect(
 				// Masterbar can't be turned off on Atomic sites - don't show the toggle in that case
 				! siteIsAutomatedTransfer,
 			isPodcastingSupported,
+			showAdvancedDashboard,
+			siteIsAutomatedTransfer,
 		};
 	},
-	{ requestPostTypes },
-	null,
-	{ pure: false }
+	{ requestPostTypes }
 );
 
 const getFormSettings = ( settings ) => {
@@ -252,6 +261,7 @@ const getFormSettings = ( settings ) => {
 		'time_format',
 		'timezone_string',
 		'podcasting_category_id',
+		'wpcom_publish_posts_with_markdown',
 	] );
 
 	// handling `gmt_offset` and `timezone_string` values

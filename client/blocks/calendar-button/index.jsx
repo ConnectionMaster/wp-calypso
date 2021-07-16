@@ -5,13 +5,15 @@ import PropTypes from 'prop-types';
 import React, { Component, Fragment } from 'react';
 import Gridicon from 'calypso/components/gridicon';
 import classNames from 'classnames';
-import { noop, pick } from 'lodash';
+import { pick } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import { Button } from '@automattic/components';
 import AsyncLoad from 'calypso/components/async-load';
+
+const noop = () => {};
 
 class CalendarButton extends Component {
 	static propTypes = {
@@ -51,7 +53,6 @@ class CalendarButton extends Component {
 	state = { showPopover: false };
 
 	setDate = ( date ) => {
-		this.setState( { date } );
 		this.props.onDateChange( date );
 	};
 

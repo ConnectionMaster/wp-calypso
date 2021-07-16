@@ -23,7 +23,6 @@ export { default as DateRange } from 'calypso/components/date-range/docs/example
 export { default as DiffViewerExample } from 'calypso/components/diff-viewer/docs/example';
 export { default as DropZones } from 'calypso/components/drop-zone/docs/example';
 export { default as EllipsisMenu } from 'calypso/components/ellipsis-menu/docs/example';
-export { default as EmbedDialog } from 'calypso/components/tinymce/plugins/embed/docs/example';
 export { default as EmojifyExample } from 'calypso/components/emojify/docs/example';
 export { default as EmptyContent } from 'calypso/components/empty-content/docs/example';
 export { default as ExternalLink } from 'calypso/components/external-link/docs/example';
@@ -70,7 +69,6 @@ export { default as SectionNav } from 'calypso/components/section-nav/docs/examp
 export { default as SegmentedControl } from 'calypso/components/segmented-control/docs/example';
 export { default as SelectDropdown } from 'calypso/components/select-dropdown/docs/example';
 export { default as ShareButton } from 'calypso/components/share-button/docs/example';
-export { default as SiteTitleControl } from 'calypso/components/site-title/docs/example';
 export { default as SocialLogos } from 'calypso/components/social-logo/docs/example';
 export { default as Spinner } from 'calypso/components/spinner/docs/example';
 export { default as SpinnerButton } from 'calypso/components/spinner-button/docs/example';

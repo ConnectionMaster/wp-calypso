@@ -28,7 +28,6 @@
 	"jetpack_connect_url": false,
 	"mc_analytics_enabled": false,
 	"oauth_client_id": false,
-	"olark_chat_identity": false,
 	"protocol": "http",
 	"port": 3000,
 	"happychat_url": "https://happychat.io/customer",
@@ -124,7 +123,6 @@
 	"siftscience_key": false,
 	"signup_url": false,
 	"gutenboarding_url": false,
-	"signup/social-management": false,
 	"twemoji_cdn_url": "https://s0.wp.com/wp-content/mu-plugins/wpcom-smileys/twemoji/2/",
 	"woocommerce_blog_id": 113771570,
 	"wpcom_concierge_schedule_id": 1,
@@ -151,5 +149,6 @@
 		}
 	],
 	"restricted_me_access": true,
-	"theme_color": "#135e96"
+	"theme_color": "#055d9c",
+	"reskinned_flows": [ "onboarding", "launch-site" ]
 }

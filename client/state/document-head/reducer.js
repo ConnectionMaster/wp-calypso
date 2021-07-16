@@ -1,12 +1,13 @@
 /**
  * External dependencies
  */
-import { uniqWith, isEqual, isArray } from 'lodash';
+import config from '@automattic/calypso-config';
+import { uniqWith, isEqual } from 'lodash';
+import { withStorageKey } from '@automattic/state-utils';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
 import { combineReducers, withSchemaValidation } from 'calypso/state/utils';
 import {
 	DOCUMENT_HEAD_LINK_SET,
@@ -61,7 +62,7 @@ export const link = withSchemaValidation( linkSchema, ( state = [], action ) => 
 			// Append action.link to the state array and prevent duplicate objects.
 			// Works with action.link being a single link object or an array of link objects.
 			return uniqWith(
-				[ ...state, ...( isArray( action.link ) ? action.link : [ action.link ] ) ],
+				[ ...state, ...( Array.isArray( action.link ) ? action.link : [ action.link ] ) ],
 				isEqual
 			);
 	}
@@ -69,9 +70,11 @@ export const link = withSchemaValidation( linkSchema, ( state = [], action ) => 
 	return state;
 } );
 
-export default combineReducers( {
+const combinedReducer = combineReducers( {
 	link,
 	meta,
 	title,
 	unreadCount,
 } );
+
+export default withStorageKey( 'documentHead', combinedReducer );

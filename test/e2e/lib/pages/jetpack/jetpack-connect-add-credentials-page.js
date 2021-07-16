@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper';
 
 export default class JetpackConnectAddCredentialsPage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -29,7 +22,7 @@ export default class JetpackConnectAddCredentialsPage extends AsyncBaseContainer
 	}
 
 	async waitToDisappear() {
-		return await driverHelper.waitTillNotPresent(
+		return await driverHelper.waitUntilElementNotLocated(
 			this.driver,
 			By.css( '.jetpack-connect__credentials-submit' ),
 			this.explicitWaitMS * 2

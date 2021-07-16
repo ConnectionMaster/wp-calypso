@@ -1,16 +1,8 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import AsyncBaseContainer from '../async-base-container';
-
+import * as dataHelper from '../data-helper';
 import * as driverHelper from '../driver-helper';
 import * as driverManager from '../driver-manager';
-import * as dataHelper from '../data-helper';
 
 export default class StatsPage extends AsyncBaseContainer {
 	constructor( driver, url = dataHelper.getCalypsoURL( 'stats/day' ) ) {
@@ -20,7 +12,7 @@ export default class StatsPage extends AsyncBaseContainer {
 	async openInsights() {
 		await this._expandNavIfMobile();
 		await driverHelper.clickWhenClickable( this.driver, By.css( '.stats-navigation__insights' ) );
-		return await driverHelper.waitTillPresentAndDisplayed(
+		return await driverHelper.waitUntilElementLocatedAndVisible(
 			this.driver,
 			By.css( '.stats__section-header' )
 		);

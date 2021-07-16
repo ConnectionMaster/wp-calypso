@@ -1,44 +1,44 @@
 /**
  * External dependencies
  */
+import { isEnabled } from '@automattic/calypso-config';
 import { translate } from 'i18n-calypso';
-import { ResponseCart, ResponseCartProduct } from '@automattic/shopping-cart';
-import debugFactory from 'debug';
-
-/**
- * Internal dependencies
- */
-import {
+import { getTotalLineItemFromCart, tryToGuessPostalCodeFormat } from '@automattic/wpcom-checkout';
+import type { LineItem } from '@automattic/composite-checkout';
+import type {
+	ResponseCart,
+	ResponseCartProduct,
+	ResponseCartTaxData,
+	DomainContactDetails,
+} from '@automattic/shopping-cart';
+import type {
+	WPCOMTransactionEndpointCart,
+	WPCOMTransactionEndpointRequestPayload,
+	TransactionRequest,
 	WPCOMCart,
-	WPCOMCartItem,
-	WPCOMCartCouponItem,
-	WPCOMCartCreditsItem,
-	CheckoutCartItem,
-} from '../types/checkout-cart';
-import {
-	readWPCOMPaymentMethodClass,
-	translateWpcomPaymentMethodToCheckoutPaymentMethod,
-} from './translate-payment-method-names';
+} from '@automattic/wpcom-checkout';
 import {
 	isPlan,
 	isDomainTransferProduct,
 	isDomainProduct,
 	isDotComPlan,
+	isGoogleWorkspaceExtraLicence,
+	isGSuiteOrGoogleWorkspace,
 	isTitanMail,
-} from 'calypso/lib/products-values';
+	isP2Plus,
+	isJetpackSearch,
+} from '@automattic/calypso-products';
+
+/**
+ * Internal dependencies
+ */
+import {
+	readWPCOMPaymentMethodClass,
+	translateWpcomPaymentMethodToCheckoutPaymentMethod,
+} from './translate-payment-method-names';
 import { isRenewal } from 'calypso/lib/cart-values/cart-items';
 import doesValueExist from './does-value-exist';
-import doesPurchaseHaveFullCredits from './does-purchase-have-full-credits';
-import type { DomainContactDetails } from '../types/backend/domain-contact-details-components';
-import type {
-	WPCOMTransactionEndpointCart,
-	WPCOMTransactionEndpointCartItem,
-	WPCOMTransactionEndpointRequestPayload,
-	TransactionRequestWithLineItems,
-} from '../types/transaction-endpoint';
 import { isGSuiteOrGoogleWorkspaceProductSlug } from 'calypso/lib/gsuite';
-
-const debug = debugFactory( 'calypso:composite-checkout:translate-cart' );
 
 /**
  * Translate a cart object as returned by the WPCOM cart endpoint to
@@ -48,112 +48,9 @@ const debug = debugFactory( 'calypso:composite-checkout:translate-cart' );
  * @returns Cart object suitable for passing to the checkout component
  */
 export function translateResponseCartToWPCOMCart( serverCart: ResponseCart ): WPCOMCart {
-	const {
-		products,
-		total_tax_integer,
-		total_tax_display,
-		total_cost_integer,
-		total_cost_display,
-		coupon_savings_total_display,
-		coupon_savings_total_integer,
-		sub_total_with_taxes_display,
-		savings_total_display,
-		savings_total_integer,
-		currency,
-		credits_integer,
-		credits_display,
-		allowed_payment_methods,
-		sub_total_integer,
-		sub_total_display,
-		coupon,
-		tax,
-	} = serverCart;
+	const { products, allowed_payment_methods } = serverCart;
 
-	const taxLineItem: CheckoutCartItem = {
-		id: 'tax-line-item',
-		label: String( translate( 'Tax' ) ),
-		type: 'tax', // TODO: does this need to be localized, e.g. tax-us?
-		amount: {
-			currency: currency,
-			value: total_tax_integer,
-			displayValue: total_tax_display,
-		},
-	};
-
-	const couponLineItem: WPCOMCartCouponItem = {
-		id: 'coupon-line-item',
-		label: String( translate( 'Coupon: %(couponCode)s', { args: { couponCode: coupon } } ) ),
-		type: 'coupon',
-		amount: {
-			currency: currency,
-			value: coupon_savings_total_integer,
-			displayValue: String(
-				translate( '- %(discountAmount)s', {
-					args: { discountAmount: coupon_savings_total_display },
-				} )
-			),
-		},
-		wpcom_meta: {
-			couponCode: coupon,
-		},
-	};
-
-	const creditsLineItem: WPCOMCartCreditsItem = {
-		id: 'credits',
-		label: String( translate( 'Credits' ) ),
-		type: 'credits',
-		amount: {
-			currency: currency,
-			value: credits_integer,
-			displayValue: String(
-				translate( '- %(discountAmount)s', {
-					args: {
-						// Clamp the credits display value to the total
-						discountAmount: doesPurchaseHaveFullCredits( serverCart )
-							? sub_total_with_taxes_display
-							: credits_display,
-					},
-				} )
-			),
-		},
-		wpcom_meta: {
-			credits_integer,
-			credits_display,
-		},
-	};
-
-	const savingsLineItem: CheckoutCartItem = {
-		id: 'savings-line-item',
-		label: String( translate( 'Total savings' ) ),
-		type: 'savings',
-		amount: {
-			currency: currency,
-			value: savings_total_integer,
-			displayValue: savings_total_display,
-		},
-	};
-
-	const totalItem: CheckoutCartItem = {
-		id: 'total',
-		type: 'total',
-		label: String( translate( 'Total' ) ),
-		amount: {
-			currency: currency,
-			value: total_cost_integer,
-			displayValue: total_cost_display,
-		},
-	};
-
-	const subtotalItem: CheckoutCartItem = {
-		id: 'subtotal',
-		type: 'subtotal',
-		label: String( translate( 'Subtotal' ) ),
-		amount: {
-			currency: currency,
-			value: sub_total_integer,
-			displayValue: sub_total_display,
-		},
-	};
+	const totalItem = getTotalLineItemFromCart( serverCart );
 
 	const alwaysEnabledPaymentMethods = [ 'full-credits', 'free-purchase' ];
 
@@ -163,191 +60,132 @@ export function translateResponseCartToWPCOMCart( serverCart: ResponseCart ): WP
 		.map( translateWpcomPaymentMethodToCheckoutPaymentMethod );
 
 	return {
-		items: products.map( translateReponseCartProductToWPCOMCartItem ),
-		tax: tax.display_taxes ? taxLineItem : null,
-		coupon: coupon && coupon_savings_total_integer ? couponLineItem : null,
+		items: products.map( translateReponseCartProductToLineItem ),
 		total: totalItem,
-		savings: savings_total_integer > 0 ? savingsLineItem : null,
-		subtotal: subtotalItem,
-		credits: credits_integer > 0 ? creditsLineItem : null,
 		allowedPaymentMethods,
-		couponCode: coupon,
 	};
 }
 
 // Convert a backend cart item to a checkout cart item
-function translateReponseCartProductToWPCOMCartItem(
-	serverCartItem: ResponseCartProduct
-): WPCOMCartItem {
+function translateReponseCartProductToLineItem( serverCartItem: ResponseCartProduct ): LineItem {
 	const {
-		product_id,
-		product_name,
 		product_slug,
 		currency,
-		item_original_cost_display,
-		item_original_cost_integer,
-		item_subtotal_monthly_cost_display,
-		item_subtotal_monthly_cost_integer,
-		item_original_subtotal_display,
-		item_original_subtotal_integer,
-		related_monthly_plan_cost_display,
-		related_monthly_plan_cost_integer,
-		is_sale_coupon_applied,
-		months_per_bill_period,
 		item_subtotal_display,
 		item_subtotal_integer,
-		is_domain_registration,
-		is_bundled,
-		meta,
-		extra,
-		volume,
-		quantity,
 		uuid,
-		product_cost_integer,
-		product_cost_display,
 	} = serverCartItem;
 
-	let label = product_name || '';
-	const sublabel = String( getSublabel( serverCartItem ) );
-
-	if (
-		serverCartItem.meta &&
-		( isDomainProduct( serverCartItem ) || isDomainTransferProduct( serverCartItem ) )
-	) {
-		label = meta;
-	}
+	const label = getLabel( serverCartItem );
 
 	const type = isPlan( serverCartItem ) ? 'plan' : product_slug;
-
-	// for displaying crossed-out original price
-	const itemOriginalCostDisplay = item_original_cost_display || '';
-	const itemOriginalSubtotalDisplay = item_original_subtotal_display || '';
-	const itemSubtotalMonthlyCostDisplay = item_subtotal_monthly_cost_display || '';
 
 	return {
 		id: uuid,
 		label,
-		sublabel,
 		type,
 		amount: {
 			currency: currency || '',
 			value: item_subtotal_integer || 0,
 			displayValue: item_subtotal_display || '',
 		},
-		wpcom_meta: {
-			uuid: uuid,
-			meta,
-			product_id,
-			product_slug,
-			extra,
-			volume,
-			quantity,
-			is_domain_registration: is_domain_registration || false,
-			is_bundled: is_bundled || false,
-			item_original_cost_display: itemOriginalCostDisplay,
-			item_original_cost_integer: item_original_cost_integer || 0,
-			item_subtotal_monthly_cost_display: itemSubtotalMonthlyCostDisplay,
-			item_subtotal_monthly_cost_integer: item_subtotal_monthly_cost_integer || 0,
-			item_original_subtotal_display: itemOriginalSubtotalDisplay,
-			item_original_subtotal_integer: item_original_subtotal_integer || 0,
-			is_sale_coupon_applied: is_sale_coupon_applied || false,
-			months_per_bill_period,
-			product_cost_integer: product_cost_integer || 0,
-			product_cost_display: product_cost_display || '',
-			related_monthly_plan_cost_integer: related_monthly_plan_cost_integer || 0,
-			related_monthly_plan_cost_display: related_monthly_plan_cost_display || '',
-		},
 	};
-}
-
-export function getNonProductWPCOMCartItemTypes(): string[] {
-	return [ 'tax', 'coupon', 'total', 'subtotal', 'credits', 'savings' ];
 }
 
 // Create cart object as required by the WPCOM transactions endpoint
 // '/me/transactions/': WPCOM_JSON_API_Transactions_Endpoint
-export function createTransactionEndpointCartFromLineItems( {
+export function createTransactionEndpointCartFromResponseCart( {
 	siteId,
-	couponId,
-	country,
-	postalCode,
-	subdivisionCode,
-	items,
 	contactDetails,
+	responseCart,
 }: {
 	siteId: string | undefined;
-	couponId?: string;
-	country: string;
-	postalCode: string;
-	subdivisionCode?: string;
-	items: WPCOMCartItem[];
 	contactDetails: DomainContactDetails | null;
+	responseCart: ResponseCart;
 } ): WPCOMTransactionEndpointCart {
-	debug( 'creating cart from items', items );
+	if ( responseCart.products.some( ( product ) => product.extra.isJetpackCheckout ) ) {
+		const isUserLess = responseCart.cart_key === 'no-user';
+		const isSiteLess = responseCart.blog_id === 0;
 
-	const currency: string = items.reduce(
-		( firstValue: string, item ) => firstValue || item.amount.currency,
-		''
-	);
+		// At this point, cart_key will be 'no-user' | blog_id | 'no-site', in that order.
+		const cartKey = isUserLess ? responseCart.cart_key : responseCart.blog_id || 'no-site';
+		const isSiteLessJetpackCheckout = isEnabled( 'jetpack/siteless-checkout' ) && isSiteLess;
+
+		// A cart with the 'no-user' key, in the context of a Jetpack checkout flow, means that
+		// a WP.com account will be created before submitting the transaction (see submitWpcomTransaction).
+		// Once the WP.com account is created, the cart key is replaced with the blog ID and sent to the
+		// /transactions endpoint. If there is no blog ID, a temporary blog is created on the backend side.
+		return {
+			blog_id: responseCart.blog_id.toString(),
+			cart_key: cartKey.toString(),
+			create_new_blog: isSiteLessJetpackCheckout,
+			is_jetpack_checkout: true,
+			coupon: responseCart.coupon || '',
+			currency: responseCart.currency,
+			temporary: false,
+			extra: [],
+			products: responseCart.products.map( ( item ) =>
+				addRegistrationDataToGSuiteCartProduct( item, contactDetails )
+			),
+			tax: createTransactionEndpointTaxFromResponseCartTax( responseCart.tax ),
+		};
+	}
 
 	return {
 		blog_id: siteId || '0',
 		cart_key: siteId || 'no-site',
 		create_new_blog: siteId ? false : true,
-		coupon: couponId || '',
-		currency: currency || '',
+		is_jetpack_checkout: false,
+		coupon: responseCart.coupon || '',
+		currency: responseCart.currency,
 		temporary: false,
 		extra: [],
-		products: items
-			.filter( ( product ) => ! getNonProductWPCOMCartItemTypes().includes( product.type ) )
-			.map( ( item ) => addRegistrationDataToGSuiteItem( item, contactDetails ) )
-			.map( createTransactionEndpointCartItemFromLineItem ),
-		tax: {
-			location: {
-				country_code: country,
-				postal_code: postalCode,
-				subdivision_code: subdivisionCode,
-			},
+		products: responseCart.products.map( ( item ) =>
+			addRegistrationDataToGSuiteCartProduct( item, contactDetails )
+		),
+		tax: createTransactionEndpointTaxFromResponseCartTax( responseCart.tax ),
+	};
+}
+
+function createTransactionEndpointTaxFromResponseCartTax(
+	tax: ResponseCartTaxData
+): Omit< ResponseCartTaxData, 'display_taxes' > {
+	const { country_code, postal_code } = tax.location;
+	const formattedPostalCode = postal_code
+		? tryToGuessPostalCodeFormat( postal_code.toUpperCase(), country_code )
+		: undefined;
+	return {
+		location: {
+			...( country_code ? { country_code } : {} ),
+			...( formattedPostalCode ? { postal_code: formattedPostalCode } : {} ),
 		},
 	};
 }
 
-function createTransactionEndpointCartItemFromLineItem(
-	item: WPCOMCartItem
-): WPCOMTransactionEndpointCartItem {
-	return {
-		product_id: item.wpcom_meta?.product_id,
-		meta: item.wpcom_meta?.meta,
-		currency: item.amount.currency,
-		volume: item.wpcom_meta?.volume ?? 1,
-		quantity: item.wpcom_meta?.quantity ?? null,
-		extra: item.wpcom_meta?.extra,
-	} as WPCOMTransactionEndpointCartItem;
-}
-
-function addRegistrationDataToGSuiteItem(
-	item: WPCOMCartItem,
+function addRegistrationDataToGSuiteCartProduct(
+	item: ResponseCartProduct,
 	contactDetails: DomainContactDetails | null
-): WPCOMCartItem {
-	if ( ! isGSuiteOrGoogleWorkspaceProductSlug( item.wpcom_meta?.product_slug ) ) {
+): ResponseCartProduct {
+	if (
+		! isGSuiteOrGoogleWorkspaceProductSlug( item.product_slug ) ||
+		isGoogleWorkspaceExtraLicence( item )
+	) {
 		return item;
 	}
 	return {
 		...item,
-		wpcom_meta: {
-			...item.wpcom_meta,
-			extra: { ...item.wpcom_meta.extra, google_apps_registration_data: contactDetails },
+		extra: {
+			...item.extra,
+			google_apps_registration_data: contactDetails || undefined,
 		},
-	} as WPCOMCartItem;
+	};
 }
 
-export function createTransactionEndpointRequestPayloadFromLineItems( {
-	siteId,
-	couponId,
+export function createTransactionEndpointRequestPayload( {
+	cart,
 	country,
 	state,
 	postalCode,
-	subdivisionCode,
 	city,
 	address,
 	streetNumber,
@@ -355,7 +193,6 @@ export function createTransactionEndpointRequestPayloadFromLineItems( {
 	document,
 	deviceId,
 	domainDetails,
-	items,
 	paymentMethodType,
 	paymentMethodToken,
 	paymentPartnerProcessorId,
@@ -369,17 +206,9 @@ export function createTransactionEndpointRequestPayloadFromLineItems( {
 	pan,
 	gstin,
 	nik,
-}: TransactionRequestWithLineItems ): WPCOMTransactionEndpointRequestPayload {
+}: TransactionRequest ): WPCOMTransactionEndpointRequestPayload {
 	return {
-		cart: createTransactionEndpointCartFromLineItems( {
-			siteId,
-			couponId: couponId || getCouponIdFromProducts( items ),
-			country,
-			postalCode,
-			subdivisionCode,
-			items: items.filter( ( item ) => item.type !== 'tax' ),
-			contactDetails: domainDetails || {},
-		} ),
+		cart,
 		domainDetails,
 		payment: {
 			paymentMethod: paymentMethodType,
@@ -410,34 +239,37 @@ export function createTransactionEndpointRequestPayloadFromLineItems( {
 	};
 }
 
-function getCouponIdFromProducts( items: WPCOMCartItem[] ): string | undefined {
-	const couponItem = items.find( ( item ) => item.type === 'coupon' );
-	return couponItem?.wpcom_meta?.couponCode;
-}
-
-function getSublabel( serverCartItem: ResponseCartProduct ): i18nCalypso.TranslateResult {
+export function getSublabel( serverCartItem: ResponseCartProduct ): string {
 	const isRenewalItem = isRenewal( serverCartItem );
 	const { meta, product_name: productName } = serverCartItem;
 
+	// Jetpack Search has its own special sublabel
+	if ( ! isRenewalItem && isJetpackSearch( serverCartItem ) ) {
+		return '';
+	}
+
 	if ( isDotComPlan( serverCartItem ) || ( ! isRenewalItem && isTitanMail( serverCartItem ) ) ) {
 		if ( isRenewalItem ) {
-			return translate( 'Plan Renewal' );
-		}
-
-		switch ( serverCartItem.months_per_bill_period ) {
-			case 1:
-				return translate( 'Monthly subscription' );
-			case 12:
-				return translate( 'One year subscription' );
-			case 24:
-				return translate( 'Two year subscription' );
-			default:
-				return translate( 'Plan Subscription' );
+			return String( translate( 'Plan Renewal' ) );
 		}
 	}
 
 	if ( isPlan( serverCartItem ) ) {
-		return isRenewalItem ? translate( 'Plan Renewal' ) : translate( 'Plan Subscription' );
+		if ( isP2Plus( serverCartItem ) ) {
+			return String( translate( 'Monthly subscription' ) );
+		}
+
+		return isRenewalItem
+			? String( translate( 'Plan Renewal' ) )
+			: String( translate( 'Plan Subscription' ) );
+	}
+
+	if ( isGSuiteOrGoogleWorkspace( serverCartItem ) ) {
+		if ( isRenewalItem ) {
+			return String( translate( 'Productivity and Collaboration Tools Renewal' ) );
+		}
+
+		return String( translate( 'Productivity and Collaboration Tools' ) );
 	}
 
 	if (
@@ -449,9 +281,27 @@ function getSublabel( serverCartItem: ResponseCartProduct ): i18nCalypso.Transla
 		}
 
 		if ( productName ) {
-			return translate( '%(productName)s Renewal', { args: { productName } } );
+			return String( translate( '%(productName)s Renewal', { args: { productName } } ) );
 		}
 	}
 
-	return isRenewalItem ? translate( 'Renewal' ) : '';
+	if ( ! isRenewalItem && serverCartItem.months_per_bill_period === 1 ) {
+		return String( translate( 'Billed monthly' ) );
+	}
+
+	if ( isRenewalItem ) {
+		return String( translate( 'Renewal' ) );
+	}
+
+	return '';
+}
+
+export function getLabel( serverCartItem: ResponseCartProduct ): string {
+	if (
+		serverCartItem.meta &&
+		( isDomainProduct( serverCartItem ) || isDomainTransferProduct( serverCartItem ) )
+	) {
+		return serverCartItem.meta;
+	}
+	return serverCartItem.product_name || '';
 }

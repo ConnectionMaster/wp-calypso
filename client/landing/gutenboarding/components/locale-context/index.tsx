@@ -2,17 +2,17 @@
  * External dependencies
  */
 import * as React from 'react';
-import { setLocaleData, LocaleData } from '@wordpress/i18n';
+import { defaultI18n, LocaleData } from '@wordpress/i18n';
 import { subscribe, select } from '@wordpress/data';
-import { I18nProvider } from '@automattic/react-i18n';
+import { I18nProvider } from '@wordpress/react-i18n';
 import {
 	getLanguageFile,
 	getLanguageManifestFile,
 	getTranslationChunkFile,
 } from '../../../../lib/i18n-utils/switch-locale';
 import { getLanguageSlugs } from '../../../../lib/i18n-utils';
-import { getUrlParts } from '../../../../lib/url/url-parts';
-import config from '../../../../config';
+import { getUrlParts } from '@automattic/calypso-url';
+import config from '@automattic/calypso-config';
 import type { User } from '@automattic/data-stores';
 import { LocaleProvider } from '@automattic/i18n-utils';
 
@@ -51,11 +51,10 @@ export const ChangeLocaleContextConsumer = ChangeLocaleContext.Consumer;
 export const LocaleContext: React.FunctionComponent = ( { children } ) => {
 	const [ contextLocaleData, setContextLocaleData ] = React.useState< LocaleData | undefined >();
 	const [ localeDataLoaded, setLocaleDataLoaded ] = React.useState( false );
+	const localeSlug = contextLocaleData?.[ '' ]?.localeSlug ?? DEFAULT_LOCALE_SLUG;
 
 	const setLocale = ( newLocaleData: LocaleData | undefined ) => {
-		// Translations done within react are made using the localData passed to the <I18nProvider/>.
-		// We must also set the locale for translations done outside of a react rendering cycle using setLocaleData.
-		setLocaleData( newLocaleData );
+		defaultI18n.resetLocaleData( newLocaleData );
 		setContextLocaleData( newLocaleData );
 		setLocaleDataLoaded( true );
 	};
@@ -91,10 +90,8 @@ export const LocaleContext: React.FunctionComponent = ( { children } ) => {
 
 	return (
 		<ChangeLocaleContext.Provider value={ changeLocale }>
-			<LocaleProvider localeSlug={ contextLocaleData?.[ '' ]?.localeSlug ?? DEFAULT_LOCALE_SLUG }>
-				<I18nProvider localeData={ contextLocaleData }>
-					{ localeDataLoaded ? children : null }
-				</I18nProvider>
+			<LocaleProvider localeSlug={ localeSlug }>
+				<I18nProvider i18n={ defaultI18n }>{ localeDataLoaded ? children : null }</I18nProvider>
 			</LocaleProvider>
 		</ChangeLocaleContext.Provider>
 	);

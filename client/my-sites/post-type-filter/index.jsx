@@ -20,6 +20,7 @@ import {
 } from 'calypso/state/posts/counts/selectors';
 import urlSearch from 'calypso/lib/url-search';
 import QueryPostCounts from 'calypso/components/data/query-post-counts';
+import QueryPostTypes from 'calypso/components/data/query-post-types';
 import SectionNav from 'calypso/components/section-nav';
 import NavTabs from 'calypso/components/section-nav/tabs';
 import NavItem from 'calypso/components/section-nav/item';
@@ -43,13 +44,12 @@ export class PostTypeFilter extends Component {
 			type: PropTypes.string.isRequired,
 		} ),
 		typeLabel: PropTypes.string,
-		jetpack: PropTypes.bool,
 		siteSlug: PropTypes.string,
 		counts: PropTypes.object,
 	};
 
 	getNavItems() {
-		const { query, siteId, siteSlug, statusSlug, jetpack, counts } = this.props;
+		const { query, siteId, siteSlug, statusSlug, counts } = this.props;
 
 		const isPostOrPage = query.type === 'post' || query.type === 'page';
 
@@ -96,8 +96,8 @@ export class PostTypeFilter extends Component {
 
 				return memo.concat( {
 					key: `filter-${ status }`,
-					// Hide count in all sites mode; and in Jetpack mode for non-posts
-					count: ! siteId || ( jetpack && query.type !== 'post' ) ? null : count,
+					// Hide count in all sites mode.
+					count: ! siteId ? null : count,
 					path: compact( [
 						basePath,
 						isPostOrPage && query.author && 'my',
@@ -113,14 +113,7 @@ export class PostTypeFilter extends Component {
 	}
 
 	render() {
-		const {
-			authorToggleHidden,
-			jetpack,
-			query,
-			siteId,
-			statusSlug,
-			searchPagesPlaceholder,
-		} = this.props;
+		const { authorToggleHidden, query, siteId, statusSlug, searchPagesPlaceholder } = this.props;
 
 		if ( ! query ) {
 			return null;
@@ -143,7 +136,8 @@ export class PostTypeFilter extends Component {
 
 		return (
 			<div className="post-type-filter">
-				{ siteId && false === jetpack && <QueryPostCounts siteId={ siteId } type={ query.type } /> }
+				{ siteId && <QueryPostCounts siteId={ siteId } type={ query.type } /> }
+				{ siteId && <QueryPostTypes siteId={ siteId } /> }
 				<SectionNav
 					selectedText={
 						<span>
@@ -180,7 +174,11 @@ export class PostTypeFilter extends Component {
 							initialValue={ query.search }
 							isOpen={ this.props.getSearchOpen() }
 							onSearch={ this.props.doSearch }
-							placeholder={ `${ searchPagesPlaceholder }…` }
+							placeholder={
+								searchPagesPlaceholder
+									? `${ searchPagesPlaceholder }…`
+									: this.props.translate( 'Search…' )
+							}
 							delaySearch={ true }
 						/>
 					) }
@@ -210,7 +208,6 @@ export default flow(
 		const props = {
 			siteId,
 			authorToggleHidden,
-			jetpack: isJetpackSite( state, siteId ),
 			siteSlug: getSiteSlug( state, siteId ),
 		};
 

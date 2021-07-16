@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: ''
-labels: "[Type] Bug"
+labels: "[Type] Bug, Needs triage"
 assignees: ''
 
 ---
@@ -31,5 +31,7 @@ assignees: ''
 #### Is there any console output or error text?
 
 #### Level of impact (Does it block purchases? Does it affect more than just one site?)
+
+#### Reproducibility (Consistent, Intermittent) Leave empty for consistent.
 
 #### Screenshot / Video: If applicable, add screenshots to help explain your problem.

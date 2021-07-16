@@ -6,7 +6,7 @@
  * External dependencies
  */
 import { expect } from 'chai';
-import { constant, times } from 'lodash';
+import { times } from 'lodash';
 
 /**
  * Internal dependencies
@@ -16,7 +16,6 @@ import { findEligibleTour, getGuidedTourState, hasTourJustBeenVisible } from '..
 jest.mock( 'calypso/layout/guided-tours/config', () => {
 	return require( 'calypso/state/guided-tours/test/fixtures/config' );
 } );
-jest.mock( 'calypso/lib/user', () => () => {} );
 
 describe( 'selectors', () => {
 	describe( '#hasTourJustBeenVisible', () => {
@@ -233,7 +232,7 @@ describe( 'selectors', () => {
 			 * anymore.
 			 */
 			const state = makeState( {
-				actionLog: times( 50, constant( navigateToTest ) ),
+				actionLog: times( 50, () => navigateToTest ),
 				toursHistory: [ testTourSeen, themesTourSeen ],
 				queryArguments: { tour: 'themes', _timestamp: 0 },
 			} );

@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
-import { By, until } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import AsyncBaseContainer from '../async-base-container';
+import { By } from 'selenium-webdriver';
 import ViewPostPage from '../../lib/pages/view-post-page.js';
+import AsyncBaseContainer from '../async-base-container';
 import * as driverHelper from '../driver-helper.js';
 
 export default class PostPreviewComponent extends AsyncBaseContainer {
@@ -65,15 +58,8 @@ export default class PostPreviewComponent extends AsyncBaseContainer {
 	}
 
 	static async switchToIFrame( driver ) {
-		const iFrameSelector = By.css( '.web-preview__frame' );
-		const webPreview = By.css( '.web-preview__inner.is-visible.is-loaded' );
-
+		const iFrameLocator = By.css( '.web-preview__frame' );
 		await driver.switchTo().defaultContent();
-		await driverHelper.waitTillPresentAndDisplayed( driver, webPreview );
-		return await driver.wait(
-			until.ableToSwitchToFrame( iFrameSelector ),
-			this.explicitWaitMS,
-			'Could not switch to web preview iFrame'
-		);
+		return await driverHelper.waitUntilAbleToSwitchToFrame( driver, iFrameLocator );
 	}
 }

@@ -1,17 +1,10 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import * as driverHelper from '../../driver-helper';
 import GutenbergBlockComponent from './gutenberg-block-component';
 
 export class FileBlockComponent extends GutenbergBlockComponent {
 	async uploadFile( fileDetails ) {
-		await driverHelper.waitTillPresentAndDisplayed(
+		await driverHelper.waitUntilElementLocatedAndVisible(
 			this.driver,
 			By.css( '.components-form-file-upload ' )
 		);
@@ -19,7 +12,7 @@ export class FileBlockComponent extends GutenbergBlockComponent {
 			By.css( '.components-form-file-upload input[type="file"]' )
 		);
 		await filePathInput.sendKeys( fileDetails.file );
-		return await driverHelper.waitTillNotPresent(
+		return await driverHelper.waitUntilElementNotLocated(
 			this.driver,
 			By.css( '.wp-block-image .components-spinner' )
 		); // Wait for upload spinner to complete

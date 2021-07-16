@@ -1,12 +1,5 @@
-/**
- * External dependencies
- */
 import { select, subscribe } from '@wordpress/data';
 import wpcomRequest from 'wpcom-proxy-request';
-
-/**
- * Internal dependencies
- */
 import { register } from '..';
 import { DataStatus } from '../constants';
 
@@ -49,7 +42,7 @@ const apiResponse = [
 ];
 
 beforeAll( () => {
-	store = register( { vendor: 'variation2_front' } );
+	store = register();
 } );
 
 beforeEach( () => {

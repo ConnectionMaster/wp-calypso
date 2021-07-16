@@ -69,8 +69,19 @@ function transmitDraftId( calypsoPort ) {
 function handlePostTrash( calypsoPort ) {
 	use( ( registry ) => {
 		return {
-			dispatch: ( namespace ) => {
+			dispatch: ( store ) => {
+				/**
+				 * Gutenberg 10.8.0 changed the way wp-data stores are referenced and uses
+				 * the store definition as the ID.
+				 * We need to keep supporting the old approach to make sure this also
+				 * works when Gutenberg < 10.8.0 is being used.
+				 * More context:
+				 * - https://github.com/WordPress/gutenberg/issues/27088;
+				 * - https://github.com/WordPress/gutenberg/pull/32153.
+				 **/
+				const namespace = store.name ?? store;
 				const actions = { ...registry.dispatch( namespace ) };
+
 				if ( namespace === 'core/editor' && actions.trashPost ) {
 					actions.trashPost = () => {
 						debug( 'override core/editor trashPost action to use postlist trash' );
@@ -442,74 +453,81 @@ function handleUpdateImageBlocks( calypsoPort ) {
  * @param {MessagePort} calypsoPort Port used for communication with parent frame.
  */
 function handlePreview( calypsoPort ) {
-	$( '#editor' ).on( 'click', '.editor-post-preview', ( e ) => {
-		e.preventDefault();
-		e.stopPropagation();
-
-		const postUrl = select( 'core/editor' ).getCurrentPostAttribute( 'link' );
-		const previewChannel = new MessageChannel();
-
-		calypsoPort.postMessage(
-			{
-				action: 'previewPost',
-				payload: {
-					postUrl: postUrl,
-				},
-			},
-			[ previewChannel.port2 ]
-		);
-
-		const isAutosaveable = select( 'core/editor' ).isEditedPostAutosaveable();
-
-		// If we don't need to autosave the post before previewing, then we simply
-		// generate the preview.
-		if ( ! isAutosaveable ) {
-			sendPreviewData();
-			return;
-		}
-
-		// Request an autosave before generating the preview.
-		const postStatus = select( 'core/editor' ).getEditedPostAttribute( 'status' );
-		const isDraft = [ 'draft', 'auto-draft' ].indexOf( postStatus ) !== -1;
-		if ( isDraft ) {
-			dispatch( 'core/editor' ).savePost( { isPreview: true } );
-		} else {
-			dispatch( 'core/editor' ).autosave( { isPreview: true } );
-		}
-		const unsubscribe = subscribe( () => {
-			const previewUrl = select( 'core/editor' ).getEditedPostPreviewLink();
-			if ( previewUrl ) {
-				unsubscribe();
-				sendPreviewData();
+	document.getElementById( 'editor' )?.addEventListener(
+		'click',
+		( e ) => {
+			if ( ! e.target.classList.contains( 'editor-post-preview' ) ) {
+				return;
 			}
-		} );
+			e.preventDefault();
+			e.stopPropagation();
 
-		function sendPreviewData() {
-			const previewUrl = select( 'core/editor' ).getEditedPostPreviewLink();
+			const postUrl = select( 'core/editor' ).getCurrentPostAttribute( 'link' );
+			const previewChannel = new MessageChannel();
 
-			const featuredImageId = select( 'core/editor' ).getEditedPostAttribute( 'featured_media' );
-			const featuredImage = featuredImageId
-				? get( select( 'core' ).getMedia( featuredImageId ), 'source_url' )
-				: null;
+			calypsoPort.postMessage(
+				{
+					action: 'previewPost',
+					payload: {
+						postUrl: postUrl,
+					},
+				},
+				[ previewChannel.port2 ]
+			);
 
-			const authorId = select( 'core/editor' ).getCurrentPostAttribute( 'author' );
-			const author = find( select( 'core' ).getAuthors(), { id: authorId } );
-			const editedPost = {
-				title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
-				URL: select( 'core/editor' ).getEditedPostAttribute( 'link' ),
-				excerpt: select( 'core/editor' ).getEditedPostAttribute( 'excerpt' ),
-				content: select( 'core/editor' ).getEditedPostAttribute( 'content' ),
-				featured_image: featuredImage,
-				author: author,
-			};
+			const isAutosaveable = select( 'core/editor' ).isEditedPostAutosaveable();
 
-			previewChannel.port1.postMessage( {
-				previewUrl: previewUrl,
-				editedPost: editedPost,
+			// If we don't need to autosave the post before previewing, then we simply
+			// generate the preview.
+			if ( ! isAutosaveable ) {
+				sendPreviewData();
+				return;
+			}
+
+			// Request an autosave before generating the preview.
+			const postStatus = select( 'core/editor' ).getEditedPostAttribute( 'status' );
+			const isDraft = [ 'draft', 'auto-draft' ].indexOf( postStatus ) !== -1;
+			if ( isDraft ) {
+				dispatch( 'core/editor' ).savePost( { isPreview: true } );
+			} else {
+				dispatch( 'core/editor' ).autosave( { isPreview: true } );
+			}
+			const unsubscribe = subscribe( () => {
+				const previewUrl = select( 'core/editor' ).getEditedPostPreviewLink();
+				if ( previewUrl ) {
+					unsubscribe();
+					sendPreviewData();
+				}
 			} );
-			previewChannel.port1.close();
-		}
-	} );
+
+			function sendPreviewData() {
+				const previewUrl = select( 'core/editor' ).getEditedPostPreviewLink();
+
+				const featuredImageId = select( 'core/editor' ).getEditedPostAttribute( 'featured_media' );
+				const featuredImage = featuredImageId
+					? get( select( 'core' ).getMedia( featuredImageId ), 'source_url' )
+					: null;
+
+				const authorId = select( 'core/editor' ).getCurrentPostAttribute( 'author' );
+				const author = find( select( 'core' ).getAuthors(), { id: authorId } );
+				const editedPost = {
+					title: select( 'core/editor' ).getEditedPostAttribute( 'title' ),
+					URL: select( 'core/editor' ).getEditedPostAttribute( 'link' ),
+					excerpt: select( 'core/editor' ).getEditedPostAttribute( 'excerpt' ),
+					content: select( 'core/editor' ).getEditedPostAttribute( 'content' ),
+					featured_image: featuredImage,
+					author: author,
+				};
+
+				previewChannel.port1.postMessage( {
+					previewUrl: previewUrl,
+					editedPost: editedPost,
+				} );
+				previewChannel.port1.close();
+			}
+		},
+		{ capture: true }
+	);
 }
 
 /**
@@ -546,7 +564,9 @@ function handleCloseEditor( calypsoPort ) {
 			{
 				action: 'closeEditor',
 				payload: {
-					unsavedChanges: select( 'core/editor' ).isEditedPostDirty(),
+					unsavedChanges:
+						select( 'core' ).__experimentalGetDirtyEntityRecords?.().length > 0 ||
+						select( 'core/editor' ).isEditedPostDirty(),
 				},
 			},
 			[ port2 ]
@@ -584,7 +604,7 @@ function handleCloseEditor( calypsoPort ) {
 		} );
 	}
 
-	if ( typeof MainDashboardButton !== 'undefined' ) {
+	if ( ! MainDashboardButton ) {
 		return;
 	}
 
@@ -661,7 +681,7 @@ function isNavSidebarPresent() {
  *
  * @param {MessagePort} calypsoPort Port used for communication with parent frame.
  */
-function openLinksInParentFrame( calypsoPort ) {
+async function openLinksInParentFrame( calypsoPort ) {
 	const viewPostLinkSelectors = [
 		'.components-notice-list .is-success .components-notice__action.is-link', // View Post link in success notice, Gutenberg <5.9
 		'.components-snackbar-list .components-snackbar__content a', // View Post link in success snackbar, Gutenberg >=5.9
@@ -676,15 +696,157 @@ function openLinksInParentFrame( calypsoPort ) {
 		} );
 	} );
 
-	if ( calypsoifyGutenberg.manageReusableBlocksUrl ) {
-		const manageReusableBlocksLinkSelectors = [
-			'.block-editor-inserter__manage-reusable-blocks', // Link in the Blocks Inserter
-			'a.components-menu-item__button[href*="post_type=wp_block"]', // Link in the More Menu
-		].join( ',' );
-		$( '#editor' ).on( 'click', manageReusableBlocksLinkSelectors, ( e ) => {
-			e.preventDefault();
-			window.open( calypsoifyGutenberg.manageReusableBlocksUrl, '_top' );
+	const { createNewPostUrl, manageReusableBlocksUrl } = calypsoifyGutenberg;
+	if ( ! createNewPostUrl && ! manageReusableBlocksUrl ) {
+		return;
+	}
+
+	await isEditorReadyWithBlocks();
+
+	// Create a new post link in block settings sidebar for Query block
+	const tryToReplaceCreateNewPostLink = () => {
+		// We need to wait for the rendering to be finished.
+		// This is mostly for Safari, but it doesn't hurt for other browsers.
+		setTimeout( () => {
+			const hyperlink = document.querySelector( '.wp-block-query__create-new-link a' );
+			if ( hyperlink ) {
+				hyperlink.href = createNewPostUrl;
+				hyperlink.target = '_top';
+			}
 		} );
+	};
+	const createNewPostLinkObserver = new window.MutationObserver( tryToReplaceCreateNewPostLink );
+
+	// Manage reusable blocks link in the global block inserter's Reusable tab
+	// Post editor only
+	const inserterManageReusableBlocksObserver = new window.MutationObserver( ( mutations ) => {
+		const node = mutations[ 0 ].target;
+		if ( node.attributes.getNamedItem( 'aria-selected' )?.nodeValue === 'true' ) {
+			const hyperlink = document.querySelector( 'a.block-editor-inserter__manage-reusable-blocks' );
+			if ( hyperlink ) {
+				hyperlink.href = manageReusableBlocksUrl;
+				hyperlink.target = '_top';
+			}
+		}
+	} );
+
+	const shouldReplaceCreateNewPostLinksFor = ( node ) =>
+		createNewPostUrl &&
+		( node.classList.contains( 'interface-interface-skeleton__sidebar' ) || // Site editor
+			node.classList.contains( 'edit-post-sidebar' ) ); // Post editor
+
+	const shouldReplaceManageReusableBlockLinksFor = ( node ) =>
+		manageReusableBlocksUrl &&
+		node.classList.contains( 'interface-interface-skeleton__secondary-sidebar' );
+
+	// This observer functions as a "parent" observer, which connects and disconnects
+	// "child" observers as the relevant sidebar settings appear and disappear in the DOM.
+	const sidebarsObserver = new window.MutationObserver( ( mutations ) => {
+		for ( const record of mutations ) {
+			// We are checking for added nodes here to start observing for more specific changes.
+			for ( const node of record.addedNodes ) {
+				if (
+					// Block settings sidebar for Query block.
+					shouldReplaceCreateNewPostLinksFor( node )
+				) {
+					const componentsPanel = node.querySelector(
+						'.interface-interface-skeleton__sidebar .components-panel, .edit-post-sidebar .components-panel'
+					);
+					createNewPostLinkObserver.observe( componentsPanel, {
+						childList: true,
+						subtree: true,
+					} );
+					// If a Query block is selected, then the sidebar will
+					// directly open on the block settings tab
+					tryToReplaceCreateNewPostLink();
+				} else if (
+					// Block inserter sidebar, Reusable tab
+					shouldReplaceManageReusableBlockLinksFor( node )
+				) {
+					const resuableTab = node.querySelector(
+						'.components-tab-panel__tabs-item[id*="reusable"]'
+					);
+					if ( resuableTab ) {
+						inserterManageReusableBlocksObserver.observe( resuableTab, {
+							attributeFilter: [ 'aria-selected' ],
+						} );
+					}
+				}
+			}
+
+			// We are checking the removed nodes here to disconect
+			// the correct observer when a node is removed.
+			for ( const node of record.removedNodes ) {
+				if (
+					// Block settings sidebar for Query block.
+					shouldReplaceCreateNewPostLinksFor( node )
+				) {
+					createNewPostLinkObserver.disconnect();
+				} else if (
+					// Block inserter sidebar, Reusable tab
+					shouldReplaceManageReusableBlockLinksFor( node )
+				) {
+					inserterManageReusableBlocksObserver.disconnect();
+				}
+			}
+		}
+	} );
+	// In the Site editor the `.interface-interface-skeleton__sidebar` element
+	// is totally removed when all the sidebars are closed.
+	// We need to observe the body to make sure we catch when a sidebar is opened or closed.
+	// Block inserter sidebar, post editor
+	// Block settings sidebar, site editor
+	sidebarsObserver.observe( document.querySelector( '.interface-interface-skeleton__body' ), {
+		childList: true,
+	} );
+	// In the Post editor the `.interface-interface-skeleton__sidebar` element
+	// is always present. We can scope down our observer to the sidebar element in this case.
+	// Block settings sidebar, post editor
+	const sidebar = document.querySelector( '.interface-interface-skeleton__sidebar' );
+	if ( sidebar ) {
+		sidebarsObserver.observe( sidebar, {
+			childList: true,
+		} );
+	}
+
+	// Manage reusable blocks link in the 3 dots more menu, post and site editors
+	if ( manageReusableBlocksUrl ) {
+		const toggleButton = document.querySelector(
+			'.edit-post-more-menu button, .edit-site-more-menu button'
+		);
+		const moreMenuManageReusableBlocksObserver = new window.MutationObserver( () => {
+			const isExpanded =
+				toggleButton.attributes.getNamedItem( 'aria-expanded' )?.nodeValue === 'true';
+			if ( isExpanded ) {
+				// The menu has not expanded at this point in Safari, so modify the link
+				// after the call stack has cleared and the menu has rendered.
+				setTimeout( () => {
+					const hyperlink = document.querySelector(
+						'a.components-menu-item__button[href*="post_type=wp_block"]'
+					);
+					hyperlink.href = manageReusableBlocksUrl;
+					hyperlink.target = '_top';
+				} );
+			}
+		} );
+		moreMenuManageReusableBlocksObserver.observe( toggleButton, {
+			attributeFilter: [ 'aria-expanded' ],
+		} );
+	}
+
+	// Sidebar might already be open before this script is executed.
+	// post and site editors
+	if ( createNewPostUrl ) {
+		const sidebarComponentsPanel = document.querySelector(
+			'.interface-interface-skeleton__sidebar .components-panel'
+		);
+		if ( sidebarComponentsPanel ) {
+			createNewPostLinkObserver.observe( sidebarComponentsPanel, {
+				childList: true,
+				subtree: true,
+			} );
+			tryToReplaceCreateNewPostLink();
+		}
 	}
 }
 
@@ -790,23 +952,8 @@ function getGutenboardingStatus( calypsoPort ) {
 		[ port2 ]
 	);
 	port1.onmessage = ( { data } ) => {
-		const {
-			isGutenboarding,
-			isSiteUnlaunched,
-			launchUrl,
-			isNewLaunchMobile,
-			isExperimental,
-			isPersistentLaunchButton,
-			isFocusedLaunchFlow,
-			currentCalypsoUrl,
-		} = data;
+		const { isGutenboarding, currentCalypsoUrl } = data;
 		calypsoifyGutenberg.isGutenboarding = isGutenboarding;
-		calypsoifyGutenberg.isSiteUnlaunched = isSiteUnlaunched;
-		calypsoifyGutenberg.launchUrl = launchUrl;
-		calypsoifyGutenberg.isNewLaunchMobile = isNewLaunchMobile;
-		calypsoifyGutenberg.isExperimental = isExperimental;
-		calypsoifyGutenberg.isPersistentLaunchButton = isPersistentLaunchButton;
-		calypsoifyGutenberg.isFocusedLaunchFlow = isFocusedLaunchFlow;
 		calypsoifyGutenberg.currentCalypsoUrl = currentCalypsoUrl;
 		// Hook necessary if message recieved after editor has loaded.
 		window.wp.hooks.doAction( 'setGutenboardingStatus', isGutenboarding );
@@ -961,6 +1108,30 @@ async function preselectParentPage() {
 	}
 }
 
+function handleCheckoutModalOpened( calypsoPort, data ) {
+	const { port1, port2 } = new MessageChannel();
+
+	// Remove checkoutOnSuccessCallback from data to prevent
+	// the `data` object could not be cloned in postMessage()
+	const { checkoutOnSuccessCallback, ...checkoutModalOptions } = data;
+
+	calypsoPort.postMessage(
+		{
+			action: 'openCheckoutModal',
+			payload: checkoutModalOptions,
+		},
+		[ port2 ]
+	);
+
+	port1.onmessage = () => {
+		checkoutOnSuccessCallback?.();
+		// this is a once-only port
+		// to send more messages we have to re-open the
+		// modal and create a new channel
+		port1.close();
+	};
+}
+
 function handleCheckoutModal( calypsoPort ) {
 	const { port1, port2 } = new MessageChannel();
 	calypsoPort.postMessage(
@@ -979,10 +1150,7 @@ function handleCheckoutModal( calypsoPort ) {
 				'a8c.wpcom-block-editor.openCheckoutModal',
 				'a8c/wpcom-block-editor/openCheckoutModal',
 				( data ) => {
-					calypsoPort.postMessage( {
-						action: 'openCheckoutModal',
-						payload: data,
-					} );
+					handleCheckoutModalOpened( calypsoPort, data );
 				}
 			);
 		}

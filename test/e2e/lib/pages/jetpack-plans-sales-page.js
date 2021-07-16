@@ -1,11 +1,4 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import AsyncBaseContainer from '../async-base-container';
 import * as driverHelper from '../driver-helper.js';
 
@@ -15,8 +8,7 @@ export default class JetpackPlansSalesPage extends AsyncBaseContainer {
 	}
 
 	async clickPurchaseButton() {
-		const selector = By.css( '.cta-install #btn-mast-getstarted' );
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, selector );
-		return await driverHelper.clickWhenClickable( this.driver, selector );
+		const locator = By.css( '.cta-install #btn-mast-getstarted' );
+		return await driverHelper.clickWhenClickable( this.driver, locator );
 	}
 }

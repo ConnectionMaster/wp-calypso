@@ -1,19 +1,12 @@
-/**
- * External dependencies
- */
-import React from 'react';
 import styled from '@emotion/styled';
-import debugFactory from 'debug';
 import { sprintf } from '@wordpress/i18n';
-import { useI18n } from '@automattic/react-i18n';
-
-/**
- * Internal dependencies
- */
+import { useI18n } from '@wordpress/react-i18n';
+import debugFactory from 'debug';
+import React from 'react';
 import Button from '../../components/button';
 import { FormStatus, useLineItems, useEvents } from '../../public-api';
-import { SummaryLine, SummaryDetails } from '../styled-components/summary-details';
 import { useFormStatus } from '../form-status';
+import { SummaryLine, SummaryDetails } from '../styled-components/summary-details';
 import PaymentLogo from './payment-logo.js';
 
 const debug = debugFactory( 'composite-checkout:existing-card-payment-method' );
@@ -81,6 +74,7 @@ function formatDate( cardExpiry ) {
 export function ExistingCardLabel( { last4, cardExpiry, cardholderName, brand } ) {
 	const { __, _x } = useI18n();
 
+	/* translators: %s is the last 4 digits of the credit card number */
 	const maskedCardDetails = sprintf( _x( '**** %s', 'Masked credit card number' ), last4 );
 
 	return (
@@ -147,6 +141,7 @@ function ButtonContents( { formStatus, total, activeButtonText = undefined } ) {
 		return __( 'Processing…' );
 	}
 	if ( formStatus === FormStatus.READY ) {
+		/* translators: %s is the total to be paid in localized currency */
 		return activeButtonText || sprintf( __( 'Pay %s' ), total.amount.displayValue );
 	}
 	return __( 'Please wait…' );
@@ -155,6 +150,7 @@ function ButtonContents( { formStatus, total, activeButtonText = undefined } ) {
 function ExistingCardSummary( { cardholderName, cardExpiry, brand, last4 } ) {
 	const { __, _x } = useI18n();
 
+	/* translators: %s is the last 4 digits of the credit card number */
 	const maskedCardDetails = sprintf( _x( '**** %s', 'Masked credit card number' ), last4 );
 
 	return (

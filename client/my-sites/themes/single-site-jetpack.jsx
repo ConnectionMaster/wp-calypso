@@ -12,20 +12,13 @@ import { connect } from 'react-redux';
 import Main from 'calypso/components/main';
 import CurrentTheme from 'calypso/my-sites/themes/current-theme';
 import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
-import FormattedHeader from 'calypso/components/formatted-header';
-import ThanksModal from 'calypso/my-sites/themes/thanks-modal';
-import AutoLoadingHomepageModal from 'calypso/my-sites/themes/auto-loading-homepage-modal';
-import config from 'calypso/config';
 import { isPartnerPurchase } from 'calypso/lib/purchases';
-import JetpackReferrerMessage from './jetpack-referrer-message';
 import { connectOptions } from './theme-options';
 import UpsellNudge from 'calypso/blocks/upsell-nudge';
 import {
 	FEATURE_UNLIMITED_PREMIUM_THEMES,
 	PLAN_JETPACK_SECURITY_REALTIME,
-} from 'calypso/lib/plans/constants';
-import QuerySitePlans from 'calypso/components/data/query-site-plans';
-import QuerySitePurchases from 'calypso/components/data/query-site-purchases';
+} from '@automattic/calypso-products';
 import ThemeShowcase from './theme-showcase';
 import ThemesSelection from './themes-selection';
 import { addTracking } from './helpers';
@@ -38,6 +31,7 @@ import { getByPurchaseId } from 'calypso/state/purchases/selectors';
 import { getLastThemeQuery, getThemesFoundForQuery } from 'calypso/state/themes/selectors';
 import { getSelectedSiteSlug } from 'calypso/state/ui/selectors';
 import { isJetpackSiteMultiSite } from 'calypso/state/sites/selectors';
+import ThemesHeader from './themes-header';
 
 const ConnectedThemesSelection = connectOptions( ( props ) => {
 	return (
@@ -55,8 +49,6 @@ const ConnectedThemesSelection = connectOptions( ( props ) => {
 
 const ConnectedSingleSiteJetpack = connectOptions( ( props ) => {
 	const {
-		analyticsPath,
-		analyticsPageTitle,
 		currentPlan,
 		emptyContent,
 		filter,
@@ -72,29 +64,13 @@ const ConnectedSingleSiteJetpack = connectOptions( ( props ) => {
 		requestingSitePlans,
 		siteSlug,
 	} = props;
-	const jetpackEnabled = config.isEnabled( 'manage/themes-jetpack' );
-
-	if ( ! jetpackEnabled ) {
-		return (
-			<JetpackReferrerMessage
-				siteId={ siteId }
-				analyticsPath={ analyticsPath }
-				analyticsPageTitle={ analyticsPageTitle }
-			/>
-		);
-	}
 
 	const isPartnerPlan = purchase && isPartnerPurchase( purchase );
 
 	return (
-		<Main className="themes">
+		<Main fullWidthLayout className="themes">
 			<SidebarNavigation />
-			<FormattedHeader
-				brandFont
-				className="themes__page-heading"
-				headerText={ translate( 'Themes' ) }
-				align="left"
-			/>
+			<ThemesHeader />
 			<CurrentTheme siteId={ siteId } />
 			{ ! requestingSitePlans && currentPlan && ! hasUnlimitedPremiumThemes && ! isPartnerPlan && (
 				<UpsellNudge
@@ -113,17 +89,15 @@ const ConnectedSingleSiteJetpack = connectOptions( ( props ) => {
 				{ ...props }
 				siteId={ siteId }
 				emptyContent={ showWpcomThemesList ? <div /> : null }
+				isJetpackSite={ true }
 			>
-				{ siteId && <QuerySitePlans siteId={ siteId } /> }
-				{ siteId && <QuerySitePurchases siteId={ siteId } /> }
-				<ThanksModal source={ 'list' } />
-				<AutoLoadingHomepageModal source={ 'list' } />
 				{ showWpcomThemesList && (
 					<div>
 						<ConnectedThemesSelection
 							origin="wpcom"
 							defaultOption={ 'activate' }
 							secondaryOption={ 'tryandcustomize' }
+							noMarginBeforeHeader={ true }
 							search={ search }
 							tier={ tier }
 							filter={ filter }

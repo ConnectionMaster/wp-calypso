@@ -2,9 +2,9 @@
 * @component Search
 */
 
-@import '~@automattic/typography/styles/variables';
-@import '~@wordpress/base-styles/variables';
-@import '~@wordpress/base-styles/mixins';
+@import '@automattic/typography/styles/variables';
+@import '@wordpress/base-styles/variables';
+@import '@wordpress/base-styles/mixins';
 
 $input-z-index: 20;
 
@@ -12,7 +12,6 @@ $input-z-index: 20;
 	border-radius: 2px;
 	display: flex;
 	flex: 1 1 auto;
-	margin-bottom: 24px;
 	width: 60px;
 	height: 51px;
 	position: relative;
@@ -171,9 +170,9 @@ $input-z-index: 20;
 
 	.components-button {
 		padding: 0;
-	
+
 		&:focus {
-			box-shadow: none;
+			z-index: 9999;
 		}
 	}
 
@@ -195,6 +194,7 @@ $input-z-index: 20;
 		}
 	
 		input.search-component__input[type='search'] {
+			font-size: inherit;
 			display: block;
 		}
 	

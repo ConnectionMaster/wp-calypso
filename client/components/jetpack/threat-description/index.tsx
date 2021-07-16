@@ -21,10 +21,12 @@ export interface Props {
 	status: ThreatStatus;
 	problem: string | ReactNode;
 	fix?: string | ReactNode;
-	context?: object;
+	context?: Record< string, unknown >;
 	diff?: string;
+	rows?: Record< string, unknown >;
+	table?: string;
 	filename?: string;
-	isFixable: bool;
+	isFixable: boolean;
 }
 
 class ThreatDescription extends React.PureComponent< Props > {
@@ -43,9 +45,9 @@ class ThreatDescription extends React.PureComponent< Props > {
 			case 'current':
 				if ( isFixable ) {
 					return translate( 'How will we fix it?' );
-				} else {
-					return translate( 'Resolving the threat' );
 				}
+				return translate( 'Resolving the threat' );
+
 				break;
 
 			default:
@@ -72,8 +74,30 @@ class ThreatDescription extends React.PureComponent< Props > {
 		);
 	}
 
+	renderDatabaseRows(): ReactNode | null {
+		const { rows, table } = this.props;
+		if ( ! rows || ! table ) {
+			return null;
+		}
+
+		const content = Object.values( rows ).map( ( row ) => JSON.stringify( row ) + '\n' );
+
+		return (
+			<>
+				<p className="threat-description__section-text">
+					{ translate( 'Threat found in the table %(threatTable)s, in the following rows:', {
+						args: {
+							threatTable: table,
+						},
+					} ) }
+				</p>
+				<pre className="threat-description__alert-filename">{ content }</pre>
+			</>
+		);
+	}
+
 	render() {
-		const { children, status, problem, fix, diff, context, filename } = this.props;
+		const { children, problem, fix, diff, rows, context, filename } = this.props;
 
 		return (
 			<div className="threat-description">
@@ -81,12 +105,13 @@ class ThreatDescription extends React.PureComponent< Props > {
 					<strong>{ translate( 'What was the problem?' ) }</strong>
 				</p>
 				{ this.renderTextOrNode( <p className="threat-description__section-text">{ problem }</p> ) }
-				{ ( filename || context || diff ) && (
+				{ ( filename || context || diff || rows ) && (
 					<p className="threat-description__section-title">
 						<strong>{ translate( 'The technical details' ) }</strong>
 					</p>
 				) }
 				{ this.renderFilename() }
+				{ this.renderDatabaseRows() }
 				{ context && <MarkedLines context={ context } /> }
 				{ diff && <DiffViewer diff={ diff } /> }
 				{ fix && (

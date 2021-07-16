@@ -1,29 +1,26 @@
-/**
- * External dependencies
- */
+import formatCurrency from '@automattic/format-currency';
 import { stringify } from 'qs';
-
-/**
- * Internal dependencies
- */
+import { fetchAndParse, wpcomRequest } from '../wpcom-request-controls';
 import { setFeatures, setFeaturesByType, setPlanProducts, setPlans } from './actions';
-import type {
-	PricedAPIPlan,
-	Plan,
-	DetailsAPIResponse,
-	PlanFeature,
-	PlanProduct,
-	Feature,
-} from './types';
 import {
-	currenciesFormats,
 	TIMELESS_PLAN_FREE,
 	TIMELESS_PLAN_PREMIUM,
 	plansProductSlugs,
 	monthlySlugs,
 	annualSlugs,
+	FEATURE_IDS_THAT_REQUIRE_ANNUALLY_BILLED_PLAN,
 } from './constants';
-import { fetchAndParse, wpcomRequest } from '../wpcom-request-controls';
+import type {
+	PricedAPIPlan,
+	APIPlanDetail,
+	PlanSimplifiedFeature,
+	Plan,
+	DetailsAPIResponse,
+	PlanFeature,
+	PlanProduct,
+	PlanSlug,
+	DetailsAPIFeature,
+} from './types';
 
 const MONTHLY_PLAN_BILLING_PERIOD = 31;
 
@@ -34,19 +31,7 @@ const MONTHLY_PLAN_BILLING_PERIOD = 31;
  * @param plan the plan object
  */
 function getMonthlyPrice( plan: PricedAPIPlan ) {
-	const currency = currenciesFormats[ plan.currency_code ];
-	let price: number | string = plan.raw_price / 12;
-
-	// if the number isn't an integer, follow the API rule for rounding it
-	if ( ! Number.isInteger( price ) ) {
-		price = price.toFixed( currency.decimal );
-	}
-
-	if ( currency.format === 'AMOUNT_THEN_SYMBOL' ) {
-		return `${ price }${ currency.symbol }`;
-	}
-	// else
-	return `${ currency.symbol }${ price }`;
+	return formatCurrency( plan.raw_price / 12, plan.currency_code, { stripZeros: true } ) as string;
 }
 
 /**
@@ -55,19 +40,17 @@ function getMonthlyPrice( plan: PricedAPIPlan ) {
  * @param plan the plan object
  */
 function getAnnualPrice( plan: PricedAPIPlan ) {
-	const currency = currenciesFormats[ plan.currency_code ];
-	let price: number | string = plan.raw_price * 12;
+	return formatCurrency( plan.raw_price * 12, plan.currency_code, { stripZeros: true } ) as string;
+}
 
-	// if the number isn't an integer, follow the API rule for rounding it
-	if ( ! Number.isInteger( price ) ) {
-		price = price.toFixed( currency.decimal );
-	}
-
-	if ( currency.format === 'AMOUNT_THEN_SYMBOL' ) {
-		return `${ price }${ currency.symbol }`;
-	}
-	// else
-	return `${ currency.symbol }${ price }`;
+/**
+ * Formats the plan price according to 'format-currency' package rules
+ * We use this for consistency in prices formats across monthly and annual plans
+ *
+ * @param plan the plan object
+ */
+function getFormattedPrice( plan: PricedAPIPlan ) {
+	return formatCurrency( plan.raw_price, plan.currency_code, { stripZeros: true } ) as string;
 }
 
 function calculateDiscounts( planProducts: PlanProduct[] ) {
@@ -88,16 +71,52 @@ function calculateDiscounts( planProducts: PlanProduct[] ) {
 	}
 }
 
-function processFeatures( features: Feature[] ) {
+function processFeatures( features: DetailsAPIFeature[] ) {
 	return features.reduce( ( features, feature ) => {
 		features[ feature.id ] = {
 			id: feature.id,
 			name: feature.name,
 			description: feature.description,
-			type: feature.type ?? 'checkbox',
+			type: 'checkbox',
+			requiresAnnuallyBilledPlan:
+				FEATURE_IDS_THAT_REQUIRE_ANNUALLY_BILLED_PLAN.indexOf( feature.id ) > -1,
 		};
 		return features;
 	}, {} as Record< string, PlanFeature > );
+}
+
+function featureRequiresAnnual(
+	featureName: string,
+	allFeaturesData: Record< string, PlanFeature >
+): boolean {
+	const matchedFeatureId = Object.keys( allFeaturesData ).find(
+		( featureId ) => allFeaturesData[ featureId ].name === featureName
+	);
+
+	if ( matchedFeatureId ) {
+		return allFeaturesData[ matchedFeatureId ].requiresAnnuallyBilledPlan;
+	}
+
+	return false;
+}
+
+function processPlanFeatures(
+	planData: APIPlanDetail,
+	allFeaturesData: Record< string, PlanFeature >
+): PlanSimplifiedFeature[] {
+	const features: PlanSimplifiedFeature[] = planData.highlighted_features.map(
+		( featureName ) => ( {
+			name: featureName,
+			requiresAnnuallyBilledPlan: featureRequiresAnnual( featureName, allFeaturesData ),
+		} )
+	);
+
+	// Features requiring an annually billed plan should be first in the array.
+	features.sort(
+		( a, b ) => Number( b.requiresAnnuallyBilledPlan ) - Number( a.requiresAnnuallyBilledPlan )
+	);
+
+	return features;
 }
 
 function normalizePlanProducts(
@@ -105,9 +124,7 @@ function normalizePlanProducts(
 	periodAgnosticPlans: Plan[]
 ): PlanProduct[] {
 	const plansProducts: PlanProduct[] = plansProductSlugs.reduce( ( plans, slug ) => {
-		const planProduct = pricedPlans.find(
-			( pricedPlan ) => pricedPlan.product_slug === slug
-		) as PricedAPIPlan;
+		const planProduct = pricedPlans.find( ( pricedPlan ) => pricedPlan.product_slug === slug );
 
 		if ( ! planProduct ) {
 			return plans;
@@ -119,20 +136,22 @@ function normalizePlanProducts(
 
 		plans.push( {
 			productId: planProduct.product_id,
+			// This means that free plan is considered "annually billed"
 			billingPeriod:
 				planProduct.bill_period === MONTHLY_PLAN_BILLING_PERIOD ? 'MONTHLY' : 'ANNUALLY',
 			periodAgnosticSlug: periodAgnosticPlan.periodAgnosticSlug,
 			storeSlug: planProduct.product_slug,
 			rawPrice: planProduct.raw_price,
+			// Not all plans returned from /plans have a `path_slug` (e.g. monthly plans don't have)
 			pathSlug: planProduct.path_slug,
 			price:
 				planProduct?.bill_period === MONTHLY_PLAN_BILLING_PERIOD || planProduct.raw_price === 0
-					? planProduct.formatted_price
+					? getFormattedPrice( planProduct )
 					: getMonthlyPrice( planProduct ),
 			annualPrice:
 				planProduct?.bill_period === MONTHLY_PLAN_BILLING_PERIOD
 					? getAnnualPrice( planProduct )
-					: planProduct.formatted_price,
+					: getFormattedPrice( planProduct ),
 		} );
 		return plans;
 	}, [] as PlanProduct[] );
@@ -157,28 +176,31 @@ export function* getSupportedPlans( locale = 'en' ) {
 		}
 	) ) as { body: DetailsAPIResponse };
 
+	const features = processFeatures( plansFeatures.features );
+
 	const periodAgnosticPlans: Plan[] = plansFeatures.plans.map( ( plan ) => {
+		const planSlug = plan.nonlocalized_short_name?.toLowerCase() as PlanSlug;
+
 		return {
 			description: plan.tagline,
-			features: plan.highlighted_features,
+			features: processPlanFeatures( plan, features ),
 			storage: plan.storage,
 			title: plan.short_name,
 			featuresSlugs: plan.features.reduce( ( slugs, slug ) => {
 				slugs[ slug ] = true;
 				return slugs;
 			}, {} as Record< string, boolean > ),
-			isFree: plan.nonlocalized_short_name === TIMELESS_PLAN_FREE,
-			isPopular: plan.nonlocalized_short_name === TIMELESS_PLAN_PREMIUM,
-			periodAgnosticSlug: plan.nonlocalized_short_name,
+			isFree: planSlug === TIMELESS_PLAN_FREE,
+			isPopular: planSlug === TIMELESS_PLAN_PREMIUM,
+			periodAgnosticSlug: planSlug,
 			productIds: plan.products.map( ( { plan_id } ) => plan_id ),
 		};
 	} );
 
 	const planProducts = normalizePlanProducts( pricedPlans, periodAgnosticPlans );
-	const features = processFeatures( plansFeatures.features );
 
-	yield setPlans( periodAgnosticPlans );
+	yield setPlans( periodAgnosticPlans, locale );
 	yield setPlanProducts( planProducts );
-	yield setFeatures( features );
-	yield setFeaturesByType( plansFeatures.features_by_type );
+	yield setFeatures( features, locale );
+	yield setFeaturesByType( plansFeatures.features_by_type, locale );
 }

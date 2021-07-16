@@ -12,7 +12,7 @@ import { localize } from 'i18n-calypso';
  * Internal dependencies
  */
 import SidebarItem from 'calypso/layout/sidebar/item';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { bumpStat } from 'calypso/lib/analytics/mc';
 import compareProps from 'calypso/lib/compare-props';
 import { getSiteAdminUrl, getSiteSlug, isJetpackSite } from 'calypso/state/sites/selectors';
@@ -40,7 +40,7 @@ class ToolsMenu extends PureComponent {
 	getPluginItem() {
 		const { canManagePlugins, isAtomicSite, translate } = this.props;
 
-		if ( config.isEnabled( 'signup/wpforteams' ) && this.props.isSiteWPForTeams ) {
+		if ( this.props.isSiteWPForTeams ) {
 			return {};
 		}
 
@@ -49,7 +49,6 @@ class ToolsMenu extends PureComponent {
 			label: translate( 'Plugins' ),
 			capability: 'manage_options',
 			queryable: ! config.isEnabled( 'calypsoify/plugins' ) || ! isAtomicSite,
-			config: 'manage/plugins',
 			link: '/plugins',
 			paths: [ '/extensions', '/plugins' ],
 			wpAdminLink: 'plugin-install.php?calypsoify=1',

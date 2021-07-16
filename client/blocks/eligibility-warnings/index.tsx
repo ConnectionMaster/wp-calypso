@@ -4,7 +4,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { localize, LocalizeProps } from 'i18n-calypso';
-import { union, includes, noop } from 'lodash';
+import { includes } from 'lodash';
 import classNames from 'classnames';
 import Gridicon from 'calypso/components/gridicon';
 import page from 'page';
@@ -17,7 +17,7 @@ import {
 	FEATURE_PERFORMANCE,
 	FEATURE_UPLOAD_THEMES,
 	FEATURE_SFTP,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
 import TrackComponentView from 'calypso/lib/analytics/track-component-view';
 import { recordTracksEvent } from 'calypso/state/analytics/actions';
 import {
@@ -33,11 +33,15 @@ import { launchSite } from 'calypso/state/sites/launch/actions';
 import { isSavingSiteSettings } from 'calypso/state/site-settings/selectors';
 import { saveSiteSettings } from 'calypso/state/site-settings/actions';
 import getRequest from 'calypso/state/selectors/get-request';
+import { isAtomicSiteWithoutBusinessPlan } from './utils';
 
 /**
  * Style dependencies
  */
 import './style.scss';
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const noop = () => {};
 
 interface ExternalProps {
 	backUrl: string;
@@ -185,8 +189,12 @@ function getProceedButtonText( holds: string[], translate: LocalizeProps[ 'trans
 
 function isProceedButtonDisabled( isEligible: boolean, holds: string[] ) {
 	const resolvableHolds = [ 'NO_BUSINESS_PLAN', 'SITE_UNLAUNCHED', 'SITE_NOT_PUBLIC' ];
-	const canHandleHoldsAutomatically = union( resolvableHolds, holds ).length === 3;
-	return ! canHandleHoldsAutomatically && ! isEligible;
+	const canHandleHoldsAutomatically = holds.every( ( h ) => resolvableHolds.includes( h ) );
+
+	// If it's not eligible for Atomic transfer lets also make sure it's not already Atomic with a plan below business.
+	return (
+		! canHandleHoldsAutomatically && ! isEligible && ! isAtomicSiteWithoutBusinessPlan( holds )
+	);
 }
 
 function siteRequiresUpgrade( holds: string[] ) {
@@ -205,7 +213,7 @@ EligibilityWarnings.defaultProps = {
 	onProceed: noop,
 };
 
-const mapStateToProps = ( state: object, ownProps: ExternalProps ) => {
+const mapStateToProps = ( state: Record< string, unknown >, ownProps: ExternalProps ) => {
 	const siteId = getSelectedSiteId( state );
 	const siteSlug = getSelectedSiteSlug( state );
 	const eligibilityData = ownProps.eligibilityData || getEligibility( state, siteId );

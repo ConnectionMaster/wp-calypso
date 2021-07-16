@@ -1,13 +1,7 @@
 /**
- * External dependencies
- */
-
-import { some } from 'lodash';
-
-/**
  * Internal dependencies
  */
-import createSelector from 'calypso/lib/create-selector';
+import { createSelector } from '@automattic/state-utils';
 import getSitesItems from 'calypso/state/selectors/get-sites-items';
 import isMainSiteOf from 'calypso/state/selectors/is-main-site-of';
 
@@ -22,5 +16,5 @@ import isMainSiteOf from 'calypso/state/selectors/is-main-site-of';
  */
 export default createSelector( ( state, siteId ) => {
 	const siteIds = Object.keys( getSitesItems( state ) );
-	return some( siteIds, ( mainSiteId ) => isMainSiteOf( state, mainSiteId, siteId ) );
+	return siteIds.some( ( mainSiteId ) => isMainSiteOf( state, mainSiteId, siteId ) );
 }, getSitesItems );

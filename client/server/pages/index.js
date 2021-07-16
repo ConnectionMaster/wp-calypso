@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { execSync } from 'child_process';
 import cookieParser from 'cookie-parser';
 import debugFactory from 'debug';
-import { get, includes, pick, snakeCase, split } from 'lodash';
+import { get, includes, pick, snakeCase } from 'lodash';
 import bodyParser from 'body-parser';
 // eslint-disable-next-line no-restricted-imports
 import superagent from 'superagent'; // Don't have Node.js fetch lib yet.
@@ -17,9 +17,8 @@ import superagent from 'superagent'; // Don't have Node.js fetch lib yet.
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import sanitize from 'calypso/server/sanitize';
-import utils from 'calypso/server/bundler/utils';
 import { pathToRegExp } from 'calypso/utils';
 import sections from 'calypso/sections';
 import isSectionEnabled from 'calypso/sections-filter';
@@ -34,11 +33,12 @@ import {
 } from 'calypso/server/render';
 import stateCache from 'calypso/server/state-cache';
 import getBootstrappedUser from 'calypso/server/user-bootstrap';
+import isWpMobileApp from 'calypso/server/lib/is-wp-mobile-app';
 import { createReduxStore } from 'calypso/state';
 import { setDocumentHeadLink } from 'calypso/state/document-head/actions';
 import { setStore } from 'calypso/state/redux-store';
 import initialReducer from 'calypso/state/reducer';
-import { DESERIALIZE, LOCALE_SET } from 'calypso/state/action-types';
+import { LOCALE_SET } from 'calypso/state/action-types';
 import { setCurrentUser } from 'calypso/state/current-user/actions';
 import { login } from 'calypso/lib/paths';
 import { logSectionResponse } from './analytics';
@@ -47,30 +47,19 @@ import { getLanguage, filterLanguageRevisions } from 'calypso/lib/i18n-utils';
 import { isWooOAuth2Client } from 'calypso/lib/oauth2-clients';
 import { GUTENBOARDING_SECTION_DEFINITION } from 'calypso/landing/gutenboarding/section';
 import wooDnaConfig from 'calypso/jetpack-connect/woo-dna-config';
-
+import { deserialize } from 'calypso/state/utils';
 import middlewareBuildTarget from '../middleware/build-target.js';
 import middlewareAssets from '../middleware/assets.js';
 import middlewareCache from '../middleware/cache.js';
 
 const debug = debugFactory( 'calypso:pages' );
 
-const SERVER_BASE_PATH = '/public';
 const calypsoEnv = config( 'env_id' );
-
-const staticFiles = [ { path: 'tinymce/skins/wordpress/wp-content.css' } ];
-
-const staticFilesUrls = staticFiles.reduce( ( result, file ) => {
-	if ( ! file.hash ) {
-		file.hash = utils.hashFile( process.cwd() + SERVER_BASE_PATH + '/' + file.path );
-	}
-	result[ file.path ] = utils.getUrl( file.path, file.hash );
-	return result;
-}, {} );
 
 // TODO: Re-use (a modified version of) client/state/initial-state#getInitialServerState here
 function getInitialServerState( serializedServerState ) {
 	// Bootstrapped state from a server-render
-	const serverState = initialReducer( serializedServerState, { type: DESERIALIZE } );
+	const serverState = deserialize( initialReducer, serializedServerState );
 	return pick( serverState, Object.keys( serializedServerState ) );
 }
 
@@ -135,7 +124,6 @@ function getDefaultContext( request, entrypoint = 'entry-main' ) {
 
 	const oauthClientId = request.query.oauth2_client_id || request.query.client_id;
 	const isWCComConnect =
-		config.isEnabled( 'woocommerce/onboarding-oauth' ) &&
 		( 'login' === request.context.sectionName || 'signup' === request.context.sectionName ) &&
 		request.query[ 'wccom-from' ] &&
 		isWooOAuth2Client( { id: parseInt( oauthClientId ) } );
@@ -158,7 +146,7 @@ function getDefaultContext( request, entrypoint = 'entry-main' ) {
 		lang,
 		entrypoint: request.getFilesForEntrypoint( entrypoint ),
 		manifests: request.getAssets().manifests,
-		abTestHelper: !! config.isEnabled( 'dev/test-helper' ),
+		authHelper: !! config.isEnabled( 'dev/auth-helper' ),
 		preferencesHelper: !! config.isEnabled( 'dev/preferences-helper' ),
 		featuresHelper: !! config.isEnabled( 'dev/features-helper' ),
 		devDocsURL: '/devdocs',
@@ -174,8 +162,8 @@ function getDefaultContext( request, entrypoint = 'entry-main' ) {
 	context.app = {
 		// use ipv4 address when is ipv4 mapped address
 		clientIp: request.ip ? request.ip.replace( '::ffff:', '' ) : request.ip,
+		isWpMobileApp: isWpMobileApp( request.useragent.source ),
 		isDebug,
-		staticUrls: staticFilesUrls,
 	};
 
 	if ( calypsoEnv === 'wpcalypso' ) {
@@ -305,7 +293,6 @@ function setUpLoggedInRoute( req, res, next ) {
 		const protocol = req.get( 'X-Forwarded-Proto' ) === 'https' ? 'https' : 'http';
 
 		redirectUrl = login( {
-			isNative: config.isEnabled( 'login/native-login-links' ),
 			redirectTo: protocol + '://' + config( 'hostname' ) + req.originalUrl,
 		} );
 
@@ -535,7 +522,7 @@ const renderServerError = ( entrypoint = 'entry-main' ) => ( err, req, res, next
  */
 function handleLocaleSubdomains( req, res, next ) {
 	const langSlug = req.hostname?.endsWith( config( 'hostname' ) )
-		? split( req.hostname, '.' )[ 0 ]
+		? req.hostname.split( '.' )[ 0 ]
 		: null;
 
 	if ( langSlug && includes( config( 'magnificent_non_en_locales' ), langSlug ) ) {
@@ -569,7 +556,7 @@ export default function pages() {
 
 	app.use( logSectionResponse );
 	app.use( cookieParser() );
-	app.use( middlewareBuildTarget( calypsoEnv ) );
+	app.use( middlewareBuildTarget() );
 	app.use( middlewareAssets() );
 	app.use( middlewareCache() );
 	app.use( setupLoggedInContext );

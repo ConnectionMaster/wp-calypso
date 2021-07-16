@@ -1,22 +1,15 @@
-/**
- * External dependencies
- */
-import React from 'react';
 import styled from '@emotion/styled';
-import debugFactory from 'debug';
 import { sprintf } from '@wordpress/i18n';
-import { useI18n } from '@automattic/react-i18n';
-
-/**
- * Internal dependencies
- */
-import Field from '../../components/field';
+import { useI18n } from '@wordpress/react-i18n';
+import debugFactory from 'debug';
+import React from 'react';
 import Button from '../../components/button';
-import { FormStatus, useLineItems } from '../../public-api';
-import { SummaryLine, SummaryDetails } from '../styled-components/summary-details';
-import { useFormStatus } from '../form-status';
+import Field from '../../components/field';
 import { registerStore, useSelect, useDispatch } from '../../lib/registry';
+import { FormStatus, useLineItems } from '../../public-api';
+import { useFormStatus } from '../form-status';
 import { PaymentMethodLogos } from '../styled-components/payment-method-logos';
+import { SummaryLine, SummaryDetails } from '../styled-components/summary-details';
 
 const debug = debugFactory( 'composite-checkout:ideal-payment-method' );
 
@@ -118,7 +111,6 @@ function IdealFields() {
 function BankSelector( { id, value, onChange, label, isError, errorMessage, disabled } ) {
 	const { __ } = useI18n();
 	const bankOptions = getBankOptions( __ );
-	/* eslint-disable jsx-a11y/no-onchange */
 	return (
 		<SelectWrapper>
 			<label htmlFor={ id } disabled={ disabled }>
@@ -137,7 +129,6 @@ function BankSelector( { id, value, onChange, label, isError, errorMessage, disa
 			<ErrorMessage isError={ isError } errorMessage={ errorMessage } />
 		</SelectWrapper>
 	);
-	/* eslint-enable jsx-a11y/no-onchange */
 }
 
 function BankOption( { value, label } ) {
@@ -233,6 +224,7 @@ function ButtonContents( { formStatus, total } ) {
 		return __( 'Processing…' );
 	}
 	if ( formStatus === FormStatus.READY ) {
+		/* translators: %s is the total to be paid in localized currency */
 		return sprintf( __( 'Pay %s' ), total.amount.displayValue );
 	}
 	return __( 'Please wait…' );

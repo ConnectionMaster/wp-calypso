@@ -6,16 +6,18 @@ import { connect } from 'react-redux';
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React from 'react';
-import { some } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import AsyncLoad from 'calypso/components/async-load';
 import { getSite } from 'calypso/state/sites/selectors';
-import { isJetpackPlan } from 'calypso/lib/products-values';
-import { JETPACK_PLANS } from 'calypso/lib/plans/constants';
-import { JETPACK_PRODUCTS_LIST } from 'calypso/lib/products-values/constants';
+import {
+	isJetpackPlan,
+	isJetpackProduct,
+	JETPACK_PLANS,
+	JETPACK_PRODUCTS_LIST,
+} from '@automattic/calypso-products';
 import QuerySites from 'calypso/components/data/query-sites';
 import PurchaseItem from '../purchase-item';
 import { managePurchase } from '../paths';
@@ -35,8 +37,6 @@ const PurchasesSite = ( {
 	slug,
 	showSite = false,
 } ) => {
-	const isJetpack = ! isPlaceholder && some( purchases, ( purchase ) => isJetpackPlan( purchase ) );
-
 	if ( isPlaceholder ) {
 		return <PurchaseItem isPlaceholder />;
 	}
@@ -60,7 +60,7 @@ const PurchasesSite = ( {
 					slug={ slug }
 					isDisconnectedSite={ ! site }
 					purchase={ purchase }
-					isJetpack={ isJetpack }
+					isJetpack={ isJetpackPlan( purchase ) || isJetpackProduct( purchase ) }
 					site={ site }
 					showSite={ showSite }
 					name={ name }

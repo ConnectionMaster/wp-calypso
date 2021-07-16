@@ -7,7 +7,6 @@
  */
 import { expect } from 'chai';
 import { shallow } from 'enzyme';
-import { noop } from 'lodash';
 import React from 'react';
 
 /**
@@ -26,7 +25,8 @@ jest.mock( 'event', () => require( 'component-event' ), { virtual: true } );
 jest.mock( 'calypso/lib/oauth-token', () => ( {
 	getToken: () => 'bearerToken',
 } ) );
-jest.mock( 'calypso/lib/user', () => () => {} );
+
+const noop = () => {};
 
 describe( 'EditGravatar', () => {
 	let sandbox;

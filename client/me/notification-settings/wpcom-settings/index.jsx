@@ -50,6 +50,7 @@ const options = {
 	jetpack_research: 'jetpack_research',
 	jetpack_promotion: 'jetpack_promotion',
 	jetpack_news: 'jetpack_news',
+	jetpack_reports: 'jetpack_reports',
 };
 
 class WPCOMNotifications extends React.Component {
@@ -171,6 +172,13 @@ class WPCOMNotifications extends React.Component {
 							title={ translate( 'Newsletter' ) }
 							description={ translate( 'Jetpack news, announcements, and product spotlights.' ) }
 						/>
+
+						<EmailCategory
+							name={ options.jetpack_reports }
+							isEnabled={ get( settings, options.jetpack_reports ) }
+							title={ translate( 'Reports' ) }
+							description={ translate( 'Jetpack security and performance reports.' ) }
+						/>
 					</>
 				) : (
 					''
@@ -187,7 +195,7 @@ class WPCOMNotifications extends React.Component {
 
 	render() {
 		return (
-			<Main className="wpcom-settings__main is-wide-layout">
+			<Main wideLayout className="wpcom-settings__main">
 				<PageViewTracker
 					path="/me/notifications/updates"
 					title="Me > Notifications > Updates from WordPress.com"

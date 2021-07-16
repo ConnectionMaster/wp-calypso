@@ -1,11 +1,4 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import AsyncBaseContainer from '../../async-base-container';
 import * as driverHelper from '../../driver-helper';
 
@@ -18,12 +11,12 @@ export default class JetpackComFeaturesDesignPage extends AsyncBaseContainer {
 	}
 
 	async installJetpack() {
-		const getStartedSelector = By.css( 'a#btn-mast-getstarted' );
-		const installJetpackSelector = By.css(
+		const getStartedLocator = By.css( 'a#btn-mast-getstarted' );
+		const installJetpackLocator = By.css(
 			".feature-letsgetstarted-main .feature-button-cta[href*='connect']"
 		);
 
-		await driverHelper.clickWhenClickable( this.driver, getStartedSelector );
-		return await driverHelper.clickWhenClickable( this.driver, installJetpackSelector );
+		await driverHelper.clickWhenClickable( this.driver, getStartedLocator );
+		return await driverHelper.clickWhenClickable( this.driver, installJetpackLocator );
 	}
 }

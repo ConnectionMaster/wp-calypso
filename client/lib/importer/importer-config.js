@@ -3,11 +3,12 @@
  */
 import React from 'react';
 import { translate } from 'i18n-calypso';
-import { filter, head, orderBy, values } from 'lodash';
+import { filter, orderBy, values } from 'lodash';
 
 /**
  * Internal dependencies
  */
+import config from '@automattic/calypso-config';
 import InlineSupportLink from 'calypso/components/inline-support-link';
 
 function getConfig( { siteTitle = '' } = {} ) {
@@ -95,39 +96,6 @@ function getConfig( { siteTitle = '' } = {} ) {
 		weight: 0,
 	};
 
-	importerConfig[ 'godaddy-gocentral' ] = {
-		engine: 'godaddy-gocentral',
-		key: 'importer-type-godaddy-gocentral',
-		type: 'url',
-		title: 'GoDaddy',
-		icon: 'godaddy-gocentral',
-		description: translate(
-			'Import posts, pages, and media from sites made with the GoDaddy GoCentral website builder to {{b}}%(siteTitle)s{{/b}}.',
-			{
-				args: {
-					siteTitle,
-				},
-				components: {
-					b: <strong />,
-				},
-			}
-		),
-		uploadDescription: translate( 'Enter the URL of your existing site. ' + '{{supportLink/}}', {
-			components: {
-				supportLink: (
-					<InlineSupportLink
-						supportPostId={ 154436 }
-						supportLink="https://wordpress.com/support/import/import-from-godaddy/"
-						showIcon={ false }
-					>
-						{ translate( 'Need help?' ) }
-					</InlineSupportLink>
-				),
-			},
-		} ),
-		weight: 0,
-	};
-
 	importerConfig.medium = {
 		engine: 'medium',
 		key: 'importer-type-medium',
@@ -167,6 +135,60 @@ function getConfig( { siteTitle = '' } = {} ) {
 				},
 			}
 		),
+		weight: 0,
+	};
+
+	importerConfig.substack = {
+		engine: 'substack',
+		key: 'importer-type-substack',
+		type: 'file',
+		title: 'Substack',
+		icon: 'substack',
+		description: translate(
+			'Import posts and images, podcasts and public comments from a %(importerName)s export file to {{b}}%(siteTitle)s{{/b}}.',
+			{
+				args: {
+					importerName: 'Substack',
+					siteTitle,
+				},
+				components: {
+					b: <strong />,
+				},
+			}
+		),
+		uploadDescription: translate(
+			'A %(importerName)s export file is a ZIP file ' +
+				'containing a CSV file with all posts and individual HTML posts. ' +
+				'{{supportLink/}}',
+			{
+				args: {
+					importerName: 'Substack',
+				},
+				components: {
+					supportLink: (
+						<InlineSupportLink
+							supportPostId={ 87696 } // TODO: update
+							supportLink="https://wordpress.com/support/import/import-from-substack/"
+							showIcon={ false }
+						>
+							{ translate( 'Need help exporting your content?' ) }
+						</InlineSupportLink>
+					),
+				},
+			}
+		),
+		optionalUrl: {
+			title: translate( 'Substack Newsletter URL' ),
+			description: translate(
+				'An optional Substack Newsletter URL to import comments and author information.'
+			),
+			invalidDescription: translate( 'Enter a valid Substack Newsletter URL (%(exampleUrl)s).', {
+				args: { exampleUrl: 'https://newsletter.substack.com/' },
+			} ),
+			validate: ( urlInput ) => {
+				return /^https:\/\/[\w-]+\.substack\.com\/?$/.test( urlInput.trim() );
+			},
+		},
 		weight: 0,
 	};
 
@@ -249,11 +271,13 @@ function getConfig( { siteTitle = '' } = {} ) {
 }
 
 export function getImporters( params = {} ) {
-	const importers = orderBy(
-		values( getConfig( params ) ),
-		[ 'weight', 'title' ],
-		[ 'desc', 'asc' ]
-	);
+	const importerConfig = getConfig( params );
+
+	if ( ! config.isEnabled( 'importers/substack' ) ) {
+		delete importerConfig.substack;
+	}
+
+	const importers = orderBy( values( importerConfig ), [ 'weight', 'title' ], [ 'desc', 'asc' ] );
 
 	return importers;
 }
@@ -263,7 +287,7 @@ export function getFileImporters( params = {} ) {
 }
 
 export function getImporterByKey( key, params = {} ) {
-	return head( filter( getImporters( params ), ( importer ) => importer.key === key ) );
+	return filter( getImporters( params ), ( importer ) => importer.key === key )[ 0 ];
 }
 
 export default getConfig;

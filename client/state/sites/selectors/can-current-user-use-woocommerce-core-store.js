@@ -1,11 +1,10 @@
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
 import canCurrentUserUseAnyWooCommerceBasedStore from 'calypso/state/sites/selectors/can-current-user-use-any-woocommerce-based-store';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getCurrentPlan } from 'calypso/state/sites/plans/selectors';
-import { isBusinessPlan, isEcommercePlan } from 'calypso/lib/plans';
+import { isBusinessPlan, isEcommercePlan } from '@automattic/calypso-products';
 
 /**
  * Returns true if current user can see and use the WooCommerce Core-based option in menu
@@ -25,13 +24,8 @@ export default function canCurrentUserUseWooCommerceCoreStore( state, siteId = n
 		return false;
 	}
 
-	const isCalypsoStoreDeprecatedOrRemoved =
-		config.isEnabled( 'woocommerce/store-deprecated' ) ||
-		config.isEnabled( 'woocommerce/store-removed' );
-
 	return (
 		canCurrentUserUseAnyWooCommerceBasedStore( state, siteId ) &&
-		( isEcommercePlan( currentPlan.productSlug ) ||
-			( isBusinessPlan( currentPlan.productSlug ) && isCalypsoStoreDeprecatedOrRemoved ) )
+		( isEcommercePlan( currentPlan.productSlug ) || isBusinessPlan( currentPlan.productSlug ) )
 	);
 }

@@ -1,18 +1,8 @@
 /** @jest-environment jsdom */
 
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
-} ) );
-
 jest.mock( 'calypso/lib/analytics/tracks', () => ( {} ) );
 jest.mock( 'calypso/lib/analytics/page-view', () => ( {} ) );
 jest.mock( 'calypso/lib/analytics/page-view-tracker', () => 'PageViewTracker' );
-jest.mock( 'calypso/lib/plugins/wporg-data/list-store', () => ( {
-	getFullList: () => {},
-	getSearchList: () => {},
-	on: () => {},
-} ) );
-jest.mock( 'calypso/lib/plugins/wporg-data/actions', () => ( {} ) );
 jest.mock( 'calypso/components/main', () => 'MainComponent' );
 jest.mock( 'calypso/blocks/upsell-nudge', () => 'UpsellNudge' );
 jest.mock( 'calypso/components/notice', () => 'Notice' );
@@ -33,7 +23,7 @@ import {
 	PLAN_PERSONAL_2_YEARS,
 	PLAN_BLOGGER,
 	PLAN_BLOGGER_2_YEARS,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
 
 /**
  * Internal dependencies
@@ -41,6 +31,11 @@ import {
 import { PluginsBrowser } from '../';
 
 const props = {
+	pluginsByCategory: [],
+	pluginsByCategoryNew: [],
+	pluginsByCategoryPopular: [],
+	pluginsByCategoryFeatured: [],
+	pluginsBySearchTerm: [],
 	site: {
 		plan: PLAN_FREE,
 	},
@@ -96,13 +91,13 @@ describe( 'PluginsBrowser basic tests', () => {
 			0
 		);
 	} );
-	test( 'should not show upsell nudge if jetpack site', () => {
+	test( 'should not show upsell nudge if non-atomic jetpack site', () => {
 		const comp = shallow(
 			<PluginsBrowser
 				{ ...props }
 				selectedSiteId={ 10 }
 				sitePlan={ { product_slug: PLAN_PREMIUM } }
-				isJetpackSite={ true }
+				jetpackNonAtomic={ true }
 				hasBusinessPlan={ false }
 			/>
 		);

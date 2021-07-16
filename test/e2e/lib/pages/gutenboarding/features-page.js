@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper.js';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper.js';
 
 export default class PlansPage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -15,13 +8,13 @@ export default class PlansPage extends AsyncBaseContainer {
 	}
 
 	async skipStep() {
-		const skipButtonSelector = By.css( '.action-buttons__skip' );
-		return await driverHelper.clickWhenClickable( this.driver, skipButtonSelector );
+		const skipButtonLocator = By.css( '.action-buttons__skip' );
+		return await driverHelper.clickWhenClickable( this.driver, skipButtonLocator );
 	}
 
 	async goToNextStep() {
-		const nextButtonSelector = By.css( '.action-buttons__next' );
-		return await driverHelper.clickWhenClickable( this.driver, nextButtonSelector );
+		const nextButtonLocator = By.css( '.action-buttons__next' );
+		return await driverHelper.clickWhenClickable( this.driver, nextButtonLocator );
 	}
 
 	async selectPluginsFeature() {

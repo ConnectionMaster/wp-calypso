@@ -34,9 +34,9 @@ class Starter_Page_Templates {
 			'_',
 			array(
 				'starter_page_templates',
-				PLUGIN_VERSION,
+				A8C_ETK_PLUGIN_VERSION,
 				get_option( 'site_vertical', 'default' ),
-				get_locale(),
+				$this->get_verticals_locale(),
 			)
 		);
 
@@ -84,7 +84,7 @@ class Starter_Page_Templates {
 			'single'         => true,
 			'show_in_rest'   => true,
 			'object_subtype' => 'page',
-			'auth_callback'  => function() {
+			'auth_callback'  => function () {
 				return current_user_can( 'edit_posts' );
 			},
 		);
@@ -170,14 +170,12 @@ class Starter_Page_Templates {
 		$config = apply_filters(
 			'fse_starter_page_templates_config',
 			array(
-				'templates'          => array_merge( $default_templates, $page_templates ),
+				'templates'    => array_merge( $default_templates, $page_templates ),
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				'screenAction'       => isset( $_GET['new-homepage'] ) ? 'add' : $screen->action,
-				'theme'              => normalize_theme_slug( get_stylesheet() ),
+				'screenAction' => isset( $_GET['new-homepage'] ) ? 'add' : $screen->action,
+				'theme'        => normalize_theme_slug( get_stylesheet() ),
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				'isFrontPage'        => isset( $_GET['post'] ) && get_option( 'page_on_front' ) === $_GET['post'],
-				'hideFrontPageTitle' => get_theme_mod( 'hide_front_page_title' ),
-				'locale'             => $this->get_verticals_locale(),
+				'locale'       => $this->get_verticals_locale(),
 			)
 		);
 
@@ -204,15 +202,17 @@ class Starter_Page_Templates {
 	public function get_page_templates() {
 		$page_template_data = get_transient( $this->templates_cache_key );
 
+		$override_source_site = apply_filters( 'a8c_override_patterns_source_site', false );
+
 		// Load fresh data if we don't have any or vertical_id doesn't match.
-		if ( false === $page_template_data || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
-			$override_source_site = apply_filters( 'a8c_override_patterns_source_site', false );
+		if ( false === $page_template_data || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || false !== $override_source_site ) {
 
 			$request_url = esc_url_raw(
 				add_query_arg(
 					array(
-						'site' => $override_source_site,
-						'tags' => 'layout',
+						'site'         => $override_source_site,
+						'tags'         => 'layout',
+						'pattern_meta' => 'is_web',
 					),
 					'https://public-api.wordpress.com/rest/v1/ptk/patterns/' . $this->get_verticals_locale()
 				)
@@ -231,7 +231,11 @@ class Starter_Page_Templates {
 			}
 
 			$page_template_data = json_decode( wp_remote_retrieve_body( $response ), true );
-			set_transient( $this->templates_cache_key, $page_template_data, DAY_IN_SECONDS );
+
+			// Only save to cache if we have not overridden the source site.
+			if ( false === $override_source_site ) {
+				set_transient( $this->templates_cache_key, $page_template_data, DAY_IN_SECONDS );
+			}
 
 			return $page_template_data;
 		}

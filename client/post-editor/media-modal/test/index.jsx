@@ -44,6 +44,11 @@ jest.mock( 'calypso/my-sites/media-library', () =>
 	require( 'calypso/components/empty-component' )
 );
 
+const mockV4 = jest.fn();
+jest.mock( 'uuid', () => ( {
+	v4: () => mockV4(),
+} ) );
+
 /**
  * Module variables
  */
@@ -60,7 +65,7 @@ describe( 'EditorMediaModal', () => {
 	let spy;
 	let deleteMedia;
 	let onClose;
-	let setMediaLibrarySelectedItems;
+	let selectMediaItems;
 	let changeMediaSource;
 	let baseProps;
 
@@ -68,10 +73,10 @@ describe( 'EditorMediaModal', () => {
 		spy = sandbox.spy();
 		deleteMedia = sandbox.stub();
 		onClose = sandbox.stub();
-		setMediaLibrarySelectedItems = sandbox.stub();
+		selectMediaItems = sandbox.stub();
 		changeMediaSource = sandbox.stub();
 		baseProps = {
-			setMediaLibrarySelectedItems,
+			selectMediaItems,
 			site: DUMMY_SITE,
 			selectedItems: DUMMY_MEDIA,
 			translate,
@@ -87,7 +92,7 @@ describe( 'EditorMediaModal', () => {
 
 	test( 'When `single` selection screen chosen should initialise with no items selected', () => {
 		shallow( <EditorMediaModal { ...baseProps } single={ true } view={ null } /> ).instance();
-		expect( setMediaLibrarySelectedItems ).to.have.been.calledWith( DUMMY_SITE.ID, [] );
+		expect( selectMediaItems ).to.have.been.calledWith( DUMMY_SITE.ID, [] );
 	} );
 
 	test( 'should prompt to delete a single item from the list view', () => {
@@ -345,6 +350,9 @@ describe( 'EditorMediaModal', () => {
 		} );
 
 		test( 'should copy external media after loading WordPress library if 1 or more media are selected and button is pressed', () => {
+			mockV4.mockImplementationOnce( () => '1' );
+			mockV4.mockImplementationOnce( () => '2' );
+
 			const tree = shallow(
 				<EditorMediaModal { ...baseProps } view={ ModalViews.DETAIL } setView={ spy } />
 			).instance();
@@ -369,6 +377,8 @@ describe( 'EditorMediaModal', () => {
 		} );
 
 		test( 'should copy external after loading WordPress library if 1 video is selected and button is pressed', () => {
+			mockV4.mockImplementationOnce( () => '3' );
+
 			const tree = shallow(
 				<EditorMediaModal
 					{ ...baseProps }

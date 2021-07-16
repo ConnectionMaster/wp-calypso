@@ -12,8 +12,12 @@ import { localize } from 'i18n-calypso';
 import { Button, Dialog } from '@automattic/components';
 import CancelAutoRenewalForm from 'calypso/components/marketing-survey/cancel-auto-renewal-form';
 import { withLocalizedMoment } from 'calypso/components/localized-moment';
-import { getTitanProductName } from 'calypso/lib/titan/get-titan-product-name';
-import { isDomainRegistration, isPlan, isTitanMail } from 'calypso/lib/products-values';
+import {
+	isDomainRegistration,
+	isGSuiteOrGoogleWorkspace,
+	isPlan,
+	isTitanMail,
+} from '@automattic/calypso-products';
 import isSiteAtomic from 'calypso/state/selectors/is-site-automated-transfer';
 import { getSite } from 'calypso/state/sites/selectors';
 import './style.scss';
@@ -53,7 +57,7 @@ class AutoRenewDisablingDialog extends Component {
 			return 'plan';
 		}
 
-		if ( isTitanMail( purchase ) ) {
+		if ( isGSuiteOrGoogleWorkspace( purchase ) || isTitanMail( purchase ) ) {
 			return 'email';
 		}
 
@@ -125,12 +129,30 @@ class AutoRenewDisablingDialog extends Component {
 					{
 						args: {
 							domainName: purchase.meta,
-							emailProductName: getTitanProductName(),
+							// Use the purchased product name to make sure it's correct
+							emailProductName: purchase.productName,
 							expiryDate,
 						},
 						comment:
 							'%(emailProductName)s is the name of an email product, e.g. Email, Titan Mail, Google Workspace. ' +
 							'%(domainName)s is a domain name, e.g. example.com. ' +
+							'%(expiryDate)s is a date string, e.g. May 14, 2020',
+					}
+				);
+			default:
+				return translate(
+					'By canceling auto-renewal, your %(productName)s subscription for %(siteDomain)s will expire on %(expiryDate)s. ' +
+						"When it does, you'll lose access to key features you may be using on your site. " +
+						'To avoid that, turn auto-renewal back on or manually renew your subscription before the expiration date.',
+					{
+						args: {
+							productName: purchase.productName,
+							siteDomain,
+							expiryDate,
+						},
+						comment:
+							'%(productName)s is the name of a WordPress.com product. ' +
+							'%(siteDomain)s is a domain name, e.g. example.com, example.wordpress.com. ' +
 							'%(expiryDate)s is a date string, e.g. May 14, 2020',
 					}
 				);
@@ -158,7 +180,7 @@ class AutoRenewDisablingDialog extends Component {
 	renderAtomicFollowUpDialog = () => {
 		const { siteDomain, isVisible, translate } = this.props;
 
-		const exportPath = '//' + siteDomain + '/wp-admin/export.php';
+		const exportPath = '/backup/' + siteDomain;
 
 		return (
 			<Dialog

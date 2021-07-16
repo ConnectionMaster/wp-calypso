@@ -3,7 +3,7 @@
  */
 import PropTypes from 'prop-types';
 import React from 'react';
-import { noop, size, map } from 'lodash';
+import { size, map } from 'lodash';
 import page from 'page';
 import classnames from 'classnames';
 import { connect } from 'react-redux';
@@ -37,18 +37,21 @@ import {
 	requestMarkAsUnseenBlog,
 } from 'calypso/state/reader/seen-posts/actions';
 import { recordReaderTracksEvent } from 'calypso/state/reader/analytics/actions';
-import { isEligibleForUnseen } from 'calypso/reader/get-helpers';
+import { canBeMarkedAsSeen, isEligibleForUnseen } from 'calypso/reader/get-helpers';
 import isSiteWPForTeams from 'calypso/state/selectors/is-site-wpforteams';
 import isFeedWPForTeams from 'calypso/state/selectors/is-feed-wpforteams';
-import { isFollowing } from 'calypso/state/reader/follows/selectors';
+import getCurrentRoute from 'calypso/state/selectors/get-current-route';
 
 /**
  * Style dependencies
  */
 import './style.scss';
 
+const noop = () => {};
+
 class ReaderPostOptionsMenu extends React.Component {
 	static propTypes = {
+		currentRoute: PropTypes.string,
 		post: PropTypes.object,
 		feed: PropTypes.object,
 		onBlock: PropTypes.func,
@@ -61,7 +64,6 @@ class ReaderPostOptionsMenu extends React.Component {
 		position: PropTypes.string,
 		posts: PropTypes.array,
 		isWPForTeamsItem: PropTypes.bool,
-		isFollowingItem: PropTypes.bool,
 		teams: PropTypes.array,
 	};
 
@@ -260,7 +262,7 @@ class ReaderPostOptionsMenu extends React.Component {
 			position,
 			posts,
 			isWPForTeamsItem,
-			isFollowingItem,
+			currentRoute,
 		} = this.props;
 
 		if ( ! post ) {
@@ -323,19 +325,27 @@ class ReaderPostOptionsMenu extends React.Component {
 						/>
 					) }
 
-					{ isEligibleForUnseen( { teams, isFollowingItem, isWPForTeamsItem } ) && post.is_seen && (
-						<PopoverMenuItem onClick={ this.markAsUnSeen } icon="not-visible" itemComponent={ 'a' }>
-							{ size( posts ) > 0 && translate( 'Mark all as unseen' ) }
-							{ size( posts ) === 0 && translate( 'Mark as unseen' ) }
-						</PopoverMenuItem>
-					) }
+					{ isEligibleForUnseen( { teams, isWPForTeamsItem } ) &&
+						canBeMarkedAsSeen( { post, posts, currentRoute } ) &&
+						post.is_seen && (
+							<PopoverMenuItem
+								onClick={ this.markAsUnSeen }
+								icon="not-visible"
+								itemComponent={ 'a' }
+							>
+								{ size( posts ) > 0 && translate( 'Mark all as unseen' ) }
+								{ size( posts ) === 0 && translate( 'Mark as unseen' ) }
+							</PopoverMenuItem>
+						) }
 
-					{ isEligibleForUnseen( { teams, isFollowingItem, isWPForTeamsItem } ) && ! post.is_seen && (
-						<PopoverMenuItem onClick={ this.markAsSeen } icon="visible">
-							{ size( posts ) > 0 && translate( 'Mark all as seen' ) }
-							{ size( posts ) === 0 && translate( 'Mark as seen' ) }
-						</PopoverMenuItem>
-					) }
+					{ isEligibleForUnseen( { teams, isWPForTeamsItem } ) &&
+						canBeMarkedAsSeen( { post, posts, currentRoute } ) &&
+						! post.is_seen && (
+							<PopoverMenuItem onClick={ this.markAsSeen } icon="visible">
+								{ size( posts ) > 0 && translate( 'Mark all as seen' ) }
+								{ size( posts ) === 0 && translate( 'Mark as seen' ) }
+							</PopoverMenuItem>
+						) }
 
 					{ this.props.showVisitPost && post.URL && (
 						<PopoverMenuItem onClick={ this.visitPost } icon="external">
@@ -382,7 +392,7 @@ export default connect(
 		const siteId = is_external ? null : site_ID;
 
 		return Object.assign(
-			{ isFollowingItem: isFollowing( state, { blogId: siteId, feedId } ) },
+			{ currentRoute: getCurrentRoute( state ) },
 			{ isWPForTeamsItem: isSiteWPForTeams( state, siteId ) || isFeedWPForTeams( state, feedId ) },
 			{ teams: getReaderTeams( state ) },
 			feedId > 0 && { feed: getFeed( state, feedId ) },

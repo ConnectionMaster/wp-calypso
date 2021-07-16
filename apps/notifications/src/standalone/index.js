@@ -76,9 +76,10 @@ const customMiddleware = {
 };
 
 const render = () => {
+	document.body.classList.add( 'font-smoothing-antialiased' );
+
 	ReactDOM.render(
 		React.createElement( AuthWrapper( Notifications ), {
-			clientId: 56641,
 			customEnhancer,
 			customMiddleware,
 			isShowing,

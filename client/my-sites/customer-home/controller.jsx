@@ -15,15 +15,14 @@ export default async function ( context, next ) {
 	const state = await context.store.getState();
 	const siteId = await getSelectedSiteId( state );
 
-	const isDev = context.query.dev === 'true';
-	const forcedView = context.query.view;
+	const noticeType = context.query.notice;
 
 	// Scroll to the top
 	if ( typeof window !== 'undefined' ) {
 		window.scrollTo( 0, 0 );
 	}
 
-	context.primary = <CustomerHome key={ siteId } isDev={ isDev } forcedView={ forcedView } />;
+	context.primary = <CustomerHome key={ siteId } noticeType={ noticeType } />;
 
 	next();
 }

@@ -1,3 +1,7 @@
+@import '@wordpress/base-styles/breakpoints';
+@import '@wordpress/base-styles/mixins';
+@import '@wordpress/base-styles/variables';
+
 .checkout-thank-you {
 	box-sizing: border-box;
 	position: static;
@@ -38,7 +42,7 @@
 
 	&:last-child {
 		border-bottom: 1px solid var( --color-neutral-0 );
-		border-radius: 0 0 3px 3px;
+		border-radius: 0 0 2px 2px;
 	}
 }
 
@@ -50,6 +54,25 @@
 
 	.purchase-detail__text {
 		text-align: left;
+	}
+}
+
+.checkout-thank-you__domain-mapping-details {
+	.purchase-detail__description {
+		margin: 0;
+	}
+	.purchase-detail__image {
+		@include break-mobile {
+			width: auto;
+			margin-right: 1em;
+		}
+	}
+	.purchase-detail__content {
+		padding: 32px 0 0;
+
+		@include break-mobile {
+			padding: 32px;
+		}
 	}
 }
 
@@ -166,6 +189,10 @@
 	button:nth-child( 2 ) {
 		margin-left: 10px;
 	}
+
+	.button > .gridicon.gridicons-external {
+		margin-left: 6px;
+	}
 }
 
 .checkout-thank-you__header-heading {
@@ -179,6 +206,7 @@
 	font-size: $font-title-small;
 	font-weight: 400;
 	margin-top: 15px;
+	word-break: break-word;
 }
 
 .checkout-thank-you__header.is-placeholder {
@@ -644,5 +672,220 @@
 
 	&.is-large {
 		transform: scale( 1 );
+	}
+}
+
+.jetpack-checkout-siteless-thank-you {
+	.jetpack-checkout-siteless-thank-you__card {
+		display: flex;
+		flex-direction: column;
+		padding: 0;
+		box-shadow: 0 0 40px 0 #00000014;
+
+		width: 100%;
+		max-width: none;
+
+		@include break-medium {
+			flex-direction: row;
+			width: auto;
+			max-width: 1200px;
+		}
+
+		.jetpack-logo {
+			margin-bottom: 25px;
+		}
+
+		h1 {
+			font-size: 3rem;
+			line-height: 3.25rem;
+			padding-bottom: 24px;
+			+ p {
+				font-size: 1.5rem;
+				line-height: 2rem;
+			}
+		}
+		h2 {
+			font-size: 1.5rem;
+			font-weight: 700;
+			line-height: 1.75rem;
+			padding-bottom: 16px;
+		}
+
+		a.jetpack-checkout-siteless-thank-you__link {
+			text-decoration: underline;
+			color: var( --color-studio-black );
+			&:hover {
+				text-decoration: none;
+			}
+		}
+
+		> div {
+			box-sizing: border-box;
+			padding: 15px 26px 26px;
+			@include break-mobile {
+				padding: 30px 76px 55px;
+			}
+		}
+		.jetpack-checkout-siteless-thank-you__card-main {
+			max-width: 744px;
+		}
+
+		.jetpack-checkout-siteless-thank-you__step {
+			display: flex;
+			align-items: flex-start;
+			.jetpack-checkout-siteless-thank-you__step-number {
+				color: white;
+				background-color: var( --studio-jetpack-green-50 );
+				text-align: center;
+				border-radius: 50%;
+				font-size: 1.25rem;
+				width: 1.8rem;
+				height: 1.8rem;
+			}
+			.jetpack-checkout-siteless-thank-you__step-content {
+				flex: 1;
+				padding: 0 10px 0 16px;
+			}
+		}
+
+		.jetpack-checkout-siteless-thank-you__form-group {
+			display: flex;
+			flex-direction: column;
+			padding-bottom: 1.5em;
+			@include break-mobile {
+				display: flex;
+				flex-direction: row;
+				justify-content: space-between;
+			}
+
+			.jetpack-checkout-siteless-thank-you__form-input {
+				margin-bottom: 16px;
+				@include break-mobile {
+					flex: 1;
+					margin-right: 16px;
+					margin-bottom: 0;
+				}
+			}
+			.button.jetpack-checkout-siteless-thank-you__form-submit {
+				margin: 0;
+				&.is-primary {
+					background-color: var( --studio-jetpack-green-50 );
+					border-color: var( --studio-jetpack-green-50 );
+					&:hover {
+						background-color: var( --studio-jetpack-green-60 );
+						border-color: var( --studio-jetpack-green-60 );
+					}
+					&[disabled] {
+						color: var( --color-neutral-20 );
+						background-color: var( --color-surface );
+						border-color: var( --color-neutral-5 );
+					}
+				}
+				@include break-mobile {
+					align-self: flex-end;
+					justify-self: flex-end;
+				}
+			}
+		}
+
+		.jetpack-checkout-siteless-thank-you__card-footer {
+			display: flex;
+			align-items: flex-end;
+
+			background-color: var( --color-neutral-5 );
+			> div {
+				max-width: 456px;
+			}
+		}
+
+		.jetpack-checkout-siteless-thank-you__main-message {
+			font-size: 2.25rem;
+			font-weight: 700;
+			margin-bottom: 24px;
+
+			@include break-mobile {
+				font-size: 3rem;
+			}
+		}
+
+		.jetpack-checkout-siteless-thank-you__sub-message {
+			font-size: 1.5rem;
+			margin-bottom: 64px;
+		}
+
+		.jetpack-checkout-siteless-thank-you__product-info-loading {
+			@include placeholder( --color-neutral-30 );
+		}
+	}
+}
+
+.jetpack-checkout-thank-you {
+	.jetpack-checkout-thank-you__card,
+	.jetpack-checkout-thank-you__card-loading {
+		box-shadow: 0 0 40px 0 #00000014;
+
+		width: 100%;
+		max-width: none;
+		padding: 16px;
+
+		@include break-mobile {
+			width: auto;
+			max-width: 650px;
+			padding: 96px;
+		}
+
+		// TODO min width
+		// TODO primary button color
+		.jetpack-checkout-thank-you__main-message {
+			font-size: 36px;
+			font-weight: 700;
+			margin-bottom: 24px;
+
+			@include break-mobile {
+				font-size: 48px;
+			}
+		}
+
+		.jetpack-checkout-thank-you__sub-message-loading,
+		.jetpack-checkout-thank-you__sub-message {
+			font-size: 24px;
+			font-weight: 500;
+			margin-bottom: 64px;
+		}
+
+		.jetpack-checkout-thank-you__email-message-loading,
+		.jetpack-checkout-thank-you__email-message {
+			margin-top: -32px;
+			margin-bottom: 64px;
+		}
+
+		.jetpack-checkout-thank-you__button,
+		.jetpack-checkout-thank-you__button:visited {
+			border-radius: 4px;
+			// button colors imported from packages/calypso-color-schemes/src/shared/color-schemes/_jetpack-cloud.scss
+			background-color: var( --studio-jetpack-green-50 );
+			border-color: var( --studio-jetpack-green-50 );
+			color: var( --color-text-inverted );
+
+			&:hover,
+			&:focus {
+				background-color: var( --studio-jetpack-green-60 );
+				border-color: var( --studio-jetpack-green-60 );
+				color: var( --color-text-inverted );
+			}
+
+			&[disabled],
+			&:disabled,
+			&.disabled {
+				color: var( --color-neutral-20 );
+				background-color: var( --color-surface );
+				border-color: var( --color-neutral-5 );
+			}
+		}
+	}
+
+	.jetpack-checkout-thank-you__sub-message-loading,
+	.jetpack-checkout-thank-you__email-message-loading {
+		@include placeholder( --color-neutral-30 );
 	}
 }

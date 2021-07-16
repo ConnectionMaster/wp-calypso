@@ -21,6 +21,7 @@ export const SITE_REQUEST_FIELDS = [
 	'is_fse_active',
 	'is_fse_eligible',
 	'is_core_site_editor_enabled',
+	'is_wpcom_atomic',
 	'description',
 ].join();
 
@@ -46,6 +47,7 @@ export const SITE_REQUEST_OPTIONS = [
 	'is_wpcom_atomic',
 	'is_wpcom_store',
 	'is_wpforteams_site',
+	'p2_hub_blog_id',
 	'woocommerce_is_active',
 	'jetpack_frame_nonce',
 	'jetpack_version',

@@ -1,0 +1,12 @@
+{
+	"extends": "@automattic/calypso-build/typescript/ts-package.json",
+	"compilerOptions": {
+		"declarationDir": "dist/types",
+		"outDir": "dist/esm",
+		"rootDir": "src",
+		"jsx": "react-jsx"
+	},
+	"include": [ "src" ],
+	"exclude": [ "**/test/*" ],
+	"references": [ { "path": "../design-picker" } ]
+}

@@ -10,7 +10,6 @@ import debugFactory from 'debug';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
 import wpcom from 'calypso/lib/wp';
 import { recordTracksEvent } from 'calypso/lib/analytics/tracks';
 import formState from 'calypso/lib/form-state';
@@ -37,6 +36,7 @@ const VALIDATION_DELAY_AFTER_FIELD_CHANGES = 1500;
 const ERROR_CODE_MISSING_SITE_TITLE = 123; // Random number, we don't need it.
 const ERROR_CODE_MISSING_SITE = 321; // Random number, we don't need it.
 const ERROR_CODE_TAKEN_SITE = 1337; // Random number, we don't need it.
+const ERROR_CODE_FROM_LOCAL_STORAGE = 7331; // Random number, we don't need it.
 
 const SITE_TAKEN_ERROR_CODES = [
 	'blog_name_exists',
@@ -65,10 +65,16 @@ class P2Site extends React.Component {
 			initialState = props.step.form;
 
 			if ( ! isEmpty( props.step.errors ) ) {
+				const errorMessage = props.step.errors[ 0 ].message;
+
+				this.logValidationErrorToLogstash( ERROR_CODE_FROM_LOCAL_STORAGE, errorMessage );
+
 				initialState = formState.setFieldErrors(
 					formState.setFieldsValidating( initialState ),
 					{
-						site: props.step.errors[ 0 ].message,
+						site: {
+							[ ERROR_CODE_FROM_LOCAL_STORAGE ]: errorMessage,
+						},
 					},
 					true
 				);
@@ -318,10 +324,7 @@ class P2Site extends React.Component {
 	};
 
 	getErrorMessagesWithLogin = ( fieldName ) => {
-		const link = login( {
-			isNative: config.isEnabled( 'login/native-login-links' ),
-			redirectTo: window.location.href,
-		} );
+		const link = login( { redirectTo: window.location.href } );
 		const messages = formState.getFieldErrorMessages( this.state.form, fieldName );
 
 		if ( ! messages ) {
@@ -374,7 +377,7 @@ class P2Site extends React.Component {
 					className="p2-site__validation-site-title"
 				>
 					<FormLabel htmlFor="site-title-input">
-						{ this.props.translate( 'Name your team or project' ) }
+						{ this.props.translate( 'Name your team' ) }
 					</FormLabel>
 					<FormTextInput
 						id="site-title-input"
@@ -395,7 +398,7 @@ class P2Site extends React.Component {
 					className="p2-site__validation-site"
 				>
 					<FormLabel htmlFor="site-address-input">
-						{ this.props.translate( 'Choose a site address' ) }
+						{ this.props.translate( 'Choose an address for your P2' ) }
 					</FormLabel>
 					<FormTextInput
 						id="site-address-input"

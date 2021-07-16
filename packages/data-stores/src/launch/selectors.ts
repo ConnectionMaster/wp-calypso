@@ -1,18 +1,10 @@
-/**
- * External dependencies
- */
 import { select } from '@wordpress/data';
-
-/**
- * Internal dependencies
- */
+import { STORE_KEY as LAUNCH_STORE, PLANS_STORE } from './constants';
 import { LaunchSequence, LaunchStep } from './data';
-import { PLANS_STORE, STORE_KEY as LAUNCH_STORE } from './constants';
-
+import type { Plans } from '..';
+import type * as DomainSuggestions from '../domain-suggestions';
 import type { State } from './reducer';
 import type { LaunchStepType } from './types';
-import type * as DomainSuggestions from '../domain-suggestions';
-import type { Plan } from '../plans';
 
 export const getLaunchSequence = (): typeof LaunchSequence => LaunchSequence;
 export const getLaunchStep = (): typeof LaunchStep => LaunchStep;
@@ -22,38 +14,35 @@ export const hasPaidDomain = ( state: State ): boolean => {
 	if ( ! state.domain ) {
 		return false;
 	}
-	return ! state.domain.is_free;
+	return ! state.domain.is_free; // @TODO: check if we are ever storing a paid domain
 };
 export const getSelectedDomain = ( state: State ): DomainSuggestions.DomainSuggestion | undefined =>
 	state.domain;
 export const getSelectedPlanProductId = ( state: State ): number | undefined => state.planProductId;
 
-export const getSelectedPlan = ( state: State ): Plan | undefined =>
-	select( PLANS_STORE ).getPlanByProductId( state.planProductId );
-
 /**
- * Returns the product id of the the last paid plan the user had picked.
- * If they revert to a free plan,
- * this is useful if you want to recommend their once-picked paid plan
+ * This returns the readonly value of the billing period.
+ * This value is automatically inferred from the selected paid plan.
+ * If the user picks a free plan, this value will remain unchanged and
+ * will return the billing period of the previously selected paid plan.
  *
- * @param state State
+ * @param state the state
  */
-export const getPaidPlanProductId = ( state: State ): number | undefined => {
-	const productId = state.planProductId;
-	const isFree = select( PLANS_STORE ).isPlanProductFree( productId );
+export const getLastPlanBillingPeriod = ( state: State ): Plans.PlanBillingPeriod =>
+	state.planBillingPeriod;
 
-	return productId && ! isFree ? state.planProductId : undefined;
-};
+export const isSelectedPlanPaid = ( state: State ): boolean =>
+	typeof state.planProductId !== 'undefined' &&
+	! select( PLANS_STORE ).isPlanProductFree( state.planProductId );
 
 // Check if a domain has been explicitly selected (including free subdomain)
-
 /**
  * Check if the user has selected a domain, including explicitly selecting the subdomain
  * This is useful for step/flow completion in the context of highlighting steps or enabling Launch button
  *
  * @param state State
  */
-export const hasSelectedDomain = ( state: State ): boolean =>
+export const hasSelectedDomainOrSubdomain = ( state: State ): boolean =>
 	!! getSelectedDomain( state ) || state.confirmedDomainSelection;
 
 // Completion status of steps is derived from the state of the launch flow
@@ -71,7 +60,7 @@ export const isStepCompleted = ( state: State, step: LaunchStepType ): boolean =
 		return !! site?.title;
 	}
 	if ( step === LaunchStep.Domain ) {
-		return select( LAUNCH_STORE ).hasSelectedDomain();
+		return select( LAUNCH_STORE ).hasSelectedDomainOrSubdomain();
 	}
 	return false;
 };
@@ -91,3 +80,7 @@ export const getFirstIncompleteStep = ( state: State ): LaunchStepType | undefin
 	LaunchSequence.find( ( step ) => ! isStepCompleted( state, step ) );
 
 export const getSiteTitle = ( state: State ): string | undefined => state?.siteTitle;
+
+export const getCurrentStep = ( state: State ): string => state.step;
+
+export const getDomainSearch = ( state: State ): string => state.domainSearch;

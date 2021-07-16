@@ -1,6 +1,3 @@
-/**
- * External dependencies
- */
 import wpcomProxyRequest, {
 	reloadProxy as triggerReloadProxy,
 	requestAllBlogsAccess as triggerRequestAllBlogsAccess,
@@ -8,7 +5,9 @@ import wpcomProxyRequest, {
 
 type WpcomProxyRequestOptions = Parameters< typeof wpcomProxyRequest >[ 0 ];
 
-export const wpcomRequest = ( request: WpcomProxyRequestOptions ) =>
+export const wpcomRequest = (
+	request: WpcomProxyRequestOptions
+): { type: 'WPCOM_REQUEST'; request: WpcomProxyRequestOptions } =>
 	( { type: 'WPCOM_REQUEST', request } as const );
 
 /**

@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../driver-helper';
 import AsyncBaseContainer from '../async-base-container';
+import * as driverHelper from '../driver-helper';
 
 export default class RevisionsModalComponent extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -28,6 +21,9 @@ export default class RevisionsModalComponent extends AsyncBaseContainer {
 		await this.driver.executeScript( 'arguments[0].click()', firstRevision );
 		await this.driver.executeScript( 'arguments[0].click()', loadButton );
 
-		return driverHelper.waitTillNotPresent( this.driver, this.expectedElementSelector );
+		return await driverHelper.waitUntilElementNotLocated(
+			this.driver,
+			this.expectedElementLocator
+		);
 	}
 }

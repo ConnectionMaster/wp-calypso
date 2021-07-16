@@ -15,6 +15,7 @@ import {
 	HAPPYCHAT_IO_RECEIVE_INIT,
 	HAPPYCHAT_IO_RECEIVE_LOCALIZED_SUPPORT,
 	HAPPYCHAT_IO_RECEIVE_MESSAGE,
+	HAPPYCHAT_IO_RECEIVE_MESSAGE_UPDATE,
 	HAPPYCHAT_IO_RECEIVE_RECONNECTING,
 	HAPPYCHAT_IO_RECEIVE_STATUS,
 	HAPPYCHAT_IO_RECEIVE_TOKEN,
@@ -28,6 +29,7 @@ import {
 	HAPPYCHAT_IO_SEND_MESSAGE_USERINFO,
 	HAPPYCHAT_IO_SEND_PREFERENCES,
 	HAPPYCHAT_IO_SEND_TYPING,
+	HAPPYCHAT_IO_SET_CUSTOM_FIELDS,
 } from 'calypso/state/action-types';
 import { HAPPYCHAT_MESSAGE_TYPES } from 'calypso/state/happychat/constants';
 
@@ -130,6 +132,18 @@ export const receiveLocalizedSupport = ( isAvailable ) => ( {
  * @returns {object} Action object
  */
 export const receiveMessage = ( message ) => ( { type: HAPPYCHAT_IO_RECEIVE_MESSAGE, message } );
+
+/**
+ * Returns an action object for the message update event,
+ * as it was received from Happychat.
+ *
+ * @param  {object} message Updated message
+ * @returns {object} Action object
+ */
+export const receiveMessageUpdate = ( message ) => ( {
+	type: HAPPYCHAT_IO_RECEIVE_MESSAGE_UPDATE,
+	message,
+} );
 
 /**
  * Returns an action object for the status event,
@@ -305,4 +319,18 @@ export const sendPreferences = ( locale, groups, skills ) => ( {
 		groups,
 		skills,
 	},
+} );
+
+/**
+ * Returns an action object that will send the given Custom Field key/values to be
+ * set on the current chat.
+ *
+ * @param {object} fieldData Key/values of Custom Fields to be set
+ *
+ * @returns {object} Action object
+ */
+export const setChatCustomFields = ( fieldData ) => ( {
+	type: HAPPYCHAT_IO_SET_CUSTOM_FIELDS,
+	event: 'chat.setFields',
+	payload: fieldData,
 } );

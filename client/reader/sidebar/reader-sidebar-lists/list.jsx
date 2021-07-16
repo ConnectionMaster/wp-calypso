@@ -1,14 +1,14 @@
 /**
  * External dependencies
  */
-import { identity, map } from 'lodash';
+import { map } from 'lodash';
 import PropTypes from 'prop-types';
 import React from 'react';
 
 /**
  * Internal dependencies
  */
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import ListItem from './list-item';
 import ListItemCreateLink from './list-item-create-link';
 
@@ -19,10 +19,6 @@ export class ReaderSidebarListsList extends React.Component {
 		currentListOwner: PropTypes.string,
 		currentListSlug: PropTypes.string,
 		translate: PropTypes.func,
-	};
-
-	static defaultProps = {
-		translate: identity,
 	};
 
 	renderItems() {

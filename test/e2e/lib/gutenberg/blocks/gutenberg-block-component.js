@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper';
 
 export default class GutenbergBlockComponent extends AsyncBaseContainer {
 	constructor( driver, blockID ) {
@@ -23,11 +16,14 @@ export default class GutenbergBlockComponent extends AsyncBaseContainer {
 	}
 
 	async focusBlock() {
-		const selectedBlockSelector = By.css(
+		const selectedBlockLocator = By.css(
 			`${ this.blockID }.block-editor-block-list__block.is-selected`
 		);
 
-		await driverHelper.clickWhenClickable( this.driver, this.expectedElementSelector );
-		return await driverHelper.waitTillPresentAndDisplayed( this.driver, selectedBlockSelector );
+		await driverHelper.clickWhenClickable( this.driver, this.expectedElementLocator );
+		return await driverHelper.waitUntilElementLocatedAndVisible(
+			this.driver,
+			selectedBlockLocator
+		);
 	}
 }

@@ -21,9 +21,9 @@ import getIsSiteWPCOM from 'calypso/state/selectors/is-site-wpcom';
 import QueryScanState from 'calypso/components/data/query-jetpack-scan';
 import ScanBadge from 'calypso/components/jetpack/scan-badge';
 import SidebarItem from 'calypso/layout/sidebar/item';
-import { isEnabled } from 'calypso/config';
 import isSiteWPForTeams from 'calypso/state/selectors/is-site-wpforteams';
 import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
+import { isEnabled } from '@automattic/calypso-config';
 
 export default ( { path, showIcons, tracksEventNames, expandSection } ) => {
 	const translate = useTranslate();
@@ -36,8 +36,6 @@ export default ( { path, showIcons, tracksEventNames, expandSection } ) => {
 	const isWPCOM = useSelector( ( state ) => getIsSiteWPCOM( state, siteId ) );
 	const scanProgress = useSelector( ( state ) => getSiteScanProgress( state, siteId ) );
 	const scanThreats = useSelector( ( state ) => getSiteScanThreats( state, siteId ) );
-
-	const isDesktop = isEnabled( 'desktop' );
 
 	const onNavigate = ( event ) => () => {
 		dispatch( recordTracksEvent( event ) );
@@ -65,26 +63,26 @@ export default ( { path, showIcons, tracksEventNames, expandSection } ) => {
 					expandSection={ expandSection }
 				/>
 			) }
-			{
-				// Backup does not work in wp-desktop. Disable in the desktop app until
-				// it can be revisited: https://github.com/Automattic/wp-desktop/issues/943
-				isAdmin && ! isDesktop && ! isWPForTeamsSite && (
-					<SidebarItem
-						materialIcon={ showIcons ? 'backup' : undefined }
-						materialIconStyle="filled"
-						label="Backup"
-						link={ backupPath( siteSlug ) }
-						onNavigate={ onNavigate( tracksEventNames.backupClicked ) }
-						selected={ currentPathMatches( backupPath( siteSlug ) ) }
-						expandSection={ expandSection }
-					/>
-				)
-			}
+			{ isAdmin && ! isWPForTeamsSite && (
+				<SidebarItem
+					materialIcon={ showIcons ? 'backup' : undefined }
+					materialIconStyle="filled"
+					label={ translate( 'Backup', {
+						comment: 'Jetpack sidebar menu item',
+					} ) }
+					link={ backupPath( siteSlug ) }
+					onNavigate={ onNavigate( tracksEventNames.backupClicked ) }
+					selected={ currentPathMatches( backupPath( siteSlug ) ) }
+					expandSection={ expandSection }
+				/>
+			) }
 			{ isAdmin && ! isWPCOM && ! isWPForTeamsSite && (
 				<SidebarItem
 					materialIcon={ showIcons ? 'security' : undefined }
 					materialIconStyle="filled"
-					label="Scan"
+					label={ translate( 'Scan', {
+						comment: 'Jetpack sidebar menu item',
+					} ) }
 					link={ scanPath( siteSlug ) }
 					onNavigate={ onNavigate( tracksEventNames.scanClicked ) }
 					selected={ currentPathMatches( scanPath( siteSlug ) ) }
@@ -93,7 +91,7 @@ export default ( { path, showIcons, tracksEventNames, expandSection } ) => {
 					<ScanBadge progress={ scanProgress } numberOfThreatsFound={ scanThreats?.length ?? 0 } />
 				</SidebarItem>
 			) }
-			{ ! isJetpackCloud() && (
+			{ ( ! isJetpackCloud() || isEnabled( 'jetpack-cloud/search' ) ) && (
 				<SidebarItem
 					tipTarget="jetpack-search"
 					icon={ showIcons ? 'search' : undefined }

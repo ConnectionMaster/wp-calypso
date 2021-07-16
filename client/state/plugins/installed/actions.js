@@ -260,7 +260,7 @@ export function updatePlugin( siteId, plugin ) {
 }
 
 export function enableAutoupdatePlugin( siteId, plugin ) {
-	return ( dispatch, getState ) => {
+	return ( dispatch ) => {
 		const pluginId = plugin.id;
 		const defaultAction = {
 			action: ENABLE_AUTOUPDATE_PLUGIN,
@@ -271,14 +271,14 @@ export function enableAutoupdatePlugin( siteId, plugin ) {
 		dispatch( { ...defaultAction, type: PLUGIN_AUTOUPDATE_ENABLE_REQUEST } );
 
 		const afterEnableAutoupdateCallback = ( error ) => {
-			recordEvent( 'calypso_plugin_autoupdate_enabled', plugin, siteId, error );
+			dispatch( recordEvent( 'calypso_plugin_autoupdate_enabled', plugin, siteId, error ) );
 		};
 
 		const successCallback = ( data ) => {
 			dispatch( { ...defaultAction, type: PLUGIN_AUTOUPDATE_ENABLE_REQUEST_SUCCESS, data } );
 			afterEnableAutoupdateCallback( undefined );
 			if ( data.update ) {
-				updatePlugin( siteId, data )( dispatch, getState );
+				updatePlugin( siteId, data )( dispatch );
 			}
 		};
 
@@ -306,7 +306,7 @@ export function disableAutoupdatePlugin( siteId, plugin ) {
 		dispatch( { ...defaultAction, type: PLUGIN_AUTOUPDATE_DISABLE_REQUEST } );
 
 		const afterDisableAutoupdateCallback = ( error ) => {
-			recordEvent( 'calypso_plugin_autoupdate_disabled', plugin, siteId, error );
+			dispatch( recordEvent( 'calypso_plugin_autoupdate_disabled', plugin, siteId, error ) );
 		};
 
 		const successCallback = ( data ) => {
@@ -355,9 +355,7 @@ function refreshNetworkSites( siteId ) {
 }
 
 function installPluginHelper( siteId, plugin, isMainNetworkSite = false ) {
-	return ( dispatch, getState ) => {
-		const state = getState();
-		const site = getSite( state, siteId );
+	return ( dispatch ) => {
 		const pluginId = plugin.id || plugin.slug;
 		const defaultAction = {
 			action: INSTALL_PLUGIN,
@@ -386,7 +384,7 @@ function installPluginHelper( siteId, plugin, isMainNetworkSite = false ) {
 			if ( INSTALL_PLUGIN === type ) {
 				return;
 			}
-			recordEvent( 'calypso_plugin_installed', plugin, site, error );
+			dispatch( recordEvent( 'calypso_plugin_installed', plugin, siteId, error ) );
 		};
 
 		const successCallback = ( data ) => {
@@ -444,9 +442,7 @@ export function installPluginOnMultisite( siteId, plugin ) {
 }
 
 export function removePlugin( siteId, plugin ) {
-	return ( dispatch, getState ) => {
-		const state = getState();
-		const site = getSite( state, siteId );
+	return ( dispatch ) => {
 		const pluginId = plugin.id || plugin.slug;
 		const defaultAction = {
 			action: REMOVE_PLUGIN,
@@ -456,7 +452,7 @@ export function removePlugin( siteId, plugin ) {
 		dispatch( { ...defaultAction, type: PLUGIN_REMOVE_REQUEST } );
 
 		const recordRemovePluginEvent = ( type, error ) => {
-			recordEvent( 'calypso_plugin_removed', plugin, site, error );
+			dispatch( recordEvent( 'calypso_plugin_removed', plugin, siteId, error ) );
 		};
 
 		const doDeactivate = function ( pluginData ) {
@@ -506,7 +502,7 @@ export function receiveSitePlugins( siteId, plugins ) {
 }
 
 export function fetchSitePlugins( siteId ) {
-	return ( dispatch, getState ) => {
+	return ( dispatch ) => {
 		const defaultAction = {
 			siteId,
 		};
@@ -518,7 +514,7 @@ export function fetchSitePlugins( siteId ) {
 
 			data.plugins.map( ( plugin ) => {
 				if ( plugin.update && plugin.autoupdate ) {
-					updatePlugin( siteId, plugin )( dispatch, getState );
+					updatePlugin( siteId, plugin )( dispatch );
 				}
 			} );
 		};

@@ -13,9 +13,6 @@ import {
 	siteHasBackupProductPurchase,
 } from '../selectors';
 
-// Gets rid of warnings such as 'UnhandledPromiseRejectionWarning: Error: No available storage method found.'
-jest.mock( 'calypso/lib/user', () => () => {} );
-
 describe( 'selectors', () => {
 	describe( 'getPurchases', () => {
 		test( 'should return different purchases when the purchase data changes', () => {
@@ -90,6 +87,7 @@ describe( 'selectors', () => {
 				expiryStatus: '',
 				includedDomain: undefined,
 				includedDomainPurchaseAmount: undefined,
+				introductoryOffer: null,
 				isCancelable: false,
 				isDomainRegistration: false,
 				isRechargeable: true,

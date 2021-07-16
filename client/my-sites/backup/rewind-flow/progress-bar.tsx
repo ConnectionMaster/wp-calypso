@@ -9,9 +9,15 @@ import React, { FunctionComponent } from 'react';
  */
 import { ProgressBar } from '@automattic/components';
 
+/**
+ * Type dependencies
+ */
+import type { TranslateResult } from 'i18n-calypso';
+
 interface Props {
 	isReady: boolean;
 	percent: number | null;
+	initializationMessage: TranslateResult;
 	message?: string;
 	entry?: string;
 }
@@ -19,17 +25,18 @@ interface Props {
 const RewindFlowProgressBar: FunctionComponent< Props > = ( {
 	isReady,
 	percent,
+	initializationMessage,
 	message,
 	entry,
 } ) => {
 	const translate = useTranslate();
-	const filteredPercent = percent !== null ? percent : 0;
+	const filteredPercent = ( Number.isFinite( percent ) ? percent : 0 ) as number;
 
 	return (
 		<div className="rewind-flow__progress-bar">
 			<div className="rewind-flow__progress-bar-header">
 				<p className="rewind-flow__progress-bar-message">
-					{ isReady ? message : translate( 'Initializing the restore process' ) }
+					{ isReady ? message : initializationMessage }
 				</p>
 				<p className="rewind-flow__progress-bar-percent">
 					{ translate( '%(filteredPercent)d%% complete', { args: { filteredPercent } } ) }

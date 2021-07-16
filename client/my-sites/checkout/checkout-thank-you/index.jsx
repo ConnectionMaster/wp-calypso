@@ -3,7 +3,7 @@
  */
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
-import { find, get, identity } from 'lodash';
+import { find, get } from 'lodash';
 import page from 'page';
 import PropTypes from 'prop-types';
 import React from 'react';
@@ -43,7 +43,7 @@ import {
 	isDomainRegistration,
 	isDomainTransfer,
 	isEcommerce,
-	isGoogleApps,
+	isGSuiteOrExtraLicenseOrGoogleWorkspace,
 	isGuidedTransfer,
 	isJetpackPlan,
 	isPlan,
@@ -54,7 +54,11 @@ import {
 	isSiteRedirect,
 	isTheme,
 	isTitanMail,
-} from 'calypso/lib/products-values';
+	isJetpackBusinessPlan,
+	isWpComBusinessPlan,
+	shouldFetchSitePlans,
+	isMarketplaceProduct,
+} from '@automattic/calypso-products';
 import { isExternal } from 'calypso/lib/url';
 import JetpackPlanDetails from './jetpack-plan-details';
 import Main from 'calypso/components/main';
@@ -66,11 +70,6 @@ import EcommercePlanDetails from './ecommerce-plan-details';
 import FailedPurchaseDetails from './failed-purchase-details';
 import TransferPending from './transfer-pending';
 import PurchaseDetail from 'calypso/components/purchase-detail';
-import {
-	isJetpackBusinessPlan,
-	isWpComBusinessPlan,
-	shouldFetchSitePlans,
-} from 'calypso/lib/plans';
 import { getFeatureByKey } from 'calypso/lib/plans/features-list';
 import RebrandCitiesThankYou from './rebrand-cities-thank-you';
 import SiteRedirectDetails from './site-redirect-details';
@@ -85,7 +84,6 @@ import { isRebrandCitiesSiteUrl } from 'calypso/lib/rebrand-cities';
 import { fetchAtomicTransfer } from 'calypso/state/atomic-transfer/actions';
 import { transferStates } from 'calypso/state/atomic-transfer/constants';
 import getAtomicTransfer from 'calypso/state/selectors/get-atomic-transfer';
-import isFetchingTransfer from 'calypso/state/selectors/is-fetching-atomic-transfer';
 import { getSiteHomeUrl, getSiteSlug } from 'calypso/state/sites/selectors';
 import { recordStartTransferClickInThankYou } from 'calypso/state/domains/actions';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
@@ -93,6 +91,8 @@ import { getActiveTheme } from 'calypso/state/themes/selectors';
 import getCustomizeOrEditFrontPageUrl from 'calypso/state/selectors/get-customize-or-edit-front-page-url';
 import getCheckoutUpgradeIntent from 'calypso/state/selectors/get-checkout-upgrade-intent';
 import { isProductsListFetching } from 'calypso/state/products-list/selectors';
+import AsyncLoad from 'calypso/components/async-load';
+
 /**
  * Style dependencies
  */
@@ -119,7 +119,6 @@ export class CheckoutThankYou extends React.Component {
 	static propTypes = {
 		domainOnlySiteFlow: PropTypes.bool.isRequired,
 		failedPurchases: PropTypes.array,
-		isFetchingTransfer: PropTypes.bool,
 		isSimplified: PropTypes.bool,
 		receiptId: PropTypes.number,
 		gsuiteReceiptId: PropTypes.number,
@@ -129,10 +128,6 @@ export class CheckoutThankYou extends React.Component {
 		siteHomeUrl: PropTypes.string.isRequired,
 		transferComplete: PropTypes.bool,
 		siteUnlaunchedBeforeUpgrade: PropTypes.bool,
-	};
-
-	static defaultProps = {
-		fetchAtomicTransfer: identity,
 	};
 
 	componentDidMount() {
@@ -148,14 +143,14 @@ export class CheckoutThankYou extends React.Component {
 			sitePlans,
 		} = this.props;
 
-		if ( selectedSite && ! this.props.isFetchingTransfer ) {
-			this.props.fetchAtomicTransfer( selectedSite );
+		if ( selectedSite ) {
+			this.props.fetchAtomicTransfer?.( selectedSite.ID );
 		}
 
 		if ( selectedSite && receipt.hasLoadedFromServer && this.hasPlanOrDomainProduct() ) {
-			this.props.refreshSitePlans( selectedSite );
+			this.props.refreshSitePlans( selectedSite.ID );
 		} else if ( shouldFetchSitePlans( sitePlans, selectedSite ) ) {
-			this.props.fetchSitePlans( selectedSite );
+			this.props.fetchSitePlans( selectedSite.ID );
 		}
 
 		if ( receiptId && ! receipt.hasLoadedFromServer && ! receipt.isRequesting ) {
@@ -186,7 +181,7 @@ export class CheckoutThankYou extends React.Component {
 			this.hasPlanOrDomainProduct( nextProps ) &&
 			this.props.selectedSite
 		) {
-			this.props.refreshSitePlans( this.props.selectedSite );
+			this.props.refreshSitePlans( this.props.selectedSite.ID );
 		}
 	}
 
@@ -279,8 +274,12 @@ export class CheckoutThankYou extends React.Component {
 			purchases.every( isTheme )
 		) {
 			const themeId = purchases[ 0 ].meta;
-			this.props.activatedTheme( 'premium/' + themeId, this.props.selectedSite.ID );
-
+			this.props.themeActivated(
+				'premium/' + themeId,
+				this.props.selectedSite.ID,
+				'calypstore',
+				true
+			);
 			page.redirect( '/themes/' + this.props.selectedSite.slug );
 		}
 	};
@@ -330,8 +329,9 @@ export class CheckoutThankYou extends React.Component {
 				return page( domainManagementList( siteSlug ) );
 			}
 
-			if ( purchases.some( isGoogleApps ) ) {
-				const purchase = find( purchases, isGoogleApps );
+			if ( purchases.some( isGSuiteOrExtraLicenseOrGoogleWorkspace ) ) {
+				const purchase = find( purchases, isGSuiteOrExtraLicenseOrGoogleWorkspace );
+
 				return page( emailManagement( siteSlug, purchase.meta ) );
 			}
 		}
@@ -392,6 +392,7 @@ export class CheckoutThankYou extends React.Component {
 		let failedPurchases = [];
 		let wasJetpackPlanPurchased = false;
 		let wasEcommercePlanPurchased = false;
+		let wasMarketplaceProduct = false;
 		let delayedTransferPurchase = false;
 
 		if ( this.isDataLoaded() && ! this.isGenericReceipt() ) {
@@ -400,6 +401,7 @@ export class CheckoutThankYou extends React.Component {
 			wasJetpackPlanPurchased = purchases.some( isJetpackPlan );
 			wasEcommercePlanPurchased = purchases.some( isEcommerce );
 			delayedTransferPurchase = find( purchases, isDelayedDomainTransfer );
+			wasMarketplaceProduct = purchases.some( isMarketplaceProduct );
 		}
 
 		// this placeholder is using just wp logo here because two possible states do not share a common layout
@@ -430,7 +432,9 @@ export class CheckoutThankYou extends React.Component {
 			);
 		}
 
-		if ( wasEcommercePlanPurchased ) {
+		if ( wasMarketplaceProduct ) {
+			return <AsyncLoad require="calypso/my-sites/marketplace/marketplace-plugin-setup-status" />;
+		} else if ( wasEcommercePlanPurchased ) {
 			if ( ! this.props.transferComplete ) {
 				return (
 					<TransferPending orderId={ this.props.receiptId } siteId={ this.props.selectedSite.ID } />
@@ -510,7 +514,6 @@ export class CheckoutThankYou extends React.Component {
 		if ( this.isDataLoaded() && ! this.isGenericReceipt() ) {
 			const purchases = getPurchases( this.props );
 			const failedPurchases = getFailedPurchases( this.props );
-
 			if ( failedPurchases.length > 0 ) {
 				return [ FailedPurchaseDetails ];
 			} else if ( purchases.some( isJetpackPlan ) ) {
@@ -530,8 +533,11 @@ export class CheckoutThankYou extends React.Component {
 					DomainRegistrationDetails,
 					...findPurchaseAndDomain( purchases, isDomainRegistration ),
 				];
-			} else if ( purchases.some( isGoogleApps ) ) {
-				return [ GoogleAppsDetails, ...findPurchaseAndDomain( purchases, isGoogleApps ) ];
+			} else if ( purchases.some( isGSuiteOrExtraLicenseOrGoogleWorkspace ) ) {
+				return [
+					GoogleAppsDetails,
+					...findPurchaseAndDomain( purchases, isGSuiteOrExtraLicenseOrGoogleWorkspace ),
+				];
 			} else if ( purchases.some( isDomainMapping ) ) {
 				return [ DomainMappingDetails, ...findPurchaseAndDomain( purchases, isDomainMapping ) ];
 			} else if ( purchases.some( isSiteRedirect ) ) {
@@ -652,7 +658,6 @@ export default connect(
 		const activeTheme = getActiveTheme( state, siteId );
 
 		return {
-			isFetchingTransfer: isFetchingTransfer( state, siteId ),
 			isProductsListFetching: isProductsListFetching( state ),
 			planSlug,
 			receipt: getReceiptById( state, props.receiptId ),
@@ -664,35 +669,19 @@ export default connect(
 				-1,
 			user: getCurrentUser( state ),
 			userDate: getCurrentUserDate( state ),
-			transferComplete:
-				transferStates.COMPLETED ===
-				get( getAtomicTransfer( state, siteId ), 'status', transferStates.PENDING ),
+			transferComplete: transferStates.COMPLETED === getAtomicTransfer( state, siteId ).status,
 			isEmailVerified: isCurrentUserEmailVerified( state ),
 			selectedSiteSlug: getSiteSlug( state, siteId ),
 			siteHomeUrl: getSiteHomeUrl( state, siteId ),
 			customizeUrl: getCustomizeOrEditFrontPageUrl( state, activeTheme, siteId ),
 		};
 	},
-	( dispatch ) => {
-		return {
-			activatedTheme( meta, site ) {
-				dispatch( themeActivated( meta, site, 'calypstore', true ) );
-			},
-			fetchReceipt( receiptId ) {
-				dispatch( fetchReceipt( receiptId ) );
-			},
-			fetchSitePlans( site ) {
-				dispatch( fetchSitePlans( site.ID ) );
-			},
-			refreshSitePlans( site ) {
-				dispatch( refreshSitePlans( site.ID ) );
-			},
-			recordStartTransferClickInThankYou( domain ) {
-				dispatch( recordStartTransferClickInThankYou( domain ) );
-			},
-			fetchAtomicTransfer( site ) {
-				dispatch( fetchAtomicTransfer( site.ID ) );
-			},
-		};
+	{
+		themeActivated,
+		fetchReceipt,
+		fetchSitePlans,
+		refreshSitePlans,
+		recordStartTransferClickInThankYou,
+		fetchAtomicTransfer,
 	}
 )( localize( CheckoutThankYou ) );

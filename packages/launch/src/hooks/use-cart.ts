@@ -1,53 +1,87 @@
-/**
- * External dependencies
- */
-import * as React from 'react';
+import { useLocale } from '@automattic/i18n-utils';
 import { useSelect, useDispatch } from '@wordpress/data';
-
-/**
- * Internal dependencies
- */
-import { LAUNCH_STORE, SITE_STORE, PLANS_STORE } from '../stores';
+import * as React from 'react';
 import LaunchContext from '../context';
+import { useSiteDomains, useHasEcommercePlan } from '../hooks';
+import { LAUNCH_STORE, SITE_STORE, PLANS_STORE } from '../stores';
 import { getDomainProduct, getPlanProductForFlow } from '../utils';
-import { useSiteDomains } from '../hooks';
 
-export function useCart(): { goToCheckout: () => Promise< void > } {
-	const { siteId, flow, openCheckout } = React.useContext( LaunchContext );
+type LaunchCart = {
+	goToCheckout: () => Promise< void >; // used in gutenboarding-launch
+	goToCheckoutAndLaunch: () => Promise< void >; // used in focused-launch integrated with Editor Checkout modal
+	isCartUpdating: boolean;
+};
 
-	const { planProductId, domain } = useSelect( ( select ) => select( LAUNCH_STORE ).getState() );
+export function useCart(): LaunchCart {
+	const { siteId, flow, openCheckout, isInIframe } = React.useContext( LaunchContext );
 
-	const planProduct = useSelect( ( select ) =>
-		select( PLANS_STORE ).getPlanProductById( planProductId as number )
-	);
+	const locale = useLocale();
 
-	const plan = useSelect( ( select ) => select( PLANS_STORE ).getPlanByProductId( planProductId ) );
+	const [ planProductId, domain ] = useSelect( ( select ) => [
+		select( LAUNCH_STORE ).getSelectedPlanProductId(),
+		select( LAUNCH_STORE ).getSelectedDomain(),
+	] );
 
-	const isEcommercePlan = useSelect( ( select ) =>
-		select( PLANS_STORE ).isPlanEcommerce( plan?.periodAgnosticSlug )
+	const { planProduct, isEcommercePlan } = useSelect(
+		( select ) => {
+			const plansStore = select( PLANS_STORE );
+			const plan = plansStore.getPlanByProductId( planProductId, locale );
+			return {
+				planProduct: plansStore.getPlanProductById( planProductId as number ),
+				isEcommercePlan: plansStore.isPlanEcommerce( plan?.periodAgnosticSlug ),
+			};
+		},
+		[ planProductId, locale ]
 	);
 
 	const { siteSubdomain } = useSiteDomains();
 
-	const { getCart, setCart } = useDispatch( SITE_STORE );
+	const { getCart, setCart, launchSite } = useDispatch( SITE_STORE );
 
-	const goToCheckout = async () => {
-		// setting the cart with Launch products can be extracted
-		// to an action creator on the Launch data-store
+	const onSuccess = () => launchSite( siteId );
+
+	const [ isCartUpdating, setIsCartUpdating ] = React.useState( false );
+
+	const hasEcommercePlan = useHasEcommercePlan();
+
+	const addProductsToCart = async () => {
+		if ( isCartUpdating ) {
+			return;
+		}
+
+		setIsCartUpdating( true );
+
+		// @TODO: setting the cart with Launch products can be extracted to an action creator on the Launch store
 		const domainProductForFlow = domain && getDomainProduct( domain, flow );
 		const planProductForFlow = planProduct && getPlanProductForFlow( planProduct, flow );
-
 		const cart = await getCart( siteId );
 		await setCart( siteId, {
 			...cart,
+			// replace any existing products from cart
 			products: [ planProductForFlow, domainProductForFlow ],
 		} );
 
-		// open checkout modal or redirect to /checkout only after the cart is updated
-		openCheckout( siteSubdomain?.domain || siteId.toString(), isEcommercePlan );
+		setIsCartUpdating( false );
+	};
+
+	const goToCheckout = async () => {
+		await addProductsToCart();
+		openCheckout( siteSubdomain?.domain, isEcommercePlan, onSuccess );
+	};
+
+	const goToCheckoutAndLaunch = async () => {
+		if ( ! isInIframe || hasEcommercePlan ) {
+			// We launch the site first and then open Checkout in these cases:
+			// - Focused Launch is loaded outside Calypso iframe (in wp-admin)
+			// - eCommerce plan is selected so Checkout will handle thank-you redirect after purchase
+			await launchSite( siteId );
+		}
+		goToCheckout();
 	};
 
 	return {
 		goToCheckout,
+		goToCheckoutAndLaunch,
+		isCartUpdating,
 	};
 }

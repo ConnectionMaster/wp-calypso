@@ -1,14 +1,7 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
+import AsyncBaseContainer from '../../async-base-container';
 import * as driverHelper from '../../driver-helper';
 import * as driverManager from '../../driver-manager';
-import AsyncBaseContainer from '../../async-base-container';
 
 export default class JetpackComPage extends AsyncBaseContainer {
 	constructor( driver, url = 'https://jetpack.com/' ) {
@@ -17,11 +10,11 @@ export default class JetpackComPage extends AsyncBaseContainer {
 
 	async selectGetStarted() {
 		const onMobile = driverManager.currentScreenSize() === 'mobile';
-		const mobileToggleSelector = By.css( '#mobilenav-toggle' );
-		const getStartedSelector = By.css( '.install a' );
+		const mobileToggleLocator = By.css( '#mobilenav-toggle' );
+		const getStartedLocator = By.css( '.install a' );
 		if ( onMobile ) {
-			await driverHelper.clickWhenClickable( this.driver, mobileToggleSelector );
+			await driverHelper.clickWhenClickable( this.driver, mobileToggleLocator );
 		}
-		return await driverHelper.clickWhenClickable( this.driver, getStartedSelector );
+		return await driverHelper.clickWhenClickable( this.driver, getStartedLocator );
 	}
 }

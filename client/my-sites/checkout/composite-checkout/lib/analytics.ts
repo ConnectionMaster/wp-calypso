@@ -2,18 +2,18 @@
  * External dependencies
  */
 import { useDispatch } from 'react-redux';
+import type { CheckoutPaymentMethodSlug } from '@automattic/wpcom-checkout';
 
 /**
  * Internal dependencies
  */
 import { logToLogstash } from 'calypso/state/logstash/actions';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { recordTracksEvent } from 'calypso/state/analytics/actions';
 import {
 	translateCheckoutPaymentMethodToWpcomPaymentMethod,
 	isRedirectPaymentMethod,
 } from '../lib/translate-payment-method-names';
-import type { CheckoutPaymentMethodSlug } from '../types/checkout-payment-method-slug';
 
 export function logStashLoadErrorEventAction(
 	errorType: string,

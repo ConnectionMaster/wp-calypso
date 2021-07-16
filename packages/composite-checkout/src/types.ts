@@ -1,12 +1,5 @@
-/**
- * External dependencies
- */
 import { DataRegistry } from '@wordpress/data';
 import { ReactElement } from 'react';
-
-/**
- * Internal dependencies
- */
 import { Theme } from './lib/theme';
 
 export interface CheckoutStepProps {
@@ -33,9 +26,9 @@ export interface OrderSummaryData {
 
 export interface PaymentMethod {
 	id: string;
-	label: React.ReactNode;
-	activeContent: React.ReactNode;
-	inactiveContent: React.ReactNode;
+	label?: React.ReactNode;
+	activeContent?: React.ReactNode;
+	inactiveContent?: React.ReactNode;
 	submitButton: ReactElement;
 	getAriaLabel: ( localize: ( value: string ) => string ) => string;
 }
@@ -46,7 +39,7 @@ export interface LineItem {
 	id: string;
 	type: string;
 	label: string;
-	subLabel?: string;
+	sublabel?: string;
 	amount: LineItemAmount;
 }
 
@@ -98,7 +91,7 @@ export type ReactStandardAction< T = string, P = unknown > = P extends void
 	  }
 	: {
 			type: T;
-			payload: P;
+			payload?: P;
 	  };
 
 export interface CheckoutProviderProps {
@@ -135,6 +128,10 @@ export type PaymentCompleteCallbackArguments = {
 
 export type PaymentProcessorResponseData = unknown;
 
+export type PaymentProcessorError = {
+	type: PaymentProcessorResponseType.ERROR;
+	payload: string;
+};
 export type PaymentProcessorSuccess = {
 	type: PaymentProcessorResponseType.SUCCESS;
 	payload: PaymentProcessorResponseData;
@@ -149,6 +146,7 @@ export type PaymentProcessorManual = {
 };
 
 export type PaymentProcessorResponse =
+	| PaymentProcessorError
 	| PaymentProcessorSuccess
 	| PaymentProcessorRedirect
 	| PaymentProcessorManual;
@@ -163,6 +161,7 @@ export enum PaymentProcessorResponseType {
 	SUCCESS = 'SUCCESS',
 	REDIRECT = 'REDIRECT',
 	MANUAL = 'MANUAL',
+	ERROR = 'ERROR',
 }
 
 export enum TransactionStatus {
@@ -253,23 +252,4 @@ export interface LineItemsState {
 export interface LineItemsProviderProps {
 	items: LineItem[];
 	total: LineItem;
-}
-
-export interface StripePaymentRequest {
-	on: ( event: string, handler: StripePaymentRequestHandler ) => void;
-	show: () => void;
-}
-
-export type StripePaymentRequestHandler = ( event: StripePaymentRequestHandlerEvent ) => void;
-
-export interface StripePaymentRequestHandlerEvent {
-	token?: {
-		id: string;
-		object: 'token';
-	};
-	paymentMethod?: {
-		id: string;
-		object: 'payment_method';
-	};
-	complete: () => void;
 }

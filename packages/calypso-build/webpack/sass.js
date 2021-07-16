@@ -5,7 +5,7 @@ const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
 const WebpackRTLPlugin = require( '@automattic/webpack-rtl-plugin' );
 
 /**
- * Internal dependnecies
+ * Internal dependencies
  */
 const MiniCSSWithRTLPlugin = require( './mini-css-with-rtl' );
 
@@ -16,18 +16,11 @@ const MiniCSSWithRTLPlugin = require( './mini-css-with-rtl' );
  * @param  {string[]}  _.includePaths                 Sass files lookup paths
  * @param  {string}    _.prelude                      String to prepend to each Sass file
  * @param  {object}    _.postCssOptions               PostCSS options
- * @param  {object}    _.postCssConfig                PostCSS config (deprecated)
  * @param  {object}    _.cacheDirectory               Directory used to store the cache
  *
  * @returns {object}                                  webpack loader object
  */
-module.exports.loader = ( {
-	includePaths,
-	prelude,
-	postCssOptions,
-	postCssConfig = {},
-	cacheDirectory,
-} ) => ( {
+module.exports.loader = ( { includePaths, prelude, postCssOptions, cacheDirectory } ) => ( {
 	test: /\.(sc|sa|c)ss$/,
 	use: [
 		MiniCssExtractPlugin.loader,
@@ -45,16 +38,23 @@ module.exports.loader = ( {
 			loader: require.resolve( 'css-loader' ),
 			options: {
 				importLoaders: 2,
+				// We do not want css-loader to resolve absolute paths. We
+				// typically use `/` to indicate the start of the base URL,
+				// but starting with css-loader v4, it started trying to handle
+				// absolute paths itself.
+				url: ( path ) => ! path.startsWith( '/' ),
 			},
 		},
 		{
 			loader: require.resolve( 'postcss-loader' ),
-			options: postCssOptions || { config: postCssConfig },
+			options: {
+				postcssOptions: postCssOptions || {},
+			},
 		},
 		{
 			loader: require.resolve( 'sass-loader' ),
 			options: {
-				prependData: prelude,
+				additionalData: prelude,
 				sassOptions: {
 					includePaths,
 				},
@@ -62,6 +62,7 @@ module.exports.loader = ( {
 		},
 	],
 } );
+
 /**
  * Return an array of styling relevant webpack plugin objects.
  *

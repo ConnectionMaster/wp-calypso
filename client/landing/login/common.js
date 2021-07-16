@@ -7,10 +7,10 @@ import debugFactory from 'debug';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { initializeAnalytics } from 'calypso/lib/analytics/init';
 import getSuperProps from 'calypso/lib/analytics/super-props';
-import { getUrlParts } from 'calypso/lib/url';
+import { getUrlParts } from '@automattic/calypso-url';
 import { setCurrentUser } from 'calypso/state/current-user/actions';
 import { setRoute } from 'calypso/state/route/actions';
 
@@ -59,15 +59,6 @@ export function setupContextMiddleware() {
 }
 
 function renderDevHelpers( reduxStore ) {
-	if ( config.isEnabled( 'dev/test-helper' ) ) {
-		const testHelperEl = document.querySelector( '.environment.is-tests' );
-		if ( testHelperEl ) {
-			asyncRequire( 'calypso/lib/abtest/test-helper', ( testHelper ) => {
-				testHelper( testHelperEl );
-			} );
-		}
-	}
-
 	if ( config.isEnabled( 'dev/preferences-helper' ) ) {
 		const prefHelperEl = document.querySelector( '.environment.is-prefs' );
 		if ( prefHelperEl ) {
@@ -90,12 +81,9 @@ function renderDevHelpers( reduxStore ) {
 export const configureReduxStore = ( currentUser, reduxStore ) => {
 	debug( 'Executing Calypso configure Redux store.' );
 
-	if ( currentUser.get() ) {
+	if ( currentUser ) {
 		// Set current user in Redux store
-		reduxStore.dispatch( setCurrentUser( currentUser.get() ) );
-		currentUser.on( 'change', () => {
-			reduxStore.dispatch( setCurrentUser( currentUser.get() ) );
-		} );
+		reduxStore.dispatch( setCurrentUser( currentUser ) );
 	}
 
 	if ( config.isEnabled( 'network-connection' ) ) {
@@ -114,7 +102,7 @@ const setRouteMiddleware = ( reduxStore ) => {
 };
 
 const setAnalyticsMiddleware = ( currentUser, reduxStore ) => {
-	initializeAnalytics( currentUser ? currentUser.get() : undefined, getSuperProps( reduxStore ) );
+	initializeAnalytics( currentUser ? currentUser : undefined, getSuperProps( reduxStore ) );
 };
 
 export function setupMiddlewares( currentUser, reduxStore ) {

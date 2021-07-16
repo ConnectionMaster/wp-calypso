@@ -30,7 +30,7 @@ First thing is to enable your new feature in Calypso. We'll do that by opening `
 "hello-world": true
 ```
 
-Feature flags are a great way to enable/disable certain features in specific environments. For example, we can merge our "Hello, World!" code in `trunk,` but hide it behind a feature flag. We have [more documentation on feature flags](../../client/config).
+Feature flags are a great way to enable/disable certain features in specific environments. For example, we can merge our "Hello, World!" code in `trunk,` but hide it behind a feature flag. We have [more documentation on feature flags](../../config/README.md#feature-flags).
 
 ### 2. Set up folder structure
 
@@ -118,7 +118,7 @@ This checks for our feature in the current environment to figure out whether it 
 You also need to `require` the `config` module at the top of the `client/sections.js` file (in case the `require` statement is not already there):
 
 ```js
-const config = require( 'calypso/config' );
+const config = require( '@automattic/calypso-config' ).default;
 ```
 
 The `sections.js` module needs to be a CommonJS module that uses `require` calls, because it's run by Node.js. ESM imports won't work there at this moment.

@@ -1,17 +1,9 @@
-/**
- * External dependencies
- */
 import config from 'config';
-import { By, promise, until } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
+import { By, promise } from 'selenium-webdriver';
 import AsyncBaseContainer from '../async-base-container';
+import { getJetpackHost } from '../data-helper';
 import * as driverHelper from '../driver-helper.js';
 import { currentScreenSize } from '../driver-manager';
-import { getJetpackHost } from '../data-helper';
-import NoticesComponent from './notices-component';
 
 export default class SecurePaymentComponent extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -21,9 +13,7 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 			null,
 			2 * config.get( 'explicitWaitMS' )
 		);
-		this.paymentButtonSelector = By.css(
-			'.credit-card-payment-box button.is-primary:not([disabled]),.composite-checkout .checkout-submit-button button'
-		);
+		this.paymentButtonLocator = By.css( '.composite-checkout .checkout-submit-button button' );
 		this.personalPlanSlug = getJetpackHost() === 'WPCOM' ? 'personal-bundle' : 'jetpack_personal';
 		this.premiumPlanSlug = getJetpackHost() === 'WPCOM' ? 'value_bundle' : 'jetpack_premium';
 		this.businessPlanSlug =
@@ -32,30 +22,24 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	}
 
 	async isCompositeCheckout() {
-		return driverHelper.isElementPresent( this.driver, By.css( '.composite-checkout' ) );
+		return await driverHelper.isElementLocated( this.driver, By.css( '.composite-checkout' ) );
 	}
 
 	async _postInit() {
 		// This is to wait for products to settle down during sign up see - https://github.com/Automattic/wp-calypso/issues/24579
-		return await driverHelper.waitTillPresentAndDisplayed(
+		return await driverHelper.waitUntilElementLocatedAndVisible(
 			this.driver,
-			this.paymentButtonSelector,
+			this.paymentButtonLocator,
 			this.explicitWaitMS
 		);
 	}
 
 	async setInElementsIframe( iframeSelector, what, value ) {
-		await this.driver.wait(
-			until.ableToSwitchToFrame( By.css( iframeSelector ) ),
-			this.explicitWaitMS,
-			'Could not locate the ElementInput iFrame.'
-		);
-
+		await driverHelper.waitUntilAbleToSwitchToFrame( this.driver, By.css( iframeSelector ) );
 		await driverHelper.setWhenSettable( this.driver, By.name( what ), value, {
 			pauseBetweenKeysMS: 50,
 		} );
-
-		return await this.driver.switchTo().defaultContent();
+		await this.driver.switchTo().defaultContent();
 	}
 
 	async enterTestCreditCardDetails( {
@@ -77,16 +61,15 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		// SecurePaymentComponent.completeTaxDetailsInContactSection.
 		await this.completeTaxDetailsForCreditCard( { cardPostCode, cardCountryCode } );
 
-		const creditCardHandleSelector = By.css( 'label[for="card"]' );
-		await driverHelper.scrollIntoView( this.driver, creditCardHandleSelector );
+		const creditCardHandleLocator = driverHelper.createTextLocator(
+			By.css( 'label[for="card"]' ),
+			'Credit or debit card'
+		);
+		await driverHelper.scrollIntoView( this.driver, creditCardHandleLocator );
 
 		// Sometimes the credit card form will be closed and it will require a click to be opened.
 		// This can happen when users have a credit card already associated with their account.
-		await driverHelper.selectElementByText(
-			this.driver,
-			creditCardHandleSelector,
-			'Credit or debit card'
-		);
+		await driverHelper.clickWhenClickable( this.driver, creditCardHandleLocator );
 
 		await driverHelper.setWhenSettable(
 			this.driver,
@@ -158,7 +141,7 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 			this.driver,
 			By.css( `#country-selector option[value="${ cardCountryCode }"]` )
 		);
-		return driverHelper.clickWhenClickable(
+		return await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css( 'button[aria-label="Continue with the entered contact details"]' )
 		);
@@ -169,21 +152,21 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 			'.credit-card-payment-box button[disabled],.composite-checkout .checkout-submit-button button[disabled]'
 		);
 
-		await driverHelper.waitTillNotPresent( this.driver, disabledPaymentButton );
-		return await driverHelper.clickWhenClickable( this.driver, this.paymentButtonSelector );
+		await driverHelper.waitUntilElementNotLocated( this.driver, disabledPaymentButton );
+		return await driverHelper.clickWhenClickable( this.driver, this.paymentButtonLocator );
 	}
 
 	async waitForCreditCardPaymentProcessing() {
 		const isCompositeCheckout = await this.isCompositeCheckout();
 
 		if ( isCompositeCheckout ) {
-			return await driverHelper.waitTillNotPresent(
+			return await driverHelper.waitUntilElementNotLocated(
 				this.driver,
 				By.css( '.checkout-submit-button .checkout-button.is-busy' ),
 				this.explicitWaitMS * 5
 			);
 		}
-		return await driverHelper.waitTillNotPresent(
+		return await driverHelper.waitUntilElementNotLocated(
 			this.driver,
 			By.css( '.credit-card-payment-box__progress-bar' ),
 			this.explicitWaitMS * 5
@@ -191,17 +174,17 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	}
 
 	async waitForPageToDisappear() {
-		return await driverHelper.waitTillNotPresent(
+		return await driverHelper.waitUntilElementNotLocated(
 			this.driver,
-			this.expectedElementSelector,
+			this.expectedElementLocator,
 			this.explicitWaitMS * 5
 		);
 	}
 
 	async getProductsNames() {
-		const selector = By.css( '.product-name' );
+		const locator = By.css( '.product-name' );
 		return await this.driver
-			.findElements( selector )
+			.findElements( locator )
 			.then( ( products ) => promise.fullyResolved( products.map( ( e ) => e.getText() ) ) );
 	}
 
@@ -235,21 +218,31 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	}
 
 	async payWithStoredCardIfPossible( cardCredentials ) {
-		const storedCardSelector = By.css( '.credit-card__stored-card' );
+		const storedCardLocator = By.css( '.credit-card__stored-card' );
 		if (
-			await driverHelper.isEventuallyPresentAndDisplayed(
+			await driverHelper.isElementEventuallyLocatedAndVisible(
 				this.driver,
-				storedCardSelector,
+				storedCardLocator,
 				this.explicitWaitMS / 5
 			)
 		) {
-			await driverHelper.clickWhenClickable( this.driver, storedCardSelector );
+			await driverHelper.clickWhenClickable( this.driver, storedCardLocator );
 		} else {
 			await this.completeTaxDetailsInContactSection( cardCredentials );
 			await this.enterTestCreditCardDetails( cardCredentials );
 		}
 
-		return await this.submitPaymentDetails();
+		try {
+			await this.submitPaymentDetails();
+		} catch {
+			const noticeLocator = By.css(
+				'.notice button.notice_dismiss, .notice button.notice__dismiss'
+			);
+			if ( await driverHelper.isElementLocated( this.driver, noticeLocator ) ) {
+				await driverHelper.clickWhenClickable( this.driver, noticeLocator );
+				await this.submitPaymentDetails();
+			}
+		}
 	}
 
 	async toggleCartSummary() {
@@ -270,12 +263,11 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	async clickCouponButton() {
 		const isCompositeCheckout = await this.isCompositeCheckout();
 		if ( isCompositeCheckout ) {
-			return await driverHelper.clickWhenClickable(
-				this.driver,
-				By.css(
-					'.checkout-steps__step-complete-content .wp-checkout-order-review__show-coupon-field-button'
-				)
-			);
+			const selector =
+				getJetpackHost() === 'WPCOM'
+					? '.checkout-steps__step-complete-content .wp-checkout-order-review__show-coupon-field-button'
+					: '.checkout-steps__step-content .wp-checkout-order-review__show-coupon-field-button';
+			return await driverHelper.clickWhenClickable( this.driver, By.css( selector ) );
 		}
 
 		// If we're on desktop
@@ -292,7 +284,7 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		);
 	}
 
-	getCartTotalSelector() {
+	getCartTotalLocator() {
 		if ( currentScreenSize() === 'mobile' ) {
 			return By.css( '.cart__total-amount,.cart-total-amount,.wp-checkout__total-price' );
 		}
@@ -303,11 +295,11 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 
 	async cartTotalAmount() {
 		if ( currentScreenSize() === 'mobile' ) {
-			await driverHelper.scrollIntoView( this.driver, this.getCartTotalSelector() );
+			await driverHelper.scrollIntoView( this.driver, this.getCartTotalLocator() );
 		}
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, this.getCartTotalSelector() );
+		await driverHelper.waitUntilElementLocatedAndVisible( this.driver, this.getCartTotalLocator() );
 
-		const cartElement = await this.driver.findElement( this.getCartTotalSelector() );
+		const cartElement = await this.driver.findElement( this.getCartTotalLocator() );
 
 		const cartText = await cartElement.getAttribute( 'innerText' );
 
@@ -321,11 +313,10 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css(
-				'button[data-e2e-type="apply-coupon"],.checkout-steps__step-complete-content .coupon button'
+				'button[data-e2e-type="apply-coupon"],.checkout-steps__step-content .coupon button,' +
+					'.checkout-steps__step-complete-content .coupon button'
 			)
 		);
-		const noticesComponent = await NoticesComponent.Expect( this.driver );
-		await noticesComponent.dismissNotice();
 		return this.waitForCouponToBeApplied();
 	}
 
@@ -334,7 +325,8 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 		await driverHelper.setWhenSettable(
 			this.driver,
 			By.css(
-				'input[data-e2e-type="coupon-code"],.checkout-steps__step-complete-content .coupon input'
+				'input[data-e2e-type="coupon-code"],.checkout-steps__step-content .coupon input,' +
+					'.checkout-steps__step-complete-content .coupon input'
 			),
 			couponCode
 		);
@@ -344,39 +336,45 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	async hasCouponApplied() {
 		const isCompositeCheckout = await this.isCompositeCheckout();
 		if ( isCompositeCheckout ) {
-			return driverHelper.isElementPresent(
+			return await driverHelper.isElementLocated(
 				this.driver,
 				By.css( '#checkout-line-item-coupon-line-item' )
 			);
 		}
-		return driverHelper.isElementPresent( this.driver, By.css( '.cart__remove-link' ) );
+		return await driverHelper.isElementLocated( this.driver, By.css( '.cart__remove-link' ) );
 	}
 
 	async waitForCouponToBeApplied() {
 		const isCompositeCheckout = await this.isCompositeCheckout();
 		if ( isCompositeCheckout ) {
-			return driverHelper.waitTillPresentAndDisplayed(
+			return await driverHelper.waitUntilElementLocatedAndVisible(
 				this.driver,
-				By.css( '#checkout-line-item-coupon-line-item' )
+				By.css( '.checkout-review-order.is-summary #checkout-line-item-coupon-line-item' )
 			);
 		}
-		return driverHelper.waitTillPresentAndDisplayed( this.driver, By.css( '.cart__remove-link' ) );
+		return await driverHelper.waitUntilElementLocatedAndVisible(
+			this.driver,
+			By.css( '.cart__remove-link' )
+		);
 	}
 
 	async waitForCouponToBeRemoved() {
 		const isCompositeCheckout = await this.isCompositeCheckout();
 		if ( isCompositeCheckout ) {
-			await driverHelper.waitTillNotPresent(
+			await driverHelper.waitUntilElementNotLocated(
 				this.driver,
 				By.css( '[data-e2e-cart-is-loading="true"]' )
 			);
 
-			return await driverHelper.waitTillNotPresent(
+			return await driverHelper.waitUntilElementNotLocated(
 				this.driver,
 				By.css( '#checkout-line-item-coupon-line-item' )
 			);
 		}
-		return await driverHelper.waitTillNotPresent( this.driver, By.css( '.cart__remove-link' ) );
+		return await driverHelper.waitUntilElementNotLocated(
+			this.driver,
+			By.css( '.cart__remove-link' )
+		);
 	}
 
 	async removeCoupon() {
@@ -388,6 +386,7 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 				this.driver,
 				By.css( '.wp-checkout__review-order-step .checkout-step__edit-button' )
 			);
+
 			// Click delete button on coupon line item
 			await driverHelper.clickWhenClickable(
 				this.driver,
@@ -421,36 +420,39 @@ export default class SecurePaymentComponent extends AsyncBaseContainer {
 	}
 
 	async removeBusinessPlan() {
-		const productSlug = this.businessPlanSlug;
-		return await driverHelper.clickWhenClickable(
-			this.driver,
-			By.css(
-				`button.cart__remove-item,.checkout-line-item[data-e2e-product-slug="${ productSlug }"] button.checkout-line-item__remove-product`
-			)
+		const trashButtonLocator = By.css(
+			`.checkout-line-item[data-e2e-product-slug="${ this.businessPlanSlug }"] button.checkout-line-item__remove-product`
 		);
+		const confirmButtonLocator = driverHelper.createTextLocator(
+			By.css( '.checkout-modal .checkout-button' ),
+			'Continue'
+		);
+
+		await driverHelper.clickWhenClickable( this.driver, trashButtonLocator );
+		await driverHelper.clickWhenClickable( this.driver, confirmButtonLocator );
 	}
 
 	async cartTotalDisplayed() {
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, this.getCartTotalSelector() );
-		return await this.driver.findElement( this.getCartTotalSelector() ).getText();
+		await driverHelper.waitUntilElementLocatedAndVisible( this.driver, this.getCartTotalLocator() );
+		return await this.driver.findElement( this.getCartTotalLocator() ).getText();
 	}
 
 	async paymentButtonText() {
-		await driverHelper.waitTillPresentAndDisplayed( this.driver, this.paymentButtonSelector );
-		await driverHelper.scrollIntoView( this.driver, this.paymentButtonSelector );
-		return await this.driver.findElement( this.paymentButtonSelector ).getText();
+		await driverHelper.waitUntilElementLocatedAndVisible( this.driver, this.paymentButtonLocator );
+		await driverHelper.scrollIntoView( this.driver, this.paymentButtonLocator );
+		return await this.driver.findElement( this.paymentButtonLocator ).getText();
 	}
 
 	async _cartContainsProduct( productSlug, expectedQuantity = 1 ) {
-		await driverHelper.waitTillPresentAndDisplayed(
+		const orderSummary = await driverHelper.waitUntilElementLocatedAndVisible(
 			this.driver,
-			By.css( '.product-name,.checkout-line-item' )
+			By.css( '.checkout-review-order.is-summary' )
 		);
-		const elements = await this.driver.findElements(
+		const summaryItems = await orderSummary.findElements(
 			By.css(
-				`.product-name[data-e2e-product-slug="${ productSlug }"],.checkout-steps__step-complete-content .checkout-line-item[data-e2e-product-slug="${ productSlug }"]`
+				`.product-name[data-e2e-product-slug="${ productSlug }"], .checkout-steps__step-complete-content .checkout-line-item[data-e2e-product-slug="${ productSlug }"]`
 			)
 		);
-		return elements.length === expectedQuantity;
+		return summaryItems.length === expectedQuantity;
 	}
 }

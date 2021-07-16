@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import page from 'page';
 
 /**
@@ -18,41 +18,31 @@ import { sidebar } from 'calypso/me/controller';
 import { siteSelection } from 'calypso/my-sites/controller';
 
 export default ( router ) => {
-	if ( config.isEnabled( 'manage/payment-methods' ) ) {
-		router(
-			paths.paymentMethods,
-			sidebar,
-			paymentMethodsController.paymentMethods,
-			makeLayout,
-			clientRender
-		);
+	router(
+		paths.paymentMethods,
+		sidebar,
+		paymentMethodsController.paymentMethods,
+		makeLayout,
+		clientRender
+	);
 
-		if ( config.isEnabled( 'purchases/new-payment-methods' ) ) {
-			router(
-				paths.addNewPaymentMethod,
-				sidebar,
-				controller.addNewPaymentMethod,
-				makeLayout,
-				clientRender
-			);
-		}
+	router(
+		paths.addNewPaymentMethod,
+		sidebar,
+		controller.addNewPaymentMethod,
+		makeLayout,
+		clientRender
+	);
 
-		router(
-			paths.addCreditCard,
-			sidebar,
-			config.isEnabled( 'purchases/new-payment-methods' )
-				? controller.addNewPaymentMethod
-				: controller.addCreditCard,
-			makeLayout,
-			clientRender
-		);
+	router( paths.addCreditCard, sidebar, controller.addNewPaymentMethod, makeLayout, clientRender );
 
-		// redirect legacy urls
-		router( '/payment-methods/add-credit-card', () => {
-			config.isEnabled( 'purchases/new-payment-methods' )
-				? page.redirect( paths.addCreditCard )
-				: page.redirect( paths.addNewPaymentMethod );
-		} );
+	// redirect legacy urls
+	router( '/payment-methods/add-credit-card', () => {
+		page.redirect( paths.addCreditCard );
+	} );
+
+	if ( config.isEnabled( 'me/vat-details' ) ) {
+		router( paths.vatDetails, sidebar, controller.vatDetails, makeLayout, clientRender );
 	}
 
 	router(
@@ -138,47 +128,35 @@ export default ( router ) => {
 		clientRender
 	);
 
-	if ( config.isEnabled( 'purchases/new-payment-methods' ) ) {
-		router(
-			paths.addPaymentMethod( ':site', ':purchaseId' ),
-			sidebar,
-			siteSelection,
-			controller.changePaymentMethod,
-			makeLayout,
-			clientRender
-		);
+	router(
+		paths.addPaymentMethod( ':site', ':purchaseId' ),
+		sidebar,
+		siteSelection,
+		controller.changePaymentMethod,
+		makeLayout,
+		clientRender
+	);
 
-		router(
-			paths.changePaymentMethod( ':site', ':purchaseId', ':cardId' ),
-			sidebar,
-			siteSelection,
-			controller.changePaymentMethod,
-			makeLayout,
-			clientRender
-		);
-	} else {
-		router(
-			paths.addCardDetails( ':site', ':purchaseId' ),
-			sidebar,
-			siteSelection,
-			controller.addCardDetails,
-			makeLayout,
-			clientRender
-		);
-
-		router(
-			paths.editCardDetails( ':site', ':purchaseId', ':cardId' ),
-			sidebar,
-			siteSelection,
-			controller.editCardDetails,
-			makeLayout,
-			clientRender
-		);
-	}
+	router(
+		paths.changePaymentMethod( ':site', ':purchaseId', ':cardId' ),
+		sidebar,
+		siteSelection,
+		controller.changePaymentMethod,
+		makeLayout,
+		clientRender
+	);
 
 	// redirect legacy urls
 	router( '/me/billing', () => page.redirect( paths.billingHistory ) );
 	router( '/me/billing/:receiptId', ( { params: { receiptId } } ) =>
 		page.redirect( paths.billingHistoryReceipt( receiptId ) )
+	);
+	router( paths.addCardDetails( ':site', ':purchaseId' ), ( { params: { site, purchaseId } } ) =>
+		page.redirect( paths.addPaymentMethod( site, purchaseId ) )
+	);
+	router(
+		paths.editCardDetails( ':site', ':purchaseId', ':cardId' ),
+		( { params: { site, purchaseId, cardId } } ) =>
+			page.redirect( paths.changePaymentMethod( site, purchaseId, cardId ) )
 	);
 };

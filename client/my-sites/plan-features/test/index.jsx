@@ -1,7 +1,3 @@
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
-} ) );
-
 jest.mock( 'calypso/lib/analytics/tracks', () => ( {} ) );
 jest.mock( 'calypso/lib/analytics/page-view', () => ( {} ) );
 jest.mock( 'calypso/lib/analytics/ad-tracking', () => ( {} ) );
@@ -34,7 +30,7 @@ import {
 	PLAN_JETPACK_PREMIUM,
 	PLAN_JETPACK_PREMIUM_MONTHLY,
 	PLAN_JETPACK_BUSINESS,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
 
 /**
  * Internal dependencies

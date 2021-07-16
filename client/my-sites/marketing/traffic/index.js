@@ -10,18 +10,17 @@ import { flowRight, partialRight, pick } from 'lodash';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import Main from 'calypso/components/main';
 import EmptyContent from 'calypso/components/empty-content';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import SeoSettingsMain from 'calypso/my-sites/site-settings/seo-settings/main';
 import SeoSettingsHelpCard from 'calypso/my-sites/site-settings/seo-settings/help';
 import SiteVerification from 'calypso/my-sites/site-settings/seo-settings/site-verification';
-import AnalyticsSettings from 'calypso/my-sites/site-settings/form-analytics';
-import CloudflareAnalyticsSettings from 'calypso/my-sites/site-settings/cloudflare-analytics';
+import AnalyticsSettings from 'calypso/my-sites/site-settings/analytics/form-google-analytics';
+import CloudflareAnalyticsSettings from 'calypso/my-sites/site-settings/analytics/form-cloudflare-analytics';
 import JetpackDevModeNotice from 'calypso/my-sites/site-settings/jetpack-dev-mode-notice';
 import JetpackSiteStats from 'calypso/my-sites/site-settings/jetpack-site-stats';
-import JetpackAds from 'calypso/my-sites/site-settings/jetpack-ads';
 import RelatedPosts from 'calypso/my-sites/site-settings/related-posts';
 import Sitemaps from 'calypso/my-sites/site-settings/sitemaps';
 import Shortlinks from 'calypso/my-sites/site-settings/shortlinks';
@@ -41,10 +40,10 @@ const SiteSettingsTraffic = ( {
 	handleAutosavingRadio,
 	handleSubmitForm,
 	isAdmin,
+	isJetpack,
 	isJetpackAdmin,
 	isRequestingSettings,
 	isSavingSettings,
-	onChangeField,
 	setFieldValue,
 	translate,
 } ) => (
@@ -59,16 +58,6 @@ const SiteSettingsTraffic = ( {
 		) }
 		<JetpackDevModeNotice />
 
-		{ isJetpackAdmin && (
-			<JetpackAds
-				handleAutosavingToggle={ handleAutosavingToggle }
-				isSavingSettings={ isSavingSettings }
-				isRequestingSettings={ isRequestingSettings }
-				fields={ fields }
-				onSubmitForm={ handleSubmitForm }
-				onChangeField={ onChangeField }
-			/>
-		) }
 		{ isAdmin && <SeoSettingsHelpCard disabled={ isRequestingSettings || isSavingSettings } /> }
 		{ isAdmin && <SeoSettingsMain /> }
 		{ isAdmin && (
@@ -80,7 +69,9 @@ const SiteSettingsTraffic = ( {
 				fields={ fields }
 			/>
 		) }
-		{ isAdmin && config.isEnabled( 'cloudflare' ) && <CloudflareAnalyticsSettings /> }
+		{ ! isJetpack && isAdmin && config.isEnabled( 'cloudflare' ) && (
+			<CloudflareAnalyticsSettings />
+		) }
 
 		{ isJetpackAdmin && (
 			<JetpackSiteStats
@@ -121,6 +112,7 @@ const connectComponent = connect( ( state ) => {
 
 	return {
 		isAdmin,
+		isJetpack,
 		isJetpackAdmin,
 	};
 } );
@@ -131,9 +123,6 @@ const getFormSettings = partialRight( pick, [
 	'hide_smile',
 	'count_roles',
 	'roles',
-	'enable_header_ad',
-	'wordads_ccpa_enabled',
-	'wordads_ccpa_privacy_policy_url',
 	'jetpack_relatedposts_allowed',
 	'jetpack_relatedposts_enabled',
 	'jetpack_relatedposts_show_headline',

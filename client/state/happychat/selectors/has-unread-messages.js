@@ -6,7 +6,7 @@ import { get, last } from 'lodash';
 /**
  * Internal dependencies
  */
-import createSelector from 'calypso/lib/create-selector';
+import { createSelector } from '@automattic/state-utils';
 import getHappychatTimeline from 'calypso/state/happychat/selectors/get-happychat-timeline';
 import getLostFocusTimestamp from 'calypso/state/happychat/selectors/get-lostfocus-timestamp';
 
@@ -18,9 +18,7 @@ export default createSelector(
 		return (
 			typeof lastMessageTimestamp === 'number' &&
 			typeof lostFocusAt === 'number' &&
-			// Message timestamps are reported in seconds. We need to multiply by 1000 to convert
-			// to milliseconds, so we can compare it to other JS-generated timestamps
-			lastMessageTimestamp * 1000 >= lostFocusAt
+			lastMessageTimestamp >= lostFocusAt
 		);
 	},
 	[ getHappychatTimeline, getLostFocusTimestamp ]

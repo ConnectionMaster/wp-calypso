@@ -10,7 +10,7 @@ import { get, includes, startsWith } from 'lodash';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import Masterbar from './masterbar';
 import Item from './item';
 import WordPressLogo from 'calypso/components/wordpress-logo';
@@ -59,7 +59,6 @@ class MasterbarLoggedOut extends React.Component {
 			// We may know the email from Jetpack connection details
 			emailAddress: isJetpack && get( currentQuery, 'user_email', false ),
 			isJetpack,
-			isNative: config.isEnabled( 'login/native-login-links' ),
 			locale: getLocaleSlug(),
 			redirectTo,
 		} );
@@ -149,7 +148,7 @@ class MasterbarLoggedOut extends React.Component {
 		if ( isCheckout ) {
 			return (
 				<AsyncLoad
-					require="calypso/layout/masterbar/checkout"
+					require="calypso/layout/masterbar/checkout.tsx"
 					placeholder={ null }
 					title={ title }
 				/>

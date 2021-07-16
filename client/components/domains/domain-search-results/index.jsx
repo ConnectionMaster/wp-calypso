@@ -6,7 +6,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
-import { get, includes, times, first } from 'lodash';
+import { get, includes, times } from 'lodash';
 
 /**
  * Internal dependencies
@@ -75,7 +75,6 @@ class DomainSearchResults extends React.Component {
 	renderDomainAvailability() {
 		const {
 			availableDomain,
-			domainsWithPlansOnly,
 			lastDomainIsTransferrable,
 			lastDomainStatus,
 			lastDomainSearched,
@@ -131,17 +130,12 @@ class DomainSearchResults extends React.Component {
 			) {
 				if ( isDomainMappingFree( selectedSite ) || isNextDomainFree( this.props.cart ) ) {
 					offer = translate(
-						'{{small}}If you purchased %(domain)s elsewhere, you can {{a}}map it{{/a}} for free.{{/small}}',
+						'{{small}}If you purchased %(domain)s elsewhere, you can {{a}}connect it{{/a}} for free.{{/small}}',
 						{ args: { domain }, components }
-					);
-				} else if ( ! domainsWithPlansOnly ) {
-					offer = translate(
-						'{{small}}If you purchased %(domain)s elsewhere, you can {{a}}map it{{/a}} for %(cost)s.{{/small}}',
-						{ args: { domain, cost: this.props.products.domain_map.cost_display }, components }
 					);
 				} else {
 					offer = translate(
-						'{{small}}If you purchased %(domain)s elsewhere, you can {{a}}map it{{/a}} with WordPress.com Premium.{{/small}}',
+						'{{small}}If you purchased %(domain)s elsewhere, you can {{a}}connect it{{/a}} with WordPress.com Premium.{{/small}}',
 						{ args: { domain }, components }
 					);
 				}
@@ -227,8 +221,13 @@ class DomainSearchResults extends React.Component {
 		);
 	}
 
-	handleAddMapping = () => {
-		this.props.onAddMapping( this.props.lastDomainSearched );
+	handleAddMapping = ( event ) => {
+		event.preventDefault();
+		if ( this.props.isSignupStep ) {
+			this.props.onClickMapping( event );
+		} else {
+			this.props.onAddMapping( this.props.lastDomainSearched );
+		}
 	};
 
 	renderPlaceholders() {
@@ -273,13 +272,14 @@ class DomainSearchResults extends React.Component {
 					key="featured"
 					onButtonClick={ this.props.onClickResult }
 					premiumDomains={ this.props.premiumDomains }
-					primarySuggestion={ first( bestMatchSuggestions ) }
+					primarySuggestion={ bestMatchSuggestions[ 0 ] }
 					query={ this.props.lastDomainSearched }
 					railcarId={ this.props.railcarId }
-					secondarySuggestion={ first( bestAlternativeSuggestions ) }
+					secondarySuggestion={ bestAlternativeSuggestions[ 0 ] }
 					selectedSite={ this.props.selectedSite }
 					pendingCheckSuggestion={ this.props.pendingCheckSuggestion }
 					unavailableDomains={ this.props.unavailableDomains }
+					isReskinned={ this.props.isReskinned }
 				/>
 			);
 
@@ -307,11 +307,16 @@ class DomainSearchResults extends React.Component {
 						premiumDomain={ this.props.premiumDomains[ suggestion.domain_name ] }
 						pendingCheckSuggestion={ this.props.pendingCheckSuggestion }
 						unavailableDomains={ this.props.unavailableDomains }
+						isReskinned={ this.props.isReskinned }
 					/>
 				);
 			} );
 
-			if ( this.props.offerUnavailableOption && this.props.siteDesignType !== DESIGN_TYPE_STORE ) {
+			if (
+				this.props.offerUnavailableOption &&
+				this.props.siteDesignType !== DESIGN_TYPE_STORE &&
+				! this.props.isReskinned
+			) {
 				unavailableOffer = (
 					<DomainTransferSuggestion
 						onButtonClick={ this.props.onClickUseYourDomain }
@@ -323,7 +328,7 @@ class DomainSearchResults extends React.Component {
 			domainSkipSuggestion = (
 				<DomainSkipSuggestion
 					selectedSiteSlug={ this.props.selectedSite?.slug }
-					onButtonClick={ this.props.onSkip }
+					onButtonClick={ () => this.props.onSkip() }
 				/>
 			);
 		} else {
@@ -333,12 +338,13 @@ class DomainSearchResults extends React.Component {
 
 		return (
 			<div className="domain-search-results__domain-suggestions">
-				{ this.props.children }
+				{ ! this.props.isReskinned && this.props.children }
 				{ suggestionCount }
 				{ featuredSuggestionElement }
 				{ suggestionElements }
 				{ unavailableOffer }
 				{ this.props.showSkipButton && domainSkipSuggestion }
+				{ this.props.isReskinned && this.props.children }
 			</div>
 		);
 	}

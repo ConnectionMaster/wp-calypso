@@ -3,19 +3,21 @@ const { ipcRenderer, contextBridge } = require( 'electron' );
 // Outgoing IPC message channels from Renderer to Main process.
 // Maintain this list in alphabetical order.
 const sendChannels = [
-	'cannot-use-editor',
-	'enable-site-option-response',
 	'get-config',
 	'get-settings',
 	'log',
 	'request-site-response',
-	'unread-notices-count',
+	'clear-notices-count',
+	'back-button-clicked',
+	'forward-button-clicked',
+	'home-button-clicked',
 	'user-auth',
 	'user-login-status',
 	'view-post-clicked',
 	'print',
 	'secrets',
 	'toggle-dev-tools',
+	'title-bar-double-click',
 ];
 
 // Incoming IPC message channels from Main process to Renderer.
@@ -23,8 +25,6 @@ const sendChannels = [
 const receiveChannels = [
 	'app-config',
 	'cookie-auth-complete',
-	'enable-notification-badge',
-	'enable-site-option',
 	'is-calypso',
 	'is-calypso-response',
 	'navigate',
@@ -44,6 +44,9 @@ const receiveChannels = [
 
 ( async () => {
 	const config = await ipcRenderer.invoke( 'get-config' );
+	const styles = {
+		titleBarPaddingLeft: process.platform !== 'darwin' ? '0px' : '77px',
+	};
 	contextBridge.exposeInMainWorld( 'electron', {
 		send: ( channel, ...args ) => {
 			if ( sendChannels.includes( channel ) ) {
@@ -71,5 +74,6 @@ const receiveChannels = [
 			};
 		},
 		config,
+		styles,
 	} );
 } )();

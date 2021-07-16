@@ -436,6 +436,18 @@ describe( 'index', () => {
 			expect( normalized.content ).toBe( '<img src="//example.wordpress/example.jpg-SAFE">' );
 		} );
 
+		test( 'handles external scheme-relative images with query params', () => {
+			const post = {
+				URL: 'https://example.wordpress.com/2015/01/my-post/',
+				content:
+					'<img src="//example.wp/example.jpg?ad=1&amp;auto=compress&amp;cs=tinysrgb&amp;dpr=2&amp;h=640&amp;w=426">',
+			};
+			const normalized = withContentDOM( [ makeImagesSafe() ] )( post );
+			expect( normalized.content ).toBe(
+				'<img src="https://example.wp/example.jpg?ad=1&amp;auto=compress&amp;cs=tinysrgb&amp;dpr=2&amp;h=640&amp;w=426">'
+			);
+		} );
+
 		test( 'can route all images through photon if a size is specified', () => {
 			const post = {
 				content:
@@ -644,7 +656,7 @@ describe( 'index', () => {
 			};
 			const normalized = withContentDOM( [ makeEmbedsSafe ] )( post );
 			expect( normalized.content ).toBe(
-				'<iframe src="https://example.com/" sandbox=""></iframe>'
+				'<iframe src="https://example.com/" sandbox="allow-scripts"></iframe>'
 			);
 		} );
 

@@ -1,15 +1,10 @@
-/**
- * External dependencies
- */
-import React from 'react';
 import PropTypes from 'prop-types';
-
-/**
- * Internal dependencies
- */
+import React from 'react';
 import joinClasses from '../lib/join-classes';
-import { LineItem } from 'src/types';
 import styled from '../lib/styled';
+import type { LineItem } from '../types';
+
+/* eslint-disable @typescript-eslint/no-use-before-define */
 
 export function OrderReviewSection( {
 	children,
@@ -17,7 +12,7 @@ export function OrderReviewSection( {
 }: {
 	children?: React.ReactNode;
 	className?: string;
-} ) {
+} ): JSX.Element {
 	return (
 		<OrderReviewSectionArea className={ joinClasses( [ className, 'order-review-section' ] ) }>
 			{ children }
@@ -78,7 +73,13 @@ const OrderReviewLineItem = styled( OrderReviewLineItemUnstyled )< LineItemProps
 	}
 `;
 
-export function OrderReviewTotal( { total, className }: { total: LineItem; className?: string } ) {
+export function OrderReviewTotal( {
+	total,
+	className,
+}: {
+	total: LineItem;
+	className?: string;
+} ): JSX.Element {
 	return (
 		<div className={ joinClasses( [ className, 'order-review-total' ] ) }>
 			<OrderReviewLineItem total item={ total } />
@@ -90,7 +91,7 @@ export function OrderReviewLineItems( {
 	items,
 	className,
 	isSummaryVisible,
-}: OrderReviewLineItemsProps ) {
+}: OrderReviewLineItemsProps ): JSX.Element {
 	return (
 		<div className={ joinClasses( [ className, 'order-review-line-items' ] ) }>
 			{ items.map( ( item ) => (

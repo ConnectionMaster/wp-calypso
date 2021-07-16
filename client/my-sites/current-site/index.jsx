@@ -3,9 +3,9 @@
  */
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { localize } from 'i18n-calypso';
+import { localize, withRtl } from 'i18n-calypso';
 import PropTypes from 'prop-types';
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import { Button, Card } from '@automattic/components';
 
 /**
@@ -16,13 +16,14 @@ import AsyncLoad from 'calypso/components/async-load';
 import Site from 'calypso/blocks/site';
 import Gridicon from 'calypso/components/gridicon';
 import { setLayoutFocus } from 'calypso/state/ui/layout-focus/actions';
-import { getSelectedSite, getSidebarIsCollapsed } from 'calypso/state/ui/selectors';
+import { getSelectedSite } from 'calypso/state/ui/selectors';
 import getSelectedOrAllSites from 'calypso/state/selectors/get-selected-or-all-sites';
 import { getCurrentUserSiteCount } from 'calypso/state/current-user/selectors';
 import { recordGoogleEvent } from 'calypso/state/analytics/actions';
 import { hasAllSitesList } from 'calypso/state/sites/selectors';
-import { expandSidebar } from 'calypso/state/ui/actions';
+import { savePreference } from 'calypso/state/preferences/actions';
 import CalypsoShoppingCartProvider from 'calypso/my-sites/checkout/calypso-shopping-cart-provider';
+import isNavUnificationEnabled from 'calypso/state/selectors/is-nav-unification-enabled';
 
 /**
  * Style dependencies
@@ -37,14 +38,11 @@ class CurrentSite extends Component {
 		translate: PropTypes.func.isRequired,
 		anySiteSelected: PropTypes.array,
 		forceAllSitesView: PropTypes.bool,
-		sidebarIsCollapsed: PropTypes.bool,
-		expandSidebar: PropTypes.func.isRequired,
+		isNavUnificationEnabled: PropTypes.bool.isRequired,
+		isRtl: PropTypes.bool,
 	};
 
 	switchSites = ( event ) => {
-		if ( isEnabled( 'nav-unification' ) && this.props.sidebarIsCollapsed ) {
-			this.props.expandSidebar();
-		}
 		event.preventDefault();
 		event.stopPropagation();
 		this.props.setLayoutFocus( 'sites' );
@@ -71,26 +69,21 @@ class CurrentSite extends Component {
 			/* eslint-enable wpcalypso/jsx-classname-namespace, jsx-a11y/anchor-is-valid */
 		}
 
+		const arrowDirection = this.props.isRtl ? 'right' : 'left';
+
 		return (
 			<Card className="current-site">
-				<div
-					role="button"
-					tabIndex="0"
-					aria-hidden="true"
-					onClick={ () => {
-						return isEnabled( 'nav-unification' ) && this.props.sidebarIsCollapsed
-							? this.props.expandSidebar()
-							: null;
-					} }
-				>
+				<div role="button" tabIndex="0" aria-hidden="true" onClick={ this.expandUnifiedNavSidebar }>
 					{ this.props.siteCount > 1 && (
 						<span className="current-site__switch-sites">
 							<Button borderless onClick={ this.switchSites }>
-								{ isEnabled( 'nav-unification' ) ? (
+								{ this.props.isNavUnificationEnabled ? (
 									// eslint-disable-next-line wpcalypso/jsx-classname-namespace
-									<span className="gridicon dashicons-before dashicons-arrow-left-alt2"></span>
+									<span
+										className={ `gridicon dashicons-before dashicons-arrow-${ arrowDirection }-alt2` }
+									></span>
 								) : (
-									<Gridicon icon="chevron-left" />
+									<Gridicon icon={ `chevron-${ arrowDirection }` } />
 								) }
 								<span className="current-site__switch-sites-label">
 									{ translate( 'Switch Site' ) }
@@ -139,11 +132,11 @@ export default connect(
 		anySiteSelected: getSelectedOrAllSites( state ),
 		siteCount: getCurrentUserSiteCount( state ),
 		hasAllSitesList: hasAllSitesList( state ),
-		sidebarIsCollapsed: getSidebarIsCollapsed( state ),
+		isNavUnificationEnabled: isNavUnificationEnabled( state ),
 	} ),
 	{
 		recordGoogleEvent,
 		setLayoutFocus,
-		expandSidebar,
+		savePreference,
 	}
-)( localize( CurrentSite ) );
+)( withRtl( localize( CurrentSite ) ) );

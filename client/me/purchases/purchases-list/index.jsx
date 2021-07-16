@@ -142,10 +142,10 @@ class PurchasesList extends Component {
 		) {
 			if ( ! sites.length ) {
 				return (
-					<Main className="purchases-list is-wide-layout">
+					<Main wideLayout className="purchases-list">
 						<PageViewTracker path="/me/purchases" title="Purchases > No Sites" />
 						<FormattedHeader brandFont headerText={ titles.sectionTitle } align="left" />
-						<PurchasesNavigation section="purchases" />
+						<PurchasesNavigation section="activeUpgrades" />
 						<NoSitesMessage />
 					</Main>
 				);
@@ -171,14 +171,14 @@ class PurchasesList extends Component {
 		}
 
 		return (
-			<Main className="purchases-list is-wide-layout">
+			<Main wideLayout className="purchases-list">
 				<QueryUserPurchases userId={ userId } />
 				<QueryMembershipsSubscriptions />
 				<PageViewTracker path="/me/purchases" title="Purchases" />
 				<MeSidebarNavigation />
 
 				<FormattedHeader brandFont headerText={ titles.sectionTitle } align="left" />
-				<PurchasesNavigation section="purchases" />
+				<PurchasesNavigation section="activeUpgrades" />
 				{ content }
 				{ this.renderMembershipSubscriptions() }
 				<QueryConciergeInitial />

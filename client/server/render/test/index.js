@@ -25,20 +25,13 @@ let mockReturnValues = {};
 function remock( newReturnValues ) {
 	mockReturnValues = Object.assign(
 		{
-			isDefaultLocale: true,
 			configServerSideRender: true,
 		},
 		newReturnValues
 	);
 }
 
-jest.mock( 'calypso/lib/i18n-utils', () => {
-	return {
-		isDefaultLocale: () => mockReturnValues.isDefaultLocale,
-	};
-} );
-
-jest.mock( 'calypso/config', () => {
+jest.mock( '@automattic/calypso-config', () => {
 	const fn = () => {};
 	fn.isEnabled = ( feature_key ) =>
 		feature_key === 'server-side-rendering' ? mockReturnValues.configServerSideRender : false;
@@ -110,13 +103,6 @@ describe( 'shouldServerSideRender', () => {
 			section: { isomorphic: false },
 		};
 		expect( shouldServerSideRender( ssrNonIsomorphicSectionContext ) ).toBe( false );
-	} );
-
-	test( 'isDefaultLocale should alter the result', () => {
-		expect( shouldServerSideRender( ssrEnabledContext ) ).toBe( true );
-
-		remock( { isDefaultLocale: false } );
-		expect( shouldServerSideRender( ssrEnabledContext ) ).toBe( false );
 	} );
 } );
 

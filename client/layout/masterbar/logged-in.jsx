@@ -13,10 +13,9 @@ import React from 'react';
 import { recordTracksEvent } from 'calypso/state/analytics/actions';
 import Masterbar from './masterbar';
 import Item from './item';
-import Publish from './publish';
 import Notifications from './notifications';
 import Gravatar from 'calypso/components/gravatar';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { preload } from 'calypso/sections-helper';
 import { getCurrentUserSiteCount, getCurrentUser } from 'calypso/state/current-user/selectors';
 import { isSupportSession } from 'calypso/state/support/selectors';
@@ -26,7 +25,7 @@ import isDomainOnlySite from 'calypso/state/selectors/is-domain-only-site';
 import isNotificationsOpen from 'calypso/state/selectors/is-notifications-open';
 import isSiteMigrationInProgress from 'calypso/state/selectors/is-site-migration-in-progress';
 import isSiteMigrationActiveRoute from 'calypso/state/selectors/is-site-migration-active-route';
-import { setNextLayoutFocus } from 'calypso/state/ui/layout-focus/actions';
+import { activateNextLayoutFocus, setNextLayoutFocus } from 'calypso/state/ui/layout-focus/actions';
 import { getCurrentLayoutFocus } from 'calypso/state/ui/layout-focus/selectors';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getSiteSlug, isJetpackSite } from 'calypso/state/sites/selectors';
@@ -40,8 +39,14 @@ import { http } from 'calypso/state/data-layer/wpcom-http/actions';
 import { hasUnseen } from 'calypso/state/reader-ui/seen-posts/selectors';
 import getPreviousPath from 'calypso/state/selectors/get-previous-path.js';
 import isAtomicSite from 'calypso/state/selectors/is-site-automated-transfer';
+import isNavUnificationEnabled from 'calypso/state/selectors/is-nav-unification-enabled';
+import PopUpSearch from '../popup-search';
 
 class MasterbarLoggedIn extends React.Component {
+	state = {
+		isActionSearchVisible: false,
+	};
+
 	static propTypes = {
 		user: PropTypes.object.isRequired,
 		domainOnlySite: PropTypes.bool,
@@ -55,7 +60,7 @@ class MasterbarLoggedIn extends React.Component {
 	};
 
 	handleLayoutFocus = ( currentSection ) => {
-		if ( ! config.isEnabled( 'nav-unification' ) ) {
+		if ( ! this.props.isNavUnificationEnabled ) {
 			this.props.setNextLayoutFocus( 'sidebar' );
 		} else if ( currentSection !== this.props.section ) {
 			// When current section is not focused then open the sidebar.
@@ -74,11 +79,22 @@ class MasterbarLoggedIn extends React.Component {
 		if ( qryString?.openSidebar === 'true' ) {
 			this.props.setNextLayoutFocus( 'sidebar' );
 		}
+		this.actionSearchShortCutListener = () => {
+			if ( event.ctrlKey && event.shiftKey && event.key === 'F' ) {
+				this.clickSearchActions();
+			}
+		};
+		document.addEventListener( 'keydown', this.actionSearchShortCutListener );
+	}
+
+	componentWillUnmount() {
+		document.removeEventListener( 'keydown', this.actionSearchShortCutListener );
 	}
 
 	clickMySites = () => {
 		this.props.recordTracksEvent( 'calypso_masterbar_my_sites_clicked' );
 		this.handleLayoutFocus( 'sites' );
+		this.props.activateNextLayoutFocus();
 
 		/**
 		 * Site Migration: Reset a failed migration when clicking on My Sites
@@ -123,7 +139,18 @@ class MasterbarLoggedIn extends React.Component {
 
 	clickMe = () => {
 		this.props.recordTracksEvent( 'calypso_masterbar_me_clicked' );
+		window.scrollTo( 0, 0 );
 		this.handleLayoutFocus( 'me' );
+	};
+
+	clickSearchActions = () => {
+		this.props.recordTracksEvent( 'calypso_masterbar_search_actions_clicked' );
+		this.handleLayoutFocus( 'search-actions' );
+		this.setState( { isActionSearchVisible: true } );
+	};
+
+	onSearchActionsClose = () => {
+		this.setState( { isActionSearchVisible: false } );
 	};
 
 	preloadMySites = () => {
@@ -165,7 +192,7 @@ class MasterbarLoggedIn extends React.Component {
 			: getStatsPathForTab( 'day', siteSlug );
 
 		let mySitesUrl = domainOnlySite ? domainManagementList( siteSlug ) : homeUrl;
-		if ( config.isEnabled( 'nav-unification' ) && 'sites' === section ) {
+		if ( this.props.isNavUnificationEnabled && 'sites' === section ) {
 			mySitesUrl = '';
 		}
 		return (
@@ -186,6 +213,7 @@ class MasterbarLoggedIn extends React.Component {
 	}
 
 	render() {
+		const isWordPressActionSearchFeatureEnabled = config.isEnabled( 'wordpress-action-search' );
 		const {
 			domainOnlySite,
 			translate,
@@ -197,10 +225,12 @@ class MasterbarLoggedIn extends React.Component {
 			title,
 		} = this.props;
 
+		const { isActionSearchVisible } = this.state;
+
 		if ( isCheckout ) {
 			return (
 				<AsyncLoad
-					require="calypso/layout/masterbar/checkout"
+					require="calypso/layout/masterbar/checkout.tsx"
 					placeholder={ null }
 					title={ title }
 					isJetpackNotAtomic={ isJetpackNotAtomic }
@@ -211,60 +241,82 @@ class MasterbarLoggedIn extends React.Component {
 		}
 
 		return (
-			<Masterbar>
-				{ this.renderMySites() }
-				<Item
-					tipTarget="reader"
-					className="masterbar__reader"
-					url="/read"
-					icon="reader"
-					onClick={ this.clickReader }
-					isActive={ this.isActive( 'reader' ) }
-					tooltip={ translate( 'Read the blogs and topics you follow' ) }
-					preloadSection={ this.preloadReader }
-					hasUnseen={ this.props.hasUnseen }
-				>
-					{ translate( 'Reader', { comment: 'Toolbar, must be shorter than ~12 chars' } ) }
-				</Item>
-				{ ( this.props.isSupportSession || config.isEnabled( 'quick-language-switcher' ) ) && (
-					<AsyncLoad require="./quick-language-switcher" placeholder={ null } />
-				) }
-				<AsyncLoad require="calypso/my-sites/resume-editing" placeholder={ null } />
-				{ ! domainOnlySite && ! isMigrationInProgress && (
-					<Publish
-						isActive={ this.isActive( 'post' ) }
-						className="masterbar__item-new"
-						tooltip={ translate( 'Create a New Post' ) }
+			<>
+				{ isWordPressActionSearchFeatureEnabled && isActionSearchVisible ? (
+					<PopUpSearch onClose={ this.onSearchActionsClose } />
+				) : null }
+				<Masterbar>
+					{ this.renderMySites() }
+					<Item
+						tipTarget="reader"
+						className="masterbar__reader"
+						url="/read"
+						icon="reader"
+						onClick={ this.clickReader }
+						isActive={ this.isActive( 'reader' ) }
+						tooltip={ translate( 'Read the blogs and topics you follow' ) }
+						preloadSection={ this.preloadReader }
+						hasUnseen={ this.props.hasUnseen }
 					>
-						{ translate( 'Write' ) }
-					</Publish>
-				) }
-				<Item
-					tipTarget="me"
-					url="/me"
-					icon="user-circle"
-					onClick={ this.clickMe }
-					isActive={ this.isActive( 'me' ) }
-					className="masterbar__item-me"
-					tooltip={ translate( 'Update your profile, personal settings, and more' ) }
-					preloadSection={ this.preloadMe }
-				>
-					<Gravatar user={ this.props.user } alt={ translate( 'My Profile' ) } size={ 18 } />
-					<span className="masterbar__item-me-label">
-						{ translate( 'My Profile', { context: 'Toolbar, must be shorter than ~12 chars' } ) }
-					</span>
-				</Item>
-				<Notifications
-					isShowing={ this.props.isNotificationsShowing }
-					isActive={ this.isActive( 'notifications' ) }
-					className="masterbar__item-notifications"
-					tooltip={ translate( 'Manage your notifications' ) }
-				>
-					<span className="masterbar__item-notifications-label">
-						{ translate( 'Notifications', { comment: 'Toolbar, must be shorter than ~12 chars' } ) }
-					</span>
-				</Notifications>
-			</Masterbar>
+						{ translate( 'Reader', { comment: 'Toolbar, must be shorter than ~12 chars' } ) }
+					</Item>
+					{ ( this.props.isSupportSession || config.isEnabled( 'quick-language-switcher' ) ) && (
+						<AsyncLoad require="./quick-language-switcher" placeholder={ null } />
+					) }
+					{ isWordPressActionSearchFeatureEnabled && (
+						<Item
+							tipTarget="Action Search"
+							icon="search"
+							onClick={ this.clickSearchActions }
+							isActive={ false }
+							className="masterbar__item-action-search"
+							tooltip={ translate( 'Search' ) }
+							preloadSection={ this.preloadMe }
+						>
+							{ translate( 'Search Actions' ) }
+						</Item>
+					) }
+					<AsyncLoad require="calypso/my-sites/resume-editing" placeholder={ null } />
+					{ ! domainOnlySite && ! isMigrationInProgress && (
+						<AsyncLoad
+							require="./publish"
+							placeholder={ null }
+							isActive={ this.isActive( 'post' ) }
+							className="masterbar__item-new"
+							tooltip={ translate( 'Create a New Post' ) }
+						>
+							{ translate( 'Write' ) }
+						</AsyncLoad>
+					) }
+					<Item
+						tipTarget="me"
+						url="/me"
+						icon="user-circle"
+						onClick={ this.clickMe }
+						isActive={ this.isActive( 'me' ) }
+						className="masterbar__item-me"
+						tooltip={ translate( 'Update your profile, personal settings, and more' ) }
+						preloadSection={ this.preloadMe }
+					>
+						<Gravatar user={ this.props.user } alt={ translate( 'My Profile' ) } size={ 18 } />
+						<span className="masterbar__item-me-label">
+							{ translate( 'My Profile', { context: 'Toolbar, must be shorter than ~12 chars' } ) }
+						</span>
+					</Item>
+					<Notifications
+						isShowing={ this.props.isNotificationsShowing }
+						isActive={ this.isActive( 'notifications' ) }
+						className="masterbar__item-notifications"
+						tooltip={ translate( 'Manage your notifications' ) }
+					>
+						<span className="masterbar__item-notifications-label">
+							{ translate( 'Notifications', {
+								comment: 'Toolbar, must be shorter than ~12 chars',
+							} ) }
+						</span>
+					</Notifications>
+				</Masterbar>
+			</>
 		);
 	}
 }
@@ -295,7 +347,8 @@ export default connect(
 			previousPath: getPreviousPath( state ),
 			isJetpackNotAtomic: isJetpackSite( state, siteId ) && ! isAtomicSite( state, siteId ),
 			currentLayoutFocus: getCurrentLayoutFocus( state ),
+			isNavUnificationEnabled: isNavUnificationEnabled( state ),
 		};
 	},
-	{ setNextLayoutFocus, recordTracksEvent, updateSiteMigrationMeta }
+	{ setNextLayoutFocus, recordTracksEvent, updateSiteMigrationMeta, activateNextLayoutFocus }
 )( localize( MasterbarLoggedIn ) );

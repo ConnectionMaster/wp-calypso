@@ -16,14 +16,9 @@ import Gridicon from 'calypso/components/gridicon';
 import PopoverMenu from 'calypso/components/popover/menu';
 import PopoverMenuItem from 'calypso/components/popover/menu-item';
 import Spinner from 'calypso/components/spinner';
-import {
-	bumpStat,
-	composeAnalytics,
-	recordTracksEvent,
-	withAnalytics,
-} from 'calypso/state/analytics/actions';
-import { skipCurrentViewHomeLayout } from 'calypso/state/home/actions';
+import { bumpStat, composeAnalytics, recordTracksEvent } from 'calypso/state/analytics/actions';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
+import useSkipCurrentViewMutation from 'calypso/data/home/use-skip-current-view-mutation';
 
 /**
  * Style dependencies
@@ -43,6 +38,7 @@ const Task = ( {
 	illustration,
 	isLoading: forceIsLoading = false,
 	isUrgent = false,
+	showSkip = true,
 	enableSkipOptions = true,
 	scary,
 	siteId,
@@ -55,6 +51,7 @@ const Task = ( {
 	const dispatch = useDispatch();
 	const translate = useTranslate();
 	const skipButtonRef = useRef( null );
+	const { skipCurrentView } = useSkipCurrentViewMutation( siteId );
 
 	useEffect( () => setIsLoading( forceIsLoading ), [ forceIsLoading ] );
 
@@ -65,7 +62,7 @@ const Task = ( {
 
 		if ( completeOnStart ) {
 			setIsLoading( true );
-			dispatch( skipCurrentViewHomeLayout( siteId ) );
+			skipCurrentView();
 		}
 
 		dispatch(
@@ -82,23 +79,22 @@ const Task = ( {
 		setIsLoading( true );
 		setSkipOptionsVisible( false );
 
+		skipCurrentView( reminder );
+
 		dispatch(
-			withAnalytics(
-				composeAnalytics(
-					recordTracksEvent( 'calypso_customer_home_task_skip', {
-						task: taskId,
-						reminder,
-					} ),
-					bumpStat( 'calypso_customer_home', 'task_skip' )
-				),
-				skipCurrentViewHomeLayout( siteId, reminder )
+			composeAnalytics(
+				recordTracksEvent( 'calypso_customer_home_task_skip', {
+					task: taskId,
+					reminder,
+				} ),
+				bumpStat( 'calypso_customer_home', 'task_skip' )
 			)
 		);
 	};
 
 	const ActionButtonWithStats = ( { children } ) => {
 		return (
-			<div onClick={ startTask } role="presentation">
+			<div onClick={ startTask } role="presentation" className="task__action">
 				{ children }
 			</div>
 		);
@@ -146,15 +142,17 @@ const Task = ( {
 				<p className="task__description">{ description }</p>
 				<div className="task__actions">
 					{ renderAction() }
-					<Button
-						className="task__skip is-link"
-						ref={ skipButtonRef }
-						onClick={ () => ( enableSkipOptions ? setSkipOptionsVisible( true ) : skipTask() ) }
-					>
-						{ enableSkipOptions ? translate( 'Hide this' ) : translate( 'Dismiss' ) }
-						{ enableSkipOptions && <Gridicon icon="dropdown" size={ 18 } /> }
-					</Button>
-					{ enableSkipOptions && areSkipOptionsVisible && (
+					{ showSkip && (
+						<Button
+							className="task__skip is-link"
+							ref={ skipButtonRef }
+							onClick={ () => ( enableSkipOptions ? setSkipOptionsVisible( true ) : skipTask() ) }
+						>
+							{ enableSkipOptions ? translate( 'Hide this' ) : translate( 'Dismiss' ) }
+							{ enableSkipOptions && <Gridicon icon="dropdown" size={ 18 } /> }
+						</Button>
+					) }
+					{ showSkip && enableSkipOptions && areSkipOptionsVisible && (
 						<PopoverMenu
 							context={ skipButtonRef.current }
 							isVisible={ areSkipOptionsVisible }
@@ -184,8 +182,11 @@ const Task = ( {
 	);
 };
 
-const mapStateToProps = ( state ) => ( {
-	siteId: getSelectedSiteId( state ),
-} );
+const mapStateToProps = ( state ) => {
+	const siteId = getSelectedSiteId( state );
+	return {
+		siteId,
+	};
+};
 
 export default connect( mapStateToProps )( Task );

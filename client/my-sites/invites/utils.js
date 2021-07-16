@@ -5,6 +5,12 @@ import React from 'react';
 import { get } from 'lodash';
 import i18n from 'i18n-calypso';
 
+/**
+ * Internal dependencies
+ */
+
+import { logmeinUrl } from 'calypso/lib/logmein';
+
 export function acceptedNotice( invite, displayOnNextPage = true ) {
 	const site = (
 		<a href={ get( invite, 'site.URL' ) } className="invites__notice-site-link">
@@ -152,32 +158,37 @@ export function acceptedNotice( invite, displayOnNextPage = true ) {
 }
 
 export function getRedirectAfterAccept( invite ) {
-	const isWPForTeamsSite = get( invite, 'site.is_wpforteams_site', false );
-
-	if ( isWPForTeamsSite ) {
+	if ( invite.site.is_wpforteams_site ) {
 		return `https://${ invite.site.domain }`;
 	}
 
 	const readerPath = '/read';
 	const postsListPath = '/posts/' + invite.site.ID;
+	const getDestinationUrl = ( redirect ) => {
+		const remoteLoginHost = `https://${ invite.site.domain }`;
+		const remoteLoginBackUrl = ( destinationPath ) => `https://wordpress.com${ destinationPath }`;
+		const destination = logmeinUrl( remoteLoginHost, remoteLoginBackUrl( redirect ) );
+		const isMissingLogmein = destination === remoteLoginHost;
+		return isMissingLogmein ? redirect : destination;
+	};
 
-	if ( get( invite, 'site.is_vip' ) ) {
+	if ( invite.site.is_vip ) {
 		switch ( invite.role ) {
 			case 'viewer':
 			case 'follower':
-				return get( invite, 'site.URL' ) || readerPath;
+				return invite.site.URL || readerPath;
 
 			default:
-				return get( invite, 'site.admin_url' ) || postsListPath;
+				return invite.site.admin_url || postsListPath;
 		}
 	}
 
 	switch ( invite.role ) {
 		case 'viewer':
 		case 'follower':
-			return readerPath;
+			return getDestinationUrl( readerPath );
 
 		default:
-			return postsListPath;
+			return getDestinationUrl( postsListPath );
 	}
 }

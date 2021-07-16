@@ -1,16 +1,9 @@
-/**
- * External dependencies
- */
-import type { Reducer } from 'redux';
 import { combineReducers } from '@wordpress/data';
-
-/**
- * Internal dependencies
- */
-import type { DomainCategory, DomainAvailability, DomainSuggestionState } from './types';
 import { DataStatus } from './constants';
-import type { Action } from './actions';
 import { stringifyDomainQueryObject } from './utils';
+import type { Action } from './actions';
+import type { DomainCategory, DomainSuggestionState, DomainAvailabilities } from './types';
+import type { Reducer } from 'redux';
 
 const initialDomainSuggestionState: DomainSuggestionState = {
 	state: DataStatus.Uninitialized,
@@ -67,10 +60,7 @@ const categories: Reducer< DomainCategory[], Action > = ( state = [], action ) =
 	return state;
 };
 
-const availability: Reducer< Record< string, DomainAvailability | undefined >, Action > = (
-	state = {},
-	action
-) => {
+const availability: Reducer< DomainAvailabilities, Action > = ( state = {}, action ) => {
 	if ( action.type === 'RECEIVE_DOMAIN_AVAILABILITY' ) {
 		return {
 			...state,

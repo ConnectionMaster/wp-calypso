@@ -6,6 +6,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import Gridicon from 'calypso/components/gridicon';
+import classnames from 'classnames';
 
 /**
  * Internal dependencies
@@ -33,6 +34,7 @@ class InlineSupportLink extends Component {
 	};
 
 	static propTypes = {
+		className: PropTypes.string,
 		supportPostId: PropTypes.number,
 		supportLink: PropTypes.string,
 		showText: PropTypes.bool,
@@ -59,6 +61,7 @@ class InlineSupportLink extends Component {
 
 	render() {
 		const {
+			className,
 			showText,
 			supportPostId,
 			supportLink,
@@ -83,10 +86,25 @@ class InlineSupportLink extends Component {
 		};
 
 		const text = children ? children : translate( 'Learn more' );
+		let content = (
+			<>
+				{ showText && text }
+				{ supportPostId && showIcon && <Gridicon icon="help-outline" size={ iconSize } /> }
+			</>
+		);
+		/* Prevent widows, sometimes:
+			No  Text, No Icon  = Widow not possible
+			Yes Text, No Icon  = Widow possible
+			No  Text, Yes Icon = Widow not possible
+			Yes Text, Yes Icon = Widow possible
+		*/
+		if ( showText ) {
+			content = <span className="inline-support-link__nowrap">{ content }</span>;
+		}
 
 		return (
 			<LinkComponent
-				className="inline-support-link"
+				className={ classnames( 'inline-support-link', className ) }
 				href={ url }
 				onClick={ openDialog }
 				onMouseEnter={
@@ -99,8 +117,7 @@ class InlineSupportLink extends Component {
 				{ ...externalLinkProps }
 			>
 				{ shouldLazyLoadAlternates && <QuerySupportArticleAlternates postId={ supportPostId } /> }
-				{ showText && text }
-				{ supportPostId && showIcon && <Gridicon icon="help-outline" size={ iconSize } /> }
+				{ content }
 			</LinkComponent>
 		);
 	}

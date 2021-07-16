@@ -1,6 +1,3 @@
-/**
- * Internal dependencies
- */
 import type { DataStatus } from './constants';
 
 export interface DomainSuggestionQuery {
@@ -77,21 +74,42 @@ export interface DomainSuggestion {
 	domain_name: DomainName;
 
 	/**
+	 * Rendered formatted cost
+	 *
+	 * @example "Free" or "€15.00"
+	 */
+	cost: string;
+
+	/**
+	 * Raw price
+	 *
+	 * @example 40
+	 */
+	raw_price: number;
+
+	/**
+	 * Currency code
+	 *
+	 * @example USD
+	 */
+	currency_code: string;
+
+	/**
 	 * Relevance as a percent: 0 <= relevance <= 1
 	 *
 	 * @example 0.9
 	 */
-	relevance: number;
+	relevance?: number;
 
 	/**
 	 * Whether the domain supports privacy
 	 */
-	supports_privacy: boolean;
+	supports_privacy?: boolean;
 
 	/**
 	 * The domain vendor
 	 */
-	vendor: string;
+	vendor?: string;
 
 	/**
 	 * Reasons for suggestion the domain
@@ -101,21 +119,14 @@ export interface DomainSuggestion {
 	match_reasons?: readonly string[];
 
 	/**
-	 * Rendered cost with currency
-	 *
-	 * @example "€15.00"
-	 */
-	cost: string;
-
-	/**
 	 * The product ID
 	 */
-	product_id: number;
+	product_id?: number;
 
 	/**
 	 * The product slug
 	 */
-	product_slug: string;
+	product_slug?: string;
 
 	/**
 	 * Whether the domain is free
@@ -123,11 +134,15 @@ export interface DomainSuggestion {
 	is_free?: boolean;
 
 	/**
-	 * Whether the domain requies HSTS
+	 * Whether the domain requires HSTS
 	 */
 	hsts_required?: boolean;
-}
 
+	/**
+	 * Whether the domain is unavailable
+	 */
+	unavailable: boolean;
+}
 export interface DomainCategory {
 	/**
 	 * The domain category title
@@ -187,9 +202,16 @@ export interface DomainAvailability {
 	 * Vendor
 	 */
 	vendor?: string;
+
+	/**
+	 * Whether the domain requires HSTS
+	 */
+	hsts_required?: boolean;
 }
 
 export type TimestampMS = ReturnType< typeof Date.now >;
+
+export type DomainSuggestions = Record< string, DomainSuggestion[] | undefined >;
 
 export interface DomainSuggestionState {
 	/**
@@ -200,7 +222,7 @@ export interface DomainSuggestionState {
 	/**
 	 * Domain suggestion data typically returned from the API
 	 */
-	data: Record< string, DomainSuggestion[] | undefined >;
+	data: DomainSuggestions;
 
 	/**
 	 * Error message
@@ -217,3 +239,7 @@ export interface DomainSuggestionState {
 	 */
 	pendingSince: TimestampMS | undefined;
 }
+
+export type DomainAvailabilities = Record< string, DomainAvailability | undefined >;
+
+export type DomainSuggestionSelectorOptions = Partial< Exclude< DomainSuggestionQuery, 'query' > >;

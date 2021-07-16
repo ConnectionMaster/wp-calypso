@@ -59,6 +59,11 @@ class WPCOM_Block_Editor_NUX {
 			'wpcomBlockEditorNuxAssetsUrl',
 			plugins_url( 'dist/', __FILE__ )
 		);
+		wp_localize_script(
+			'wpcom-block-editor-nux-script',
+			'wpcomBlockEditorNuxLocale',
+			\A8C\FSE\Common\get_iso_639_locale( determine_locale() )
+		);
 
 		wp_set_script_translations( 'wpcom-block-editor-nux-script', 'full-site-editing' );
 
@@ -75,7 +80,7 @@ class WPCOM_Block_Editor_NUX {
 	 * Register the WPCOM Block Editor NUX endpoints.
 	 */
 	public function register_rest_api() {
-		require_once __DIR__ . '/../wpcom-block-editor-welcome-tour/class-wp-rest-wpcom-block-editor-nux-status-controller.php';
+		require_once __DIR__ . '/class-wp-rest-wpcom-block-editor-nux-status-controller.php';
 		$controller = new WP_REST_WPCOM_Block_Editor_NUX_Status_Controller();
 		$controller->register_rest_route();
 	}

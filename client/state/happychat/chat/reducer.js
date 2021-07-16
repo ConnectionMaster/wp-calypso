@@ -2,14 +2,14 @@
 /**
  * External dependencies
  */
-import { concat, filter, find, map, get, sortBy, takeRight } from 'lodash';
+import { concat, filter, find, findIndex, map, get, sortBy } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import {
-	SERIALIZE,
 	HAPPYCHAT_IO_RECEIVE_MESSAGE,
+	HAPPYCHAT_IO_RECEIVE_MESSAGE_UPDATE,
 	HAPPYCHAT_IO_RECEIVE_STATUS,
 	HAPPYCHAT_IO_REQUEST_TRANSCRIPT_RECEIVE,
 	HAPPYCHAT_IO_REQUEST_TRANSCRIPT_TIMEOUT,
@@ -19,7 +19,7 @@ import {
 	HAPPYCHAT_CHAT_STATUS_DEFAULT,
 	HAPPYCHAT_MAX_STORED_MESSAGES,
 } from 'calypso/state/happychat/constants';
-import { combineReducers, withSchemaValidation } from 'calypso/state/utils';
+import { combineReducers, withSchemaValidation, withPersistence } from 'calypso/state/utils';
 import { timelineSchema } from './schema';
 
 // We compare incoming timestamps against a known future Unix time in seconds date
@@ -79,6 +79,7 @@ export const status = ( state = HAPPYCHAT_CHAT_STATUS_DEFAULT, action ) => {
 const timelineEvent = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
+		case HAPPYCHAT_IO_RECEIVE_MESSAGE_UPDATE:
 			const { message } = action;
 			return {
 				id: message.id,
@@ -86,6 +87,7 @@ const timelineEvent = ( state = {}, action ) => {
 				message: message.text,
 				name: message.user.name,
 				image: message.user.avatarURL,
+				isEdited: !! message.revisions,
 				timestamp: maybeUpscaleTimePrecision( message.timestamp ),
 				user_id: message.user.id,
 				type: get( message, 'type', 'message' ),
@@ -106,10 +108,8 @@ const sortTimeline = ( timeline ) =>
  * @returns {object}        Updated state
  *
  */
-export const timeline = withSchemaValidation( timelineSchema, ( state = [], action ) => {
+const timelineReducer = ( state = [], action ) => {
 	switch ( action.type ) {
-		case SERIALIZE:
-			return takeRight( state, HAPPYCHAT_MAX_STORED_MESSAGES );
 		case HAPPYCHAT_IO_RECEIVE_MESSAGE:
 			// if meta.forOperator is set, skip so won't show to user
 			if ( get( action, 'message.meta.forOperator', false ) ) {
@@ -118,6 +118,11 @@ export const timeline = withSchemaValidation( timelineSchema, ( state = [], acti
 			const event = timelineEvent( {}, action );
 			const existing = find( state, ( { id } ) => event.id === id );
 			return existing ? state : concat( state, [ event ] );
+		case HAPPYCHAT_IO_RECEIVE_MESSAGE_UPDATE:
+			const index = findIndex( state, ( { id } ) => action.message.id === id );
+			return index === -1
+				? state
+				: [ ...state.slice( 0, index ), timelineEvent( {}, action ), ...state.slice( index + 1 ) ];
 		case HAPPYCHAT_IO_REQUEST_TRANSCRIPT_TIMEOUT:
 			return state;
 		case HAPPYCHAT_IO_REQUEST_TRANSCRIPT_RECEIVE:
@@ -141,6 +146,7 @@ export const timeline = withSchemaValidation( timelineSchema, ( state = [], acti
 						message: message.text,
 						name: message.user.name,
 						image: message.user.picture,
+						isEdited: !! message.revisions,
 						timestamp: maybeUpscaleTimePrecision( message.timestamp ),
 						user_id: message.user.id,
 						type: get( message, 'type', 'message' ),
@@ -150,7 +156,14 @@ export const timeline = withSchemaValidation( timelineSchema, ( state = [], acti
 			);
 	}
 	return state;
-} );
+};
+
+export const timeline = withSchemaValidation(
+	timelineSchema,
+	withPersistence( timelineReducer, {
+		serialize: ( state ) => state.slice( -1 * HAPPYCHAT_MAX_STORED_MESSAGES ),
+	} )
+);
 
 export default combineReducers( {
 	status,

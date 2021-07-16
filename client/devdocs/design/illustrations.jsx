@@ -14,10 +14,6 @@ import Main from 'calypso/components/main';
  * Illustrations
  */
 import adwordsGoogle from 'calypso/assets/images/illustrations/adwords-google.svg';
-import appBannerEditor from 'calypso/assets/images/illustrations/app-banner-editor.svg';
-import appBannerNotifications from 'calypso/assets/images/illustrations/app-banner-notifications.svg';
-import appBannerReader from 'calypso/assets/images/illustrations/app-banner-reader.svg';
-import appBannerStats from 'calypso/assets/images/illustrations/app-banner-stats.svg';
 import apps from 'calypso/assets/images/illustrations/apps.svg';
 import blockEditorFade from 'calypso/assets/images/illustrations/block-editor-fade.svg';
 import builderReferral from 'calypso/assets/images/illustrations/builder-referral.svg';
@@ -48,6 +44,11 @@ import themes from 'calypso/assets/images/illustrations/themes.svg';
 import updates from 'calypso/assets/images/illustrations/updates.svg';
 import videoHosting from 'calypso/assets/images/illustrations/video-hosting.svg';
 import whoops from 'calypso/assets/images/illustrations/whoops.svg';
+import helpDomains from 'calypso/assets/images/illustrations/help-domains.svg';
+import helpGetStarted from 'calypso/assets/images/illustrations/help-getstarted.svg';
+import helpPlugins from 'calypso/assets/images/illustrations/help-plugins.svg';
+import helpWebsite from 'calypso/assets/images/illustrations/help-website.svg';
+import helpPrivacy from 'calypso/assets/images/illustrations/help-privacy.svg';
 import customerHomeIllustrationBusiness from 'calypso/assets/images/customer-home/illustration--business.svg';
 import customerHomeIllustrationChecklistComplete from 'calypso/assets/images/customer-home/illustration--checklist-complete.svg';
 import customerHomeIllustrationFireworks from 'calypso/assets/images/customer-home/illustration--fireworks-v2.svg';
@@ -73,18 +74,6 @@ export default class Illustrations extends React.PureComponent {
 					<div className="design__illustrations-illustrations">
 						<div className="design__illustrations-illustration">
 							<img src={ adwordsGoogle } alt="" />
-						</div>
-						<div className="design__illustrations-illustration">
-							<img src={ appBannerEditor } alt="" />
-						</div>
-						<div className="design__illustrations-illustration">
-							<img src={ appBannerNotifications } alt="" />
-						</div>
-						<div className="design__illustrations-illustration">
-							<img src={ appBannerReader } alt="" />
-						</div>
-						<div className="design__illustrations-illustration">
-							<img src={ appBannerStats } alt="" />
 						</div>
 						<div className="design__illustrations-illustration">
 							<img src={ apps } alt="" />
@@ -163,6 +152,22 @@ export default class Illustrations extends React.PureComponent {
 						</div>
 						<div className="design__illustrations-illustration">
 							<img src={ whoops } alt="" />
+						</div>
+
+						<div className="design__illustrations-illustration">
+							<img src={ helpGetStarted } alt="" />
+						</div>
+						<div className="design__illustrations-illustration">
+							<img src={ helpDomains } alt="" />
+						</div>
+						<div className="design__illustrations-illustration">
+							<img src={ helpWebsite } alt="" />
+						</div>
+						<div className="design__illustrations-illustration">
+							<img src={ helpPlugins } alt="" />
+						</div>
+						<div className="design__illustrations-illustration">
+							<img src={ helpPrivacy } alt="" />
 						</div>
 					</div>
 

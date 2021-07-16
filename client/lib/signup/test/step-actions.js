@@ -14,20 +14,6 @@ import {
 import { useNock } from 'calypso/test-helpers/use-nock';
 import flows from 'calypso/signup/config/flows';
 import { isDomainStepSkippable } from 'calypso/signup/config/steps';
-import { getUserStub } from 'calypso/lib/user';
-
-jest.mock( 'calypso/lib/abtest', () => ( { abtest: () => '' } ) );
-
-jest.mock( 'calypso/lib/user', () => {
-	const getStub = jest.fn();
-
-	const user = () => ( {
-		get: getStub,
-	} );
-	user.getUserStub = getStub;
-
-	return user;
-} );
 
 jest.mock( 'calypso/signup/config/steps', () => require( './mocks/signup/config/steps' ) );
 jest.mock( 'calypso/signup/config/flows', () => require( './mocks/signup/config/flows' ) );
@@ -54,7 +40,6 @@ describe( 'createSiteWithCart()', () => {
 
 	beforeEach( () => {
 		isDomainStepSkippable.mockReset();
-		getUserStub.mockReset();
 	} );
 
 	test( 'should use the vertical field in the survey tree if the site topic one is empty.', () => {
@@ -147,10 +132,15 @@ describe( 'createSiteWithCart()', () => {
 
 	test( 'use username for blog_name if user data available', () => {
 		isDomainStepSkippable.mockReturnValue( true );
-		getUserStub.mockReturnValue( { username: 'alex' } );
 
 		const fakeStore = {
-			getState: () => ( {} ),
+			getState: () => ( {
+				currentUser: {
+					user: {
+						username: 'alex',
+					},
+				},
+			} ),
 		};
 
 		createSiteWithCart(
@@ -325,7 +315,7 @@ describe( 'isPlanFulfilled()', () => {
 			submitSignupStep,
 		};
 		const defaultDependencies = { cartItem: 'testPlan' };
-		const cartItem = { free_trial: false, product_slug: defaultDependencies.cartItem };
+		const cartItem = { product_slug: defaultDependencies.cartItem };
 
 		expect( flows.excludeStep ).not.toHaveBeenCalled();
 		expect( submitSignupStep ).not.toHaveBeenCalled();

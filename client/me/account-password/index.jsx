@@ -3,7 +3,7 @@
  */
 
 import { localize } from 'i18n-calypso';
-import { debounce, flowRight as compose, head, isEmpty } from 'lodash';
+import { debounce, flowRight as compose, isEmpty } from 'lodash';
 import React from 'react';
 import classNames from 'classnames';
 import { connect } from 'react-redux';
@@ -11,7 +11,7 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import { ProtectFormGuard } from 'calypso/lib/protect-form';
+import { protectForm } from 'calypso/lib/protect-form';
 import FormFieldset from 'calypso/components/forms/form-fieldset';
 import FormLabel from 'calypso/components/forms/form-label';
 import FormPasswordInput from 'calypso/components/forms/form-password-input';
@@ -22,7 +22,10 @@ import FormInputValidation from 'calypso/components/forms/form-input-validation'
 import { errorNotice } from 'calypso/state/notices/actions';
 import { recordGoogleEvent } from 'calypso/state/analytics/actions';
 import { saveUserSettings } from 'calypso/state/user-settings/actions';
-import { isPendingPasswordChange } from 'calypso/state/user-settings/selectors';
+import {
+	hasUserSettingsRequestFailed,
+	isPendingPasswordChange,
+} from 'calypso/state/user-settings/selectors';
 import { generatePassword } from 'calypso/lib/generate-password';
 import wp from 'calypso/lib/wp';
 
@@ -31,24 +34,21 @@ import wp from 'calypso/lib/wp';
  */
 import './style.scss';
 
-const wpcom = wp.undocumented();
-
 class AccountPassword extends React.Component {
 	state = {
 		password: '',
 		validation: null,
 		pendingValidation: true,
-		isUnsaved: false,
 	};
 
-	componentDidMount() {
-		this.debouncedPasswordValidate = debounce( this.validatePassword, 300 );
-	}
-
 	componentDidUpdate( prevProps ) {
-		if ( prevProps.isPendingPasswordChange && ! this.props.isPendingPasswordChange ) {
-			// eslint-disable-next-line react/no-did-update-set-state
-			this.setState( { isUnsaved: false } );
+		if (
+			prevProps.isPendingPasswordChange &&
+			! this.props.isPendingPasswordChange &&
+			! this.props.hasUserSettingsRequestFailed
+		) {
+			this.props.markSaved();
+			window.location = '?updated=password';
 		}
 	}
 
@@ -56,12 +56,12 @@ class AccountPassword extends React.Component {
 		this.setState( {
 			password: generatePassword(),
 			pendingValidation: true,
-			isUnsaved: true,
 		} );
-		this.debouncedPasswordValidate();
+		this.props.markChanged();
+		this.validatePassword();
 	};
 
-	validatePassword = async () => {
+	validatePassword = debounce( async () => {
 		const password = this.state.password;
 
 		if ( '' === password ) {
@@ -70,23 +70,28 @@ class AccountPassword extends React.Component {
 		}
 
 		try {
-			const validationResult = await wpcom.me().validatePassword( password );
+			const validation = await wp.req.post( '/me/settings/password/validate', { password } );
 
-			this.setState( { pendingValidation: false, validation: validationResult } );
+			this.setState( { pendingValidation: false, validation } );
 		} catch ( err ) {
 			this.setState( { pendingValidation: false } );
-			return;
 		}
-	};
+	}, 300 );
 
 	handlePasswordChange = ( event ) => {
 		const newPassword = event.currentTarget.value;
-		this.debouncedPasswordValidate();
+		this.validatePassword();
+
 		this.setState( {
 			password: newPassword,
 			pendingValidation: true,
-			isUnsaved: '' !== newPassword,
 		} );
+
+		if ( '' !== newPassword ) {
+			this.props.markChanged();
+		} else {
+			this.props.markSaved();
+		}
 	};
 
 	handleSaveButtonClick = () => {
@@ -110,7 +115,7 @@ class AccountPassword extends React.Component {
 
 	renderValidationNotices = () => {
 		const { translate } = this.props;
-		const failure = head( this.state.validation?.test_results.failed );
+		const failure = this.state.validation?.test_results.failed?.[ 0 ];
 
 		if ( this.state.validation?.passed ) {
 			return (
@@ -130,7 +135,6 @@ class AccountPassword extends React.Component {
 
 		return (
 			<form className="account-password" onSubmit={ this.submitForm }>
-				<ProtectFormGuard isChanged={ this.state.isUnsaved } />
 				<FormFieldset>
 					<FormLabel htmlFor="password">{ translate( 'New password' ) }</FormLabel>
 					<FormPasswordInput
@@ -182,8 +186,10 @@ export default compose(
 	connect(
 		( state ) => ( {
 			isPendingPasswordChange: isPendingPasswordChange( state ),
+			hasUserSettingsRequestFailed: hasUserSettingsRequestFailed( state ),
 		} ),
 		{ errorNotice, recordGoogleEvent, saveUserSettings }
 	),
-	localize
+	localize,
+	protectForm
 )( AccountPassword );

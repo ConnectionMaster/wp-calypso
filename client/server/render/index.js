@@ -13,7 +13,7 @@ import fs from 'fs';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { isDefaultLocale, isLocaleRtl, isTranslatedIncompletely } from 'calypso/lib/i18n-utils';
 import {
 	getLanguageFileUrl,
@@ -28,7 +28,7 @@ import {
 import getCurrentLocaleSlug from 'calypso/state/selectors/get-current-locale-slug';
 import getCurrentLocaleVariant from 'calypso/state/selectors/get-current-locale-variant';
 import initialReducer from 'calypso/state/reducer';
-import { SERIALIZE } from 'calypso/state/action-types';
+import { serialize } from 'calypso/state/utils';
 import { logToLogstash } from 'calypso/state/logstash/actions';
 import stateCache from 'calypso/server/state-cache';
 import { getNormalizedPath } from 'calypso/server/isomorphic-routing';
@@ -257,18 +257,13 @@ export function serverRender( req, res ) {
 		// And cache on the server, too.
 		if ( cacheKey ) {
 			const cacheableInitialState = pick( context.store.getState(), cacheableReduxSubtrees );
-			const serverState = initialReducer( cacheableInitialState, { type: SERIALIZE } );
+			const serverState = serialize( initialReducer, cacheableInitialState );
 			stateCache.set( cacheKey, serverState );
 		}
 	}
 	context.clientData = config.clientData;
 
 	attachBuildTimestamp( context );
-
-	if ( config.isEnabled( 'desktop' ) ) {
-		res.send( renderJsx( 'desktop', context ) );
-		return;
-	}
 
 	res.send( renderJsx( 'index', context ) );
 }
@@ -314,7 +309,6 @@ function isServerSideRenderCompatible( context ) {
 	return Boolean(
 		context.section?.isomorphic &&
 			! context.user && // logged out only
-			isDefaultLocale( context.lang ) &&
 			context.layout
 	);
 }

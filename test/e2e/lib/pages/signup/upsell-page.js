@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper.js';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper.js';
 
 export default class UpsellPage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -20,9 +13,10 @@ export default class UpsellPage extends AsyncBaseContainer {
 	}
 
 	async declineOffer() {
-		return await driverHelper.clickWhenClickable(
-			this.driver,
-			By.css( 'button[data-e2e-button="decline"]' )
-		);
+		const locator = By.css( 'button[data-e2e-button="decline"]' );
+		await driverHelper.waitUntilElementLocatedAndVisible( this.driver, locator );
+		// Sometimes the button is outside of the viewport which may be the reason behind intermittent failures.
+		await driverHelper.scrollIntoView( this.driver, locator, 'center' );
+		return await driverHelper.clickWhenClickable( this.driver, locator );
 	}
 }

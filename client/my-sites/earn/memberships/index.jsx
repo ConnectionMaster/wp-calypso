@@ -34,7 +34,7 @@ import {
 	FEATURE_MEMBERSHIPS,
 	PLAN_PERSONAL,
 	PLAN_JETPACK_PERSONAL,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
 import Notice from 'calypso/components/notice';
 import NoticeAction from 'calypso/components/notice/notice-action';
 import SectionHeader from 'calypso/components/section-header';
@@ -135,7 +135,7 @@ class MembershipsSection extends Component {
 										br: <br />,
 										a: (
 											<ExternalLink
-												href="https://wordpress.com/support/recurring-payments-button/#related-fees"
+												href="https://wordpress.com/support/wordpress-editor/blocks/payments/#related-fees"
 												icon={ true }
 											/>
 										),

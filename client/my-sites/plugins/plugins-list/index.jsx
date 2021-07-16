@@ -7,7 +7,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
-import { find, get, includes, isEmpty, isEqual, negate, range, reduce, sortBy } from 'lodash';
+import { find, get, includes, isEmpty, isEqual, range, reduce, sortBy } from 'lodash';
 
 /**
  * Internal dependencies
@@ -32,7 +32,7 @@ import {
 } from 'calypso/state/plugins/installed/actions';
 import getSites from 'calypso/state/selectors/get-sites';
 import {
-	getPluginOnSites,
+	getPluginsOnSites,
 	getPluginStatusesByType,
 } from 'calypso/state/plugins/installed/selectors';
 import { removePluginStatuses } from 'calypso/state/plugins/installed/status/actions';
@@ -237,7 +237,7 @@ export class PluginsList extends React.Component {
 		this.removePluginStatuses();
 		this.props.plugins
 			.filter( this.isSelected ) // only use selected sites
-			.filter( negate( isDeactivatingAndJetpackSelected ) ) // ignore sites that are deactiving or activating jetpack
+			.filter( ( plugin ) => ! isDeactivatingAndJetpackSelected( plugin ) ) // ignore sites that are deactiving or activating jetpack
 			.map( ( p ) => {
 				return Object.keys( p.sites ).map( ( siteId ) => {
 					const site = this.props.allSites.find( ( s ) => s.ID === parseInt( siteId ) );
@@ -591,17 +591,9 @@ export default connect(
 	( state, { plugins } ) => {
 		const selectedSite = getSelectedSite( state );
 
-		/* eslint-disable wpcalypso/redux-no-bound-selectors */
-		const pluginsOnSites = Object.values( plugins ).reduce( ( acc, plugin ) => {
-			const siteIds = Object.keys( plugin.sites );
-			acc[ plugin.slug ] = getPluginOnSites( state, siteIds, plugin.slug );
-			return acc;
-		}, {} );
-		/* eslint-enable wpcalypso/redux-no-bound-selectors */
-
 		return {
 			allSites: getSites( state ),
-			pluginsOnSites,
+			pluginsOnSites: getPluginsOnSites( state, plugins ),
 			selectedSite,
 			selectedSiteSlug: getSelectedSiteSlug( state ),
 			inProgressStatuses: getPluginStatusesByType( state, 'inProgress' ),

@@ -5,6 +5,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { flowRight as compose } from 'lodash';
 import { localize } from 'i18n-calypso';
+import { ToggleControl } from '@wordpress/components';
 
 /**
  * Internal dependencies
@@ -22,7 +23,6 @@ import MeSidebarNavigation from 'calypso/me/sidebar-navigation';
 import ProfileLinks from 'calypso/me/profile-links';
 import ReauthRequired from 'calypso/me/reauth-required';
 import SectionHeader from 'calypso/components/section-header';
-import { localizeUrl } from 'calypso/lib/i18n-utils';
 import twoStepAuthorization from 'calypso/lib/two-step-authorization';
 import { protectForm } from 'calypso/lib/protect-form';
 import { recordGoogleEvent } from 'calypso/state/analytics/actions';
@@ -43,11 +43,15 @@ class Profile extends React.Component {
 		return () => this.props.recordGoogleEvent( 'Me', 'Focused on ' + action );
 	}
 
+	toggleGravatarHidden = ( isHidden ) => {
+		this.props.setUserSetting( 'gravatar_profile_hidden', isHidden );
+	};
+
 	render() {
 		const gravatarProfileLink = 'https://gravatar.com/' + this.props.getSetting( 'user_login' );
 
 		return (
-			<Main className="profile is-wide-layout">
+			<Main className="profile">
 				<PageViewTracker path="/me" title="Me > My Profile" />
 				<MeSidebarNavigation />
 				<ReauthRequired twoStepAuthorization={ twoStepAuthorization } />
@@ -59,33 +63,6 @@ class Profile extends React.Component {
 
 				<SectionHeader label={ this.props.translate( 'Profile' ) } />
 				<Card className="profile__settings">
-					<p>
-						{ this.props.translate(
-							'This information will be displayed publicly on {{profilelink}}your profile{{/profilelink}} and in ' +
-								'{{hovercardslink}}Gravatar Hovercards{{/hovercardslink}}.',
-							{
-								components: {
-									profilelink: (
-										<a
-											onClick={ this.getClickHandler( 'My Profile Link' ) }
-											href={ gravatarProfileLink }
-											target="_blank"
-											rel="noopener noreferrer"
-										/>
-									),
-									hovercardslink: (
-										<a
-											onClick={ this.getClickHandler( 'Gravatar Hovercards Link' ) }
-											href={ localizeUrl( 'https://wordpress.com/support/gravatar-hovercards/' ) }
-											target="_blank"
-											rel="noopener noreferrer"
-										/>
-									),
-								},
-							}
-						) }
-					</p>
-
 					<EditGravatar />
 
 					<form onSubmit={ this.props.submitForm } onChange={ this.props.markChanged }>
@@ -136,6 +113,32 @@ class Profile extends React.Component {
 								onChange={ this.props.updateSetting }
 								onFocus={ this.getFocusHandler( 'About Me Field' ) }
 								value={ this.props.getSetting( 'description' ) }
+							/>
+						</FormFieldset>
+
+						<FormFieldset>
+							<ToggleControl
+								checked={ this.props.getSetting( 'gravatar_profile_hidden' ) }
+								onChange={ this.toggleGravatarHidden }
+								label={ this.props.translate(
+									'{{spanLead}}Hide my Gravatar profile.{{/spanLead}} {{spanExtra}}This will prevent your {{profileLink}}Gravatar profile{{/profileLink}} and photo from appearing on any site. It may take some time for the changes to take effect. Gravatar profiles can be deleted at {{deleteLink}}Gravatar.com{{/deleteLink}}.{{/spanExtra}}',
+									{
+										components: {
+											spanLead: <strong className="profile__link-destination-label-lead" />,
+											spanExtra: <span className="profile__link-destination-label-extra" />,
+											profileLink: (
+												<a href={ gravatarProfileLink } target="_blank" rel="noreferrer" />
+											),
+											deleteLink: (
+												<a
+													href="https://gravatar.com/account/disable/"
+													target="_blank"
+													rel="noreferrer"
+												/>
+											),
+										},
+									}
+								) }
 							/>
 						</FormFieldset>
 

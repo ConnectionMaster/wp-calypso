@@ -23,15 +23,15 @@ export function PreferencesHelper() {
 	/* eslint-enable wpcalypso/jsx-classname-namespace */
 }
 
-export function TestHelper() {
-	/* eslint-disable wpcalypso/jsx-classname-namespace */
-	return <div className="environment is-tests" />;
-	/* eslint-enable wpcalypso/jsx-classname-namespace */
-}
-
 export function FeaturesHelper() {
 	/* eslint-disable wpcalypso/jsx-classname-namespace */
 	return <div className="environment is-features" />;
+	/* eslint-enable wpcalypso/jsx-classname-namespace */
+}
+
+export function AuthHelper() {
+	/* eslint-disable wpcalypso/jsx-classname-namespace */
+	return <div className="environment is-auth" />;
 	/* eslint-enable wpcalypso/jsx-classname-namespace */
 }
 

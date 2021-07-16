@@ -14,12 +14,12 @@ import { Button, CompactCard } from '@automattic/components';
 import QueryUserPurchases from 'calypso/components/data/query-user-purchases';
 import { getProductCost, isProductsListFetching } from 'calypso/state/products-list/selectors';
 import { isFetchingUserPurchases, getUserPurchases } from 'calypso/state/purchases/selectors';
-import { getCurrentUserCurrencyCode, getCurrentUserId } from 'calypso/state/current-user/selectors';
+import { getCurrentUserId } from 'calypso/state/current-user/selectors';
+import { getCurrentUserCurrencyCode } from 'calypso/state/currency-code/selectors';
 import { getSiteSlug } from 'calypso/state/sites/selectors';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
-import { isTrafficGuide } from 'calypso/lib/products-values';
-import { WPCOM_TRAFFIC_GUIDE } from 'calypso/lib/products-values/constants';
+import { isTrafficGuide, WPCOM_TRAFFIC_GUIDE } from '@automattic/calypso-products';
 
 /**
  * Style dependencies

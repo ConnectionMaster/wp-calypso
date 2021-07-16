@@ -20,21 +20,22 @@ import StepWrapper from 'calypso/signup/step-wrapper';
 import PlansFeaturesMain from 'calypso/my-sites/plans-features-main';
 import GutenboardingHeader from 'calypso/my-sites/plans-features-main/gutenboarding-header';
 import QueryPlans from 'calypso/components/data/query-plans';
-import { FEATURE_UPLOAD_THEMES_PLUGINS } from '../../../lib/plans/constants';
-import { planHasFeature } from '../../../lib/plans';
+import { planHasFeature, FEATURE_UPLOAD_THEMES_PLUGINS } from '@automattic/calypso-products';
 import { getSiteGoals } from 'calypso/state/signup/steps/site-goals/selectors';
 import { getSiteType } from 'calypso/state/signup/steps/site-type/selectors';
 import { getSiteTypePropertyValue } from 'calypso/lib/signup/site-type';
 import { saveSignupStep, submitSignupStep } from 'calypso/state/signup/progress/actions';
 import { recordTracksEvent } from 'calypso/state/analytics/actions';
 import hasInitializedSites from 'calypso/state/selectors/has-initialized-sites';
-import { getUrlParts } from 'calypso/lib/url/url-parts';
+import { getUrlParts } from '@automattic/calypso-url';
 import { isTreatmentPlansReorderTest } from 'calypso/state/marketing/selectors';
 
 /**
  * Style dependencies
  */
 import './style.scss';
+import PulsingDot from 'calypso/components/pulsing-dot';
+import { isDesktop } from '@automattic/viewport';
 
 export class PlansStep extends Component {
 	componentDidMount() {
@@ -142,43 +143,79 @@ export class PlansStep extends Component {
 			planTypes,
 			flowName,
 			showTreatmentPlansReorderTest,
+			isLoadingExperiment,
+			isInVerticalScrollingPlansExperiment,
+			isReskinned,
 		} = this.props;
 
 		return (
 			<div>
 				<QueryPlans />
-
-				<PlansFeaturesMain
-					site={ selectedSite || {} } // `PlanFeaturesMain` expects a default prop of `{}` if no site is provided
-					hideFreePlan={ hideFreePlan }
-					isInSignup={ true }
-					isLaunchPage={ isLaunchPage }
-					intervalType={ this.getIntervalType() }
-					onUpgradeClick={ this.onSelectPlan }
-					showFAQ={ false }
-					displayJetpackPlans={ false }
-					domainName={ this.getDomainName() }
-					customerType={ this.getCustomerType() }
-					disableBloggerPlanWithNonBlogDomain={ disableBloggerPlanWithNonBlogDomain }
-					plansWithScroll={ true }
-					planTypes={ planTypes }
-					flowName={ flowName }
-					customHeader={ this.getGutenboardingHeader() }
-					showTreatmentPlansReorderTest={ showTreatmentPlansReorderTest }
-				/>
+				{ isLoadingExperiment ? (
+					<div className="plans__loading-container">
+						<PulsingDot delay={ 400 } active />
+					</div>
+				) : (
+					<PlansFeaturesMain
+						site={ selectedSite || {} } // `PlanFeaturesMain` expects a default prop of `{}` if no site is provided
+						hideFreePlan={ hideFreePlan }
+						isInSignup={ true }
+						isLaunchPage={ isLaunchPage }
+						intervalType={ this.getIntervalType() }
+						onUpgradeClick={ this.onSelectPlan }
+						showFAQ={ false }
+						domainName={ this.getDomainName() }
+						customerType={ this.getCustomerType() }
+						disableBloggerPlanWithNonBlogDomain={ disableBloggerPlanWithNonBlogDomain }
+						plansWithScroll={ isDesktop() }
+						planTypes={ planTypes }
+						flowName={ flowName }
+						customHeader={ this.getGutenboardingHeader() }
+						showTreatmentPlansReorderTest={ showTreatmentPlansReorderTest }
+						isAllPaidPlansShown={ true }
+						isInVerticalScrollingPlansExperiment={ isInVerticalScrollingPlansExperiment }
+						shouldShowPlansFeatureComparison={ isDesktop() } // Show feature comparison layout in signup flow and desktop resolutions
+						isReskinned={ isReskinned }
+					/>
+				) }
 			</div>
 		);
+	}
+
+	getHeaderText() {
+		const { headerText, translate } = this.props;
+
+		if ( isDesktop() ) {
+			return translate( 'Choose a plan' );
+		}
+
+		return headerText || translate( "Pick a plan that's right for you." );
 	}
 
 	getSubHeaderText() {
 		const { hideFreePlan, subHeaderText, translate } = this.props;
 
 		if ( ! hideFreePlan ) {
+			if ( isDesktop() ) {
+				return translate(
+					"Pick one that's right for you and unlock features that help you grow. Or {{link}}start with a free site{{/link}}.",
+					{
+						components: {
+							link: <Button onClick={ this.handleFreePlanButtonClick } borderless={ true } />,
+						},
+					}
+				);
+			}
+
 			return translate( 'Choose a plan or {{link}}start with a free site{{/link}}.', {
 				components: {
 					link: <Button onClick={ this.handleFreePlanButtonClick } borderless={ true } />,
 				},
 			} );
+		}
+
+		if ( isDesktop() ) {
+			return translate( "Pick one that's right for you and unlock features that help you grow." );
 		}
 
 		return subHeaderText || translate( 'Choose a plan. Upgrade as you grow.' );
@@ -193,7 +230,7 @@ export class PlansStep extends Component {
 			hasInitializedSitesBackUrl,
 		} = this.props;
 
-		const headerText = this.props.headerText || translate( "Pick a plan that's right for you." );
+		const headerText = this.getHeaderText();
 		const fallbackHeaderText = this.props.fallbackHeaderText || headerText;
 		const subHeaderText = this.getSubHeaderText();
 		const fallbackSubHeaderText = this.props.fallbackSubHeaderText || subHeaderText;
@@ -207,26 +244,29 @@ export class PlansStep extends Component {
 		}
 
 		return (
-			<StepWrapper
-				flowName={ flowName }
-				stepName={ stepName }
-				positionInFlow={ positionInFlow }
-				headerText={ headerText }
-				fallbackHeaderText={ fallbackHeaderText }
-				subHeaderText={ subHeaderText }
-				fallbackSubHeaderText={ fallbackSubHeaderText }
-				isWideLayout={ true }
-				stepContent={ this.plansFeaturesList() }
-				allowBackFirstStep={ !! hasInitializedSitesBackUrl }
-				backUrl={ backUrl }
-				backLabelText={ backLabelText }
-				hideFormattedHeader={ !! this.getGutenboardingHeader() }
-			/>
+			<>
+				<StepWrapper
+					flowName={ flowName }
+					stepName={ stepName }
+					positionInFlow={ positionInFlow }
+					headerText={ headerText }
+					fallbackHeaderText={ fallbackHeaderText }
+					subHeaderText={ subHeaderText }
+					fallbackSubHeaderText={ fallbackSubHeaderText }
+					isWideLayout={ true }
+					stepContent={ this.plansFeaturesList() }
+					allowBackFirstStep={ !! hasInitializedSitesBackUrl }
+					backUrl={ backUrl }
+					backLabelText={ backLabelText }
+					hideFormattedHeader={ !! this.getGutenboardingHeader() }
+				/>
+			</>
 		);
 	}
 
 	render() {
 		const classes = classNames( 'plans plans-step', {
+			'in-vertically-scrolled-plans-experiment': this.props.isInVerticalScrollingPlansExperiment,
 			'has-no-sidebar': true,
 			'is-wide-layout': true,
 		} );
@@ -284,6 +324,11 @@ export default connect(
 		hasInitializedSitesBackUrl: hasInitializedSites( state ) ? '/sites/' : false,
 		showTreatmentPlansReorderTest:
 			'treatment' === plans_reorder_abtest_variation || isTreatmentPlansReorderTest( state ),
+		isLoadingExperiment: false,
+		// IMPORTANT NOTE: The following is always set to true. It's a hack to resolve the bug reported
+		// in https://github.com/Automattic/wp-calypso/issues/50896, till a proper cleanup and deploy of
+		// treatment for the `vertical_plan_listing_v2` experiment is implemented.
+		isInVerticalScrollingPlansExperiment: true,
 	} ),
 	{ recordTracksEvent, saveSignupStep, submitSignupStep }
 )( localize( PlansStep ) );

@@ -2,7 +2,7 @@
  * External dependencies
  */
 import React, { ReactElement, FunctionComponent } from 'react';
-import { translate } from 'i18n-calypso';
+import { useTranslate } from 'i18n-calypso';
 import { useSelector } from 'react-redux';
 import { addQueryArgs } from '@wordpress/url';
 import { Button } from '@automattic/components';
@@ -32,24 +32,28 @@ import './style.scss';
 
 const JetpackBackupErrorSVG = '/calypso/images/illustrations/jetpack-cloud-backup-error.svg';
 
-const BackupMultisiteBody: FunctionComponent = () => (
-	<PromoCard
-		title={ preventWidows( translate( 'WordPress multi-sites are not supported' ) ) }
-		image={ { path: JetpackBackupErrorSVG } }
-		isPrimary
-	>
-		<p>
-			{ preventWidows(
-				translate(
-					"We're sorry, Jetpack Backup is not compatible with multisite WordPress installations at this time."
-				)
-			) }
-		</p>
-	</PromoCard>
-);
+const BackupMultisiteBody: FunctionComponent = () => {
+	const translate = useTranslate();
+	return (
+		<PromoCard
+			title={ preventWidows( translate( 'WordPress multi-sites are not supported' ) ) }
+			image={ { path: JetpackBackupErrorSVG } }
+			isPrimary
+		>
+			<p>
+				{ preventWidows(
+					translate(
+						"We're sorry, Jetpack Backup is not compatible with multisite WordPress installations at this time."
+					)
+				) }
+			</p>
+		</PromoCard>
+	);
+};
 
 const BackupVPActiveBody: FunctionComponent = () => {
 	const onUpgradeClick = useTrackCallback( undefined, 'calypso_jetpack_backup_vaultpress_click' );
+	const translate = useTranslate();
 	return (
 		<PromoCard
 			title={ preventWidows( translate( 'Your backups are powered by VaultPress' ) ) }
@@ -78,6 +82,8 @@ const BackupUpsellBody: FunctionComponent = () => {
 	const isAdmin = useSelector(
 		( state ) => siteId && canCurrentUser( state, siteId, 'manage_options' )
 	);
+	const translate = useTranslate();
+	const postCheckoutUrl = window.location.pathname + window.location.search;
 	return (
 		<PromoCard
 			title={ preventWidows( translate( 'Get time travel for your site with Jetpack Backup' ) ) }
@@ -105,7 +111,7 @@ const BackupUpsellBody: FunctionComponent = () => {
 					<Button
 						className="backup__wpcom-cta backup__wpcom-realtime-cta"
 						href={ addQueryArgs( `/checkout/${ siteSlug }/jetpack_backup_realtime`, {
-							redirect_to: window.location.href,
+							redirect_to: postCheckoutUrl,
 						} ) }
 						onClick={ onUpgradeClick }
 						primary
@@ -115,7 +121,7 @@ const BackupUpsellBody: FunctionComponent = () => {
 					<Button
 						className="backup__wpcom-cta backup__wpcom-daily-cta"
 						href={ addQueryArgs( `/checkout/${ siteSlug }/jetpack_backup_daily`, {
-							redirect_to: window.location.href,
+							redirect_to: postCheckoutUrl,
 						} ) }
 						onClick={ onUpgradeClick }
 					>
@@ -128,6 +134,7 @@ const BackupUpsellBody: FunctionComponent = () => {
 };
 
 export default function WPCOMUpsellPage( { reason }: { reason: string } ): ReactElement {
+	const translate = useTranslate();
 	let body;
 	switch ( reason ) {
 		case 'multisite_not_supported':

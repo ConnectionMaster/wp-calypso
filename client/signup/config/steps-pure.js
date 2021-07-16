@@ -1,28 +1,32 @@
 /**
  * External dependencies
  */
-import { noop } from 'lodash';
 import i18n from 'i18n-calypso';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import {
 	PLAN_PERSONAL,
 	PLAN_PREMIUM,
 	PLAN_BUSINESS,
 	PLAN_ECOMMERCE,
+	PLAN_PERSONAL_MONTHLY,
+	PLAN_PREMIUM_MONTHLY,
+	PLAN_BUSINESS_MONTHLY,
+	PLAN_ECOMMERCE_MONTHLY,
 	TYPE_FREE,
 	TYPE_PERSONAL,
 	TYPE_PREMIUM,
 	TYPE_BUSINESS,
 	TYPE_ECOMMERCE,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
+
+const noop = () => {};
 
 export function generateSteps( {
 	addPlanToCart = noop,
-	addDomainUpsellToCart = noop,
 	createAccount = noop,
 	createSite = noop,
 	createWpForTeamsSite = noop,
@@ -33,7 +37,6 @@ export function generateSteps( {
 	addDomainToCart = noop,
 	launchSiteApi = noop,
 	isPlanFulfilled = noop,
-	isFreePlansDomainUpsellFulfilled = noop,
 	isDomainFulfilled = noop,
 	isSiteTypeFulfilled = noop,
 	isSiteTopicFulfilled = noop,
@@ -75,16 +78,6 @@ export function generateSteps( {
 			providesDependencies: [ 'themeSlugWithRepo', 'useThemeHeadstart' ],
 		},
 
-		'fse-themes': {
-			stepName: 'fse-themes',
-			props: {
-				designType: 'fse-compatible',
-				quantity: 6,
-			},
-			dependencies: [ 'siteSlug' ],
-			providesDependencies: [ 'themeSlugWithRepo', 'useThemeHeadstart' ],
-		},
-
 		// `themes` does not update the theme for an existing site as we normally
 		// do this when the site is created. In flows where a site is merely being
 		// updated, we need to use a different API request function.
@@ -113,14 +106,6 @@ export function generateSteps( {
 				subHeaderText: i18n.translate( 'Select a domain name for your website' ),
 			},
 			dependencies: [ 'siteSlug' ],
-		},
-
-		'domain-upsell': {
-			stepName: 'domain-upsell',
-			apiRequestFunction: addDomainUpsellToCart,
-			fulfilledStepCallback: isFreePlansDomainUpsellFulfilled,
-			dependencies: [ 'domainItem', 'cartItem', 'siteSlug' ],
-			providesDependencies: [ 'selectedDomainUpsellItem' ],
 		},
 
 		'plans-site-selected': {
@@ -654,6 +639,9 @@ export function generateSteps( {
 			apiRequestFunction: launchSiteApi,
 			dependencies: [ 'siteSlug' ],
 			providesDependencies: [ 'isPreLaunch' ],
+			props: {
+				nonInteractive: true,
+			},
 		},
 
 		passwordless: {
@@ -671,6 +659,57 @@ export function generateSteps( {
 			stepName: 'p2-site',
 			apiRequestFunction: createWpForTeamsSite,
 			providesDependencies: [ 'siteSlug' ],
+		},
+
+		'plans-personal-monthly': {
+			stepName: 'plans-personal-monthly',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_PERSONAL_MONTHLY,
+			},
+		},
+
+		'plans-premium-monthly': {
+			stepName: 'plans-premium-monthly',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_PREMIUM_MONTHLY,
+			},
+		},
+
+		'plans-business-monthly': {
+			stepName: 'plans-business-monthly',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_BUSINESS_MONTHLY,
+			},
+		},
+
+		'plans-ecommerce-monthly': {
+			stepName: 'plans-ecommerce-monthly',
+			apiRequestFunction: addPlanToCart,
+			fulfilledStepCallback: isPlanFulfilled,
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'cartItem' ],
+			defaultDependencies: {
+				cartItem: PLAN_ECOMMERCE_MONTHLY,
+			},
+		},
+
+		design: {
+			stepName: 'design-picker',
+			dependencies: [ 'siteSlug' ],
+			providesDependencies: [ 'selectedDesign' ],
+			optionalDependencies: [ 'selectedDesign' ],
 		},
 	};
 }

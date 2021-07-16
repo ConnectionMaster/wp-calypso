@@ -11,7 +11,6 @@ import { localize } from 'i18n-calypso';
  * Internal dependencies
  */
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
-import isJetpackModuleActive from 'calypso/state/selectors/is-jetpack-module-active';
 import isVipSite from 'calypso/state/selectors/is-vip-site';
 import isSiteWpcomAtomic from 'calypso/state/selectors/is-site-wpcom-atomic';
 import DocumentHead from 'calypso/components/data/document-head';
@@ -25,7 +24,7 @@ import SectionNav from 'calypso/components/section-nav';
 import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
 import FormattedHeader from 'calypso/components/formatted-header';
 import UpsellNudge from 'calypso/blocks/upsell-nudge';
-import { FEATURE_NO_ADS } from 'calypso/lib/plans/constants';
+import { FEATURE_NO_ADS } from '@automattic/calypso-products';
 
 /**
  * Style Dependencies
@@ -105,6 +104,9 @@ export const Sharing = ( {
 				brandFont
 				className="marketing__page-heading"
 				headerText={ translate( 'Marketing and Integrations' ) }
+				subHeaderText={ translate(
+					'Explore tools to build your audience, market your site, and engage your visitors.'
+				) }
 				align="left"
 			/>
 			{ filters.length > 0 && (
@@ -152,10 +154,9 @@ export default connect( ( state ) => {
 	const isJetpack = isJetpackSite( state, siteId );
 	const isAtomic = isSiteWpcomAtomic( state, siteId );
 	const canManageOptions = canCurrentUser( state, siteId, 'manage_options' );
-	const hasSharedaddy = isJetpackModuleActive( state, siteId, 'sharedaddy' );
 
 	return {
-		showButtons: siteId && canManageOptions && ( ! isJetpack || hasSharedaddy ),
+		showButtons: siteId && canManageOptions,
 		showConnections: !! siteId,
 		showTraffic: canManageOptions && !! siteId,
 		showBusinessTools: ( !! siteId && canManageOptions && ! isJetpack ) || isAtomic,

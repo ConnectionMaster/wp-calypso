@@ -2,30 +2,30 @@
  * External dependencies
  */
 import { useTranslate } from 'i18n-calypso';
+import { isEnabled } from '@automattic/calypso-config';
+import type { ResponseCartProduct } from '@automattic/shopping-cart';
 
 /**
  * Internal dependencies
  */
-import { isEnabled } from 'calypso/config';
-import { isMonthly } from 'calypso/lib/plans/constants';
 import {
+	isMonthly,
 	isWpComBusinessPlan,
 	isWpComEcommercePlan,
 	isWpComPersonalPlan,
 	isWpComPremiumPlan,
-} from 'calypso/lib/plans';
-import type { WPCOMCartItem } from '../types/checkout-cart';
+} from '@automattic/calypso-products';
 import doesValueExist from './does-value-exist';
 
 export default function getPlanFeatures(
-	plan: WPCOMCartItem | undefined,
+	plan: ResponseCartProduct | undefined,
 	translate: ReturnType< typeof useTranslate >,
 	hasDomainsInCart: boolean,
 	hasRenewalInCart: boolean,
 	planHasDomainCredit: boolean
 ): string[] {
 	const showFreeDomainFeature = ! hasDomainsInCart && ! hasRenewalInCart && planHasDomainCredit;
-	const productSlug = plan?.wpcom_meta?.product_slug;
+	const productSlug = plan?.product_slug;
 
 	if ( ! productSlug ) {
 		return [];
@@ -52,7 +52,7 @@ export default function getPlanFeatures(
 	if ( isWpComPersonalPlan( productSlug ) ) {
 		return [
 			isMonthlyPlan ? annualPlanOnly( freeOneYearDomain ) : freeOneYearDomain,
-			String( translate( 'Email support' ) ),
+			String( translate( 'Best-in-class hosting' ) ),
 			String( translate( 'Dozens of Free Themes' ) ),
 		].filter( doesValueExist );
 	}

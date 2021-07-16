@@ -14,8 +14,8 @@ import {
 } from 'calypso/my-sites/controller';
 import domainsController from './controller';
 import domainManagementController from './domain-management/controller';
-import SiftScience from 'calypso/lib/siftscience';
-import config from 'calypso/config';
+import { recordSiftScienceUser } from 'calypso/lib/siftscience';
+import config from '@automattic/calypso-config';
 import * as paths from './paths';
 import { makeLayout, render as clientRender } from 'calypso/controller';
 
@@ -51,7 +51,7 @@ function getCommonHandlers( {
 }
 
 export default function () {
-	SiftScience.recordUser();
+	page( '/domains*', recordSiftScienceUser );
 
 	// These redirects are work-around in response to an issue where navigating back after a
 	// successful site address change shows a continuous placeholder state... #23929 for details.
@@ -65,14 +65,6 @@ export default function () {
 			paths.domainManagementEmail( ':site' ),
 		],
 		handlers: [ domainManagementController.domainManagementEmailRedirect ],
-	} );
-
-	registerMultiPage( {
-		paths: [
-			paths.domainManagementAddGSuiteUsers( ':site', ':domain' ),
-			paths.domainManagementAddGSuiteUsers( ':site' ),
-		],
-		handlers: [ domainManagementController.domainManagementAddGSuiteUsersRedirect ],
 	} );
 
 	page(
@@ -149,6 +141,14 @@ export default function () {
 		paths.domainManagementRoot(),
 		...getCommonHandlers( { noSitePath: false } ),
 		domainManagementController.domainManagementListAllSites,
+		makeLayout,
+		clientRender
+	);
+
+	page(
+		paths.domainManagementAllEditContactInfo(),
+		...getCommonHandlers( { noSitePath: false } ),
+		domainManagementController.domainManagementBulkEditContactInfo,
 		makeLayout,
 		clientRender
 	);
@@ -240,15 +240,22 @@ export default function () {
 			domainsController.redirectToDomainSearchSuggestion
 		);
 
-		page(
-			'/domains/add/:registerDomain/google-apps/:domain',
-			siteSelection,
-			navigation,
-			domainsController.redirectIfNoSite( '/domains/add' ),
-			domainsController.jetpackNoDomainsWarning,
-			domainsController.googleAppsWithRegistration,
-			makeLayout,
-			clientRender
+		[
+			'/domains/add/:registerDomain/google-workspace/:domain',
+			'/domains/add/:registerDomain/gsuite/:domain',
+		].forEach( ( path ) =>
+			page(
+				path,
+				...[
+					siteSelection,
+					navigation,
+					domainsController.redirectIfNoSite( '/domains/add' ),
+					domainsController.jetpackNoDomainsWarning,
+					domainsController.googleAppsWithRegistration,
+					makeLayout,
+					clientRender,
+				]
+			)
 		);
 
 		page(

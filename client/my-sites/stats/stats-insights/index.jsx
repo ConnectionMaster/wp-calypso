@@ -28,6 +28,7 @@ import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import SectionHeader from 'calypso/components/section-header';
 import StatsViews from '../stats-views';
 import Followers from '../stats-followers';
+import StatShares from '../stats-shares';
 import JetpackColophon from 'calypso/components/jetpack-colophon';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'calypso/state/ui/selectors';
 import { isJetpackSite } from 'calypso/state/sites/selectors';
@@ -35,19 +36,8 @@ import AnnualSiteStats from 'calypso/my-sites/stats/annual-site-stats';
 import { getSuggestionsVendor } from 'calypso/lib/domains/suggestions';
 
 const StatsInsights = ( props ) => {
-	const { followList, isJetpack, siteId, siteSlug, translate } = props;
+	const { isJetpack, siteId, siteSlug, translate } = props;
 	const moduleStrings = statsStrings();
-
-	let tagsList;
-	if ( ! isJetpack ) {
-		tagsList = (
-			<StatsModule
-				path="tags-categories"
-				moduleStrings={ moduleStrings.tags }
-				statType="statsTags"
-			/>
-		);
-	}
 
 	// TODO: should be refactored into separate components
 	/* eslint-disable wpcalypso/jsx-classname-namespace */
@@ -60,6 +50,7 @@ const StatsInsights = ( props ) => {
 				brandFont
 				className="stats__section-header"
 				headerText={ translate( 'Stats and Insights' ) }
+				subHeaderText={ translate( "View your site's performance and learn from trends." ) }
 				align="left"
 			/>
 			<StatsNavigation selectedItem={ 'insights' } siteId={ siteId } slug={ siteSlug } />
@@ -79,16 +70,23 @@ const StatsInsights = ( props ) => {
 						<div className="stats__module-column">
 							<LatestPostSummary />
 							<MostPopular />
-							{ tagsList }
+							{ ! isJetpack && (
+								<StatsModule
+									path="tags-categories"
+									moduleStrings={ moduleStrings.tags }
+									statType="statsTags"
+								/>
+							) }
 							<AnnualSiteStats isWidget />
+							{ ! isJetpack && <StatShares siteId={ siteId } /> }
 						</div>
 						<div className="stats__module-column">
 							<Reach />
-							<Followers path={ 'followers' } followList={ followList } />
+							<Followers path={ 'followers' } />
 						</div>
 						<div className="stats__module-column">
 							<AllTime />
-							<Comments path={ 'comments' } followList={ followList } />
+							<Comments path={ 'comments' } />
 							<StatsModule
 								path="publicize"
 								moduleStrings={ moduleStrings.publicize }
@@ -105,7 +103,6 @@ const StatsInsights = ( props ) => {
 };
 
 StatsInsights.propTypes = {
-	followList: PropTypes.object.isRequired,
 	translate: PropTypes.func,
 };
 

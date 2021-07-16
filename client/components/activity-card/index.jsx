@@ -6,6 +6,7 @@ import classnames from 'classnames';
 import PropTypes from 'prop-types';
 import React, { Component, Fragment } from 'react';
 import { connect } from 'react-redux';
+import { isEnabled } from '@automattic/calypso-config';
 
 /**
  * Internal dependencies
@@ -30,6 +31,8 @@ import Gridicon from 'calypso/components/gridicon';
 import PopoverMenu from 'calypso/components/popover/menu';
 import QueryRewindState from 'calypso/components/data/query-rewind-state';
 import StreamsMediaPreview from './activity-card-streams-media-preview';
+import isJetpackSiteMultiSite from 'calypso/state/sites/selectors/is-jetpack-site-multi-site';
+import ShareActivity from './share-activity';
 
 /**
  * Style dependencies
@@ -59,11 +62,15 @@ class ActivityCard extends Component {
 	topPopoverContext = React.createRef();
 	bottomPopoverContext = React.createRef();
 
-	state = {
-		showTopPopoverMenu: false,
-		showBottomPopoverMenu: false,
-		showContent: false,
-	};
+	constructor( props ) {
+		super( props );
+
+		this.state = {
+			showTopPopoverMenu: false,
+			showBottomPopoverMenu: false,
+			showContent: false,
+		};
+	}
 
 	togglePopoverMenu = ( topPopoverMenu = true ) => {
 		this.props.dispatchRecordTracksEvent( 'calypso_jetpack_backup_actions_click' );
@@ -163,7 +170,7 @@ class ActivityCard extends Component {
 	}
 
 	renderActionButton( isTopToolbar = true ) {
-		const { activity, doesRewindNeedCredentials, siteSlug, translate } = this.props;
+		const { activity, isMultiSite, doesRewindNeedCredentials, siteSlug, translate } = this.props;
 
 		const context = isTopToolbar ? this.topPopoverContext : this.bottomPopoverContext;
 
@@ -175,6 +182,19 @@ class ActivityCard extends Component {
 		// streams should be; if this is the case, make sure we send the user
 		// to a valid restore/download point when they click an action button
 		const actionableRewindId = getActionableRewindId( activity );
+
+		if ( isMultiSite ) {
+			return (
+				<Button
+					compact
+					isPrimary={ true }
+					href={ backupDownloadPath( siteSlug, actionableRewindId ) }
+					className="activity-card__download-button-multisite"
+				>
+					{ translate( 'Download backup' ) }
+				</Button>
+			);
+		}
 
 		return (
 			<>
@@ -295,16 +315,25 @@ class ActivityCard extends Component {
 		const backupTimeDisplay = applySiteOffset
 			? applySiteOffset( activity.activityTs ).format( 'LT' )
 			: '';
-
 		const showActivityContent = this.state.showContent;
+		const hasActivityFailed = activity.activityStatus === 'error';
 
 		return (
-			<div className={ classnames( className, 'activity-card' ) }>
+			<div
+				className={ classnames( className, 'activity-card', {
+					'with-error': hasActivityFailed,
+				} ) }
+			>
 				<QueryRewindState siteId={ siteId } />
 				{ ! summarize && (
-					<div className="activity-card__time">
-						<Gridicon icon={ activity.activityIcon } className="activity-card__time-icon" />
-						<div className="activity-card__time-text">{ backupTimeDisplay }</div>
+					<div className="activity-card__header">
+						<div className="activity-card__time">
+							<Gridicon icon={ activity.activityIcon } className="activity-card__time-icon" />
+							<div className="activity-card__time-text">{ backupTimeDisplay }</div>
+						</div>
+						{ isEnabled( 'jetpack/activity-log-sharing' ) && (
+							<ShareActivity siteId={ siteId } activity={ activity } />
+						) }
 					</div>
 				) }
 				<Card>
@@ -332,18 +361,20 @@ class ActivityCard extends Component {
 const mapStateToProps = ( state ) => {
 	const siteId = getSelectedSiteId( state );
 	const siteSlug = getSelectedSiteSlug( state );
+	const isMultiSite = isJetpackSiteMultiSite( state, siteId );
 
 	return {
 		allowRestore: getAllowRestore( state, siteId ),
 		doesRewindNeedCredentials: getDoesRewindNeedCredentials( state, siteId ),
 		siteId,
 		siteSlug,
+		isMultiSite,
 	};
 };
 
-const mapDispatchToProps = () => ( {
+const mapDispatchToProps = {
 	dispatchRecordTracksEvent: recordTracksEvent,
-} );
+};
 
 export default connect(
 	mapStateToProps,

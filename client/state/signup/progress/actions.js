@@ -1,7 +1,8 @@
 /**
  * External dependencies
  */
-import { includes, isEmpty, reduce, snakeCase, toPairs } from 'lodash';
+import { includes, isEmpty, reduce, snakeCase } from 'lodash';
+import { resolveDeviceTypeByViewPort } from '@automattic/viewport';
 
 /**
  * Internal dependencies
@@ -54,13 +55,14 @@ function recordSubmitStep( stepName, providedDependencies ) {
 				propValue = !! propValue;
 			}
 
-			if (
-				[ 'cart_item', 'domain_item', 'selected_domain_upsell_item' ].includes( propName ) &&
-				typeof propValue !== 'string'
-			) {
-				propValue = toPairs( propValue )
+			if ( [ 'cart_item', 'domain_item' ].includes( propName ) && typeof propValue !== 'string' ) {
+				propValue = Object.entries( propValue || {} )
 					.map( ( pair ) => pair.join( ':' ) )
 					.join( ',' );
+			}
+
+			if ( includes( [ 'selected_design' ], propName ) ) {
+				propValue = propValue.slug;
 			}
 
 			return {
@@ -71,7 +73,9 @@ function recordSubmitStep( stepName, providedDependencies ) {
 		{}
 	);
 
+	const device = resolveDeviceTypeByViewPort();
 	return recordTracksEvent( 'calypso_signup_actions_submit_step', {
+		device,
 		step: stepName,
 		...inputs,
 	} );

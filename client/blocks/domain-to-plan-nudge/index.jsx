@@ -13,9 +13,8 @@ import formatCurrency from '@automattic/format-currency';
 import UpsellNudge from 'calypso/blocks/upsell-nudge';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { getSite } from 'calypso/state/sites/selectors';
-import { PLAN_PERSONAL, FEATURE_NO_ADS } from 'calypso/lib/plans/constants';
-import { getPlan } from 'calypso/lib/plans';
-import { getCurrentUserCurrencyCode } from 'calypso/state/current-user/selectors';
+import { getPlan, PLAN_PERSONAL, FEATURE_NO_ADS } from '@automattic/calypso-products';
+import { getCurrentUserCurrencyCode } from 'calypso/state/currency-code/selectors';
 import {
 	getSitePlanRawPrice,
 	getPlanDiscountedRawPrice,

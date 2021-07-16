@@ -4,11 +4,12 @@
 import React from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import page from 'page';
+import { QueryClient, QueryClientProvider } from 'react-query';
 
 /**
  * Internal Dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { translate } from 'i18n-calypso';
 import Layout from 'calypso/layout';
 import LayoutLoggedOut from 'calypso/layout/logged-out';
@@ -17,6 +18,7 @@ import CalypsoI18nProvider from 'calypso/components/calypso-i18n-provider';
 import MomentProvider from 'calypso/components/localized-moment/provider';
 import { RouteProvider } from 'calypso/components/route';
 import { login } from 'calypso/lib/paths';
+import { getLanguageSlugs } from 'calypso/lib/i18n-utils';
 import { makeLayoutMiddleware } from './shared.js';
 import { isUserLoggedIn } from 'calypso/state/current-user/selectors';
 import {
@@ -24,13 +26,17 @@ import {
 	getImmediateLoginLocale,
 } from 'calypso/state/immediate-login/selectors';
 import { getSiteFragment } from 'calypso/lib/route';
-import { hydrate } from './web-util.js';
+import { render, hydrate } from './web-util.js';
+import { composeHandlers } from 'calypso/controller/shared';
+import { sites, siteSelection } from 'calypso/my-sites/controller';
 
 /**
  * Re-export
  */
 export { setSectionMiddleware, setLocaleMiddleware } from './shared.js';
 export { render, hydrate } from './web-util.js';
+
+const queryClient = new QueryClient();
 
 export const ProviderWrappedLayout = ( {
 	store,
@@ -57,15 +63,33 @@ export const ProviderWrappedLayout = ( {
 				currentRoute={ currentRoute }
 				currentQuery={ currentQuery }
 			>
-				<ReduxProvider store={ store }>
-					<MomentProvider>{ layout }</MomentProvider>
-				</ReduxProvider>
+				<QueryClientProvider client={ queryClient }>
+					<ReduxProvider store={ store }>
+						<MomentProvider>{ layout }</MomentProvider>
+					</ReduxProvider>
+				</QueryClientProvider>
 			</RouteProvider>
 		</CalypsoI18nProvider>
 	);
 };
 
 export const makeLayout = makeLayoutMiddleware( ProviderWrappedLayout );
+
+/**
+ * For logged in users with bootstrap (production), ReactDOM.hydrate().
+ * Otherwise (development), ReactDOM.render().
+ * See: https://wp.me/pd2qbF-P#comment-20
+ *
+ * @param context - Middleware context
+ */
+function smartHydrate( context ) {
+	const doHydrate =
+		! config.isEnabled( 'wpcom-user-bootstrap' ) && isUserLoggedIn( context.store.getState() )
+			? render
+			: hydrate;
+
+	doHydrate( context );
+}
 
 /**
  * Isomorphic routing helper, client side
@@ -82,7 +106,7 @@ export const makeLayout = makeLayoutMiddleware( ProviderWrappedLayout );
  * divs.
  */
 export function clientRouter( route, ...middlewares ) {
-	page( route, ...middlewares, hydrate );
+	page( route, ...middlewares, smartHydrate );
 }
 
 export function redirectLoggedOut( context, next ) {
@@ -93,7 +117,6 @@ export function redirectLoggedOut( context, next ) {
 		const siteFragment = context.params.site || getSiteFragment( context.path );
 
 		const loginParameters = {
-			isNative: config.isEnabled( 'login/native-login-links' ),
 			redirectTo: context.path,
 			site: siteFragment,
 		};
@@ -118,6 +141,25 @@ export function redirectLoggedOut( context, next ) {
 	next();
 }
 
+/**
+ * Removes the locale param from the path and redirects logged-in users to it.
+ *
+ * @param   {Object}   context Context object
+ * @param   {Function} next    Calls next middleware
+ * @returns {void}
+ */
+export function redirectWithoutLocaleParamIfLoggedIn( context, next ) {
+	const langSlugs = getLanguageSlugs();
+	const langSlugPathSegmentMatcher = new RegExp( `\\/(${ langSlugs.join( '|' ) })(\\/|\\?|$)` );
+	const pathWithoutLocale = context.path.replace( langSlugPathSegmentMatcher, '$2' );
+
+	if ( isUserLoggedIn( context.store.getState() ) && pathWithoutLocale !== context.path ) {
+		return page.redirect( pathWithoutLocale );
+	}
+
+	next();
+}
+
 export const notFound = ( context, next ) => {
 	/* eslint-disable wpcalypso/jsx-classname-namespace */
 	context.primary = (
@@ -132,3 +174,16 @@ export const notFound = ( context, next ) => {
 
 	next();
 };
+
+export function selectSiteIfLoggedIn( context, next ) {
+	const state = context.store.getState();
+	if ( ! isUserLoggedIn( state ) ) {
+		next();
+		return;
+	}
+
+	// Logged in: Terminate the regular handler path by not calling next()
+	// and render the site selection screen, redirecting the user if they
+	// only have one site.
+	composeHandlers( siteSelection, sites, makeLayout, render )( context );
+}

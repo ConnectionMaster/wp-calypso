@@ -31,6 +31,7 @@
 	.list__header-primary-domain-url {
 		color: inherit;
 		text-decoration: none;
+		word-break: break-all;
 	}
 }
 
@@ -169,6 +170,7 @@
 	}
 }
 
+.list-header .list__checkbox,
 .domain-item .domain-item__checkbox {
 	margin-right: 12px;
 }

@@ -1,38 +1,34 @@
-/**
- * External dependencies
- */
-import { By as by } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../driver-helper.js';
+import { By } from 'selenium-webdriver';
 import AsyncBaseContainer from '../async-base-container';
+import * as driverHelper from '../driver-helper.js';
 
 export default class ManagePurchasePage extends AsyncBaseContainer {
 	constructor( driver ) {
-		super( driver, by.css( '.manage-purchase.main' ) );
+		super( driver, By.css( '.manage-purchase.main' ) );
 	}
 
 	async _postInit() {
-		return await driverHelper.waitTillNotPresent( this.driver, by.css( '.is-placeholder' ) );
+		return await driverHelper.waitUntilElementNotLocated(
+			this.driver,
+			By.css( '.is-placeholder' )
+		);
 	}
 
 	async domainDisplayed() {
-		return await this.driver.findElement( by.css( '.manage-purchase__title' ) ).getText();
+		return await this.driver.findElement( By.css( '.manage-purchase__title' ) ).getText();
 	}
 
 	async chooseCancelAndRefund() {
 		return await driverHelper.clickWhenClickable(
 			this.driver,
-			by.css( '.manage-purchase a[href$="cancel"]' )
+			By.css( '.manage-purchase a[href$="cancel"]' )
 		);
 	}
 
 	async chooseRenewNow() {
 		return await driverHelper.clickWhenClickable(
 			this.driver,
-			by.css( '.manage-purchase button.is-card-link' )
+			By.css( '.manage-purchase button.is-card-link' )
 		);
 	}
 }

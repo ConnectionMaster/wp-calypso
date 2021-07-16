@@ -7,6 +7,7 @@ import debugFactory from 'debug';
 import { useTranslate } from 'i18n-calypso';
 import type { RequestCartProduct } from '@automattic/shopping-cart';
 import { createRequestCartProduct } from '@automattic/shopping-cart';
+import { decodeProductFromUrl } from '@automattic/wpcom-checkout';
 
 /**
  * Internal dependencies
@@ -18,11 +19,14 @@ import {
 	PRODUCT_JETPACK_SEARCH_MONTHLY,
 	PRODUCT_WPCOM_SEARCH,
 	PRODUCT_WPCOM_SEARCH_MONTHLY,
-} from 'calypso/lib/products-values/constants';
-import { getPlanByPathSlug } from 'calypso/lib/plans';
+	getPlanByPathSlug,
+} from '@automattic/calypso-products';
 import { getProductsList, isProductsListFetching } from 'calypso/state/products-list/selectors';
 import useFetchProductsIfNotLoaded from './use-fetch-products-if-not-loaded';
 import doesValueExist from '../lib/does-value-exist';
+import useStripProductsFromUrl from './use-strip-products-from-url';
+import getCartFromLocalStorage from '../lib/get-cart-from-local-storage';
+import { fillInSingleCartItemAttributes } from 'calypso/lib/cart-values';
 
 const debug = debugFactory( 'calypso:composite-checkout:use-prepare-products-for-cart' );
 
@@ -41,30 +45,45 @@ const initialPreparedProductsState = {
 export default function usePrepareProductsForCart( {
 	productAliasFromUrl,
 	purchaseId: originalPurchaseId,
+	isInEditor,
 	isJetpackNotAtomic,
 	isPrivate,
+	siteSlug,
+	isLoggedOutCart,
+	isNoSiteCart,
+	isJetpackCheckout,
+	jetpackSiteSlug,
+	jetpackPurchaseToken,
 }: {
 	productAliasFromUrl: string | null | undefined;
 	purchaseId: string | number | null | undefined;
+	isInEditor?: boolean;
 	isJetpackNotAtomic: boolean;
 	isPrivate: boolean;
+	siteSlug: string | undefined;
+	isLoggedOutCart?: boolean;
+	isNoSiteCart?: boolean;
+	isJetpackCheckout?: boolean;
+	jetpackSiteSlug?: string;
+	jetpackPurchaseToken?: string;
 } ): PreparedProductsForCart {
-	const initializePreparedProductsState = (
-		initialState: PreparedProductsForCart
-	): PreparedProductsForCart => ( {
-		...initialState,
-		isLoading: !! productAliasFromUrl,
-	} );
-	const [ state, dispatch ] = useReducer(
-		preparedProductsReducer,
-		initialPreparedProductsState,
-		initializePreparedProductsState
-	);
+	const [ state, dispatch ] = useReducer( preparedProductsReducer, initialPreparedProductsState );
+
 	debug(
 		'preparing products for cart from url string',
 		productAliasFromUrl,
 		'and purchase id',
-		originalPurchaseId
+		originalPurchaseId,
+		'and isLoggedOutCart',
+		isLoggedOutCart,
+		'and isNoSiteCart',
+		isNoSiteCart,
+		'and isJetpackCheckout',
+		isJetpackCheckout,
+		'and jetpackSiteSlug',
+		jetpackSiteSlug,
+		'and jetpackPurchaseToken',
+		jetpackPurchaseToken
 	);
 
 	useFetchProductsIfNotLoaded();
@@ -73,16 +92,28 @@ export default function usePrepareProductsForCart( {
 		isLoading: state.isLoading,
 		originalPurchaseId,
 		productAliasFromUrl,
+		isLoggedOutCart,
+		isNoSiteCart,
+		isJetpackCheckout,
 	} );
+	debug( 'isLoading', state.isLoading );
+	debug( 'handler is', addHandler );
 
 	// Only one of these should ever operate. The others should bail if they
 	// think another hook will handle the data.
+	useAddProductsFromLocalStorage( {
+		dispatch,
+		addHandler,
+	} );
 	useAddProductFromSlug( {
 		productAliasFromUrl,
 		dispatch,
 		isJetpackNotAtomic,
 		isPrivate,
 		addHandler,
+		isJetpackCheckout,
+		jetpackSiteSlug,
+		jetpackPurchaseToken,
 	} );
 	useAddRenewalItems( {
 		originalPurchaseId,
@@ -90,6 +121,11 @@ export default function usePrepareProductsForCart( {
 		dispatch,
 		addHandler,
 	} );
+	useNothingToAdd( { addHandler, dispatch } );
+
+	// Do not strip products from url until the URL has been parsed
+	const areProductsRetrievedFromUrl = ! state.isLoading && ! isInEditor;
+	useStripProductsFromUrl( siteSlug, ! areProductsRetrievedFromUrl || isJetpackCheckout );
 
 	return state;
 }
@@ -121,30 +157,104 @@ function preparedProductsReducer(
 	}
 }
 
-type AddHandler = 'addProductFromSlug' | 'addRenewalItems' | 'doNotAdd';
+type AddHandler = 'addProductFromSlug' | 'addRenewalItems' | 'doNotAdd' | 'addFromLocalStorage';
 
 function chooseAddHandler( {
 	isLoading,
 	originalPurchaseId,
 	productAliasFromUrl,
+	isLoggedOutCart,
+	isNoSiteCart,
+	isJetpackCheckout,
 }: {
 	isLoading: boolean;
 	originalPurchaseId: string | number | null | undefined;
 	productAliasFromUrl: string | null | undefined;
+	isLoggedOutCart?: boolean;
+	isNoSiteCart?: boolean;
+	isJetpackCheckout?: boolean;
 } ): AddHandler {
+	if ( isJetpackCheckout ) {
+		return 'addProductFromSlug';
+	}
+
 	if ( ! isLoading ) {
 		return 'doNotAdd';
 	}
 
-	if ( isLoading && originalPurchaseId ) {
+	if ( isLoggedOutCart || isNoSiteCart ) {
+		return 'addFromLocalStorage';
+	}
+
+	if ( originalPurchaseId ) {
 		return 'addRenewalItems';
 	}
 
-	if ( isLoading && ! originalPurchaseId && productAliasFromUrl ) {
+	if ( ! originalPurchaseId && productAliasFromUrl ) {
 		return 'addProductFromSlug';
 	}
 
 	return 'doNotAdd';
+}
+
+function useNothingToAdd( {
+	dispatch,
+	addHandler,
+}: {
+	dispatch: ( action: PreparedProductsAction ) => void;
+	addHandler: AddHandler;
+} ) {
+	useEffect( () => {
+		if ( addHandler !== 'doNotAdd' ) {
+			return;
+		}
+
+		debug( 'nothing to add' );
+		dispatch( { type: 'PRODUCTS_ADD', products: [] } );
+	}, [ addHandler, dispatch ] );
+}
+
+function useAddProductsFromLocalStorage( {
+	dispatch,
+	addHandler,
+}: {
+	dispatch: ( action: PreparedProductsAction ) => void;
+	addHandler: AddHandler;
+} ) {
+	const translate = useTranslate();
+	const products: Record<
+		string,
+		{
+			product_id: number;
+			product_slug: string;
+		}
+	> = useSelector( getProductsList );
+
+	useEffect( () => {
+		if ( addHandler !== 'addFromLocalStorage' ) {
+			return;
+		}
+		if ( Object.keys( products || {} ).length < 1 ) {
+			debug( 'waiting on products fetch' );
+			return;
+		}
+
+		const productsForCart: RequestCartProduct[] = getCartFromLocalStorage().map( ( product ) =>
+			fillInSingleCartItemAttributes( product, products )
+		);
+
+		if ( productsForCart.length < 1 ) {
+			debug( 'creating products from localStorage failed' );
+			dispatch( {
+				type: 'PRODUCTS_ADD_ERROR',
+				message: String( translate( 'I tried and failed to create products from signup' ) ),
+			} );
+			return;
+		}
+
+		debug( 'preparing products requested in localStorage', productsForCart );
+		dispatch( { type: 'PRODUCTS_ADD', products: productsForCart } );
+	}, [ addHandler, dispatch, translate, products ] );
 }
 
 function useAddRenewalItems( {
@@ -180,14 +290,9 @@ function useAddRenewalItems( {
 				if ( ! productSlug ) {
 					return null;
 				}
-				let [ slug ] = productSlug.split( ':' );
-
-				// See https://github.com/Automattic/wp-calypso/pull/15043 for explanation of
-				// the no-ads alias (seems a little strange to me that the product slug is a
-				// php file).
-				slug = slug === 'no-ads' ? 'no-adverts/no-adverts.php' : slug;
-
-				const product = products[ slug ];
+				const [ encodedSlug ] = productSlug.split( ':' );
+				const decodedSlug = decodeProductFromUrl( encodedSlug );
+				const product = products[ decodedSlug ];
 				if ( ! product ) {
 					debug( 'no renewal product found with slug', productSlug );
 					dispatch( {
@@ -203,12 +308,7 @@ function useAddRenewalItems( {
 					} );
 					return null;
 				}
-				return createRenewalItemToAddToCart(
-					productSlug,
-					product.product_id,
-					subscriptionId,
-					selectedSiteSlug
-				);
+				return createRenewalItemToAddToCart( productSlug, product.product_id, subscriptionId );
 			} )
 			.filter( doesValueExist );
 
@@ -247,12 +347,18 @@ function useAddProductFromSlug( {
 	isJetpackNotAtomic,
 	isPrivate,
 	addHandler,
+	isJetpackCheckout,
+	jetpackSiteSlug,
+	jetpackPurchaseToken,
 }: {
 	productAliasFromUrl: string | undefined | null;
 	dispatch: ( action: PreparedProductsAction ) => void;
 	isJetpackNotAtomic: boolean;
 	isPrivate: boolean;
 	addHandler: AddHandler;
+	isJetpackCheckout?: boolean;
+	jetpackSiteSlug?: string;
+	jetpackPurchaseToken?: string;
 } ) {
 	const products: Record<
 		string,
@@ -303,6 +409,9 @@ function useAddProductFromSlug( {
 				productSlug: product.product_slug,
 				productAlias: product.internal_product_alias,
 				productId: product.product_id,
+				isJetpackCheckout,
+				jetpackSiteSlug,
+				jetpackPurchaseToken,
 			} )
 		);
 
@@ -338,40 +447,38 @@ function useAddProductFromSlug( {
 		isJetpackNotAtomic,
 		productAliasFromUrl,
 		validProducts,
+		isJetpackCheckout,
 		dispatch,
 	] );
 }
 
 // Transform a fake slug like 'theme:ovation' into a real slug like 'premium_theme'
 function getProductSlugFromAlias( productAlias: string ): string {
-	if ( productAlias.startsWith( 'domain-mapping:' ) ) {
+	const [ encodedAlias ] = productAlias.split( ':' );
+	// Some product slugs contain slashes, so we decode them
+	const decodedAlias = decodeProductFromUrl( encodedAlias );
+	if ( decodedAlias === 'domain-mapping' ) {
 		return 'domain_map';
 	}
-	if ( productAlias.startsWith( 'theme:' ) ) {
+	if ( decodedAlias === 'theme' ) {
 		return 'premium_theme';
 	}
-	if ( productAlias === 'no-ads' ) {
-		return 'no-adverts/no-adverts.php';
-	}
-	const plan = getPlanByPathSlug( productAlias );
+	const plan = getPlanByPathSlug( decodedAlias );
 	const planSlug = plan?.getStoreSlug();
 	if ( planSlug ) {
 		return planSlug;
 	}
-	return productAlias;
+	return decodedAlias;
 }
 
 function createRenewalItemToAddToCart(
 	productAlias: string,
 	productId: string | number,
-	purchaseId: string | number | undefined | null,
-	selectedSiteSlug: string | null
+	purchaseId: string | number | undefined | null
 ): RequestCartProduct | null {
 	const [ slug, meta ] = productAlias.split( ':' );
-	// See https://github.com/Automattic/wp-calypso/pull/15043 for explanation of
-	// the no-ads alias (seems a little strange to me that the product slug is a
-	// php file).
-	const productSlug = slug === 'no-ads' ? 'no-adverts/no-adverts.php' : slug;
+	// Some product slugs contain slashes, so we decode them
+	const productSlug = decodeProductFromUrl( slug );
 
 	if ( ! purchaseId ) {
 		return null;
@@ -379,11 +486,11 @@ function createRenewalItemToAddToCart(
 
 	const renewalItemExtra = {
 		purchaseId: String( purchaseId ),
-		purchaseDomain: selectedSiteSlug ? String( selectedSiteSlug ) : undefined,
 		purchaseType: 'renewal',
 	};
 	return {
-		meta,
+		// Some meta values include slashes, so we decode them
+		meta: meta ? decodeProductFromUrl( meta ) : '',
 		quantity: null,
 		volume: 1,
 		product_slug: productSlug,
@@ -418,16 +525,24 @@ function createItemToAddToCart( {
 	productSlug,
 	productAlias,
 	productId,
+	isJetpackCheckout,
+	jetpackSiteSlug,
+	jetpackPurchaseToken,
 }: {
 	productSlug: string;
 	productId: number;
 	productAlias: string;
+	isJetpackCheckout?: boolean;
+	jetpackSiteSlug?: string;
+	jetpackPurchaseToken?: string;
 } ): RequestCartProduct {
 	debug( 'creating product with', productSlug, productAlias, productId );
+	const [ , meta ] = productAlias.split( ':' );
+	// Some meta values contain slashes, so we decode them
+	const cartMeta = meta ? decodeProductFromUrl( meta ) : '';
 
 	if ( productAlias.startsWith( 'theme:' ) ) {
 		debug( 'creating theme product' );
-		const cartMeta = productAlias.split( ':' )[ 1 ];
 		return addContextToProduct(
 			createRequestCartProduct( {
 				product_id: productId,
@@ -439,7 +554,6 @@ function createItemToAddToCart( {
 
 	if ( productAlias.startsWith( 'domain-mapping:' ) ) {
 		debug( 'creating domain mapping product' );
-		const cartMeta = productAlias.split( ':' )[ 1 ];
 		return addContextToProduct(
 			createRequestCartProduct( {
 				product_id: productId,
@@ -453,6 +567,7 @@ function createItemToAddToCart( {
 		createRequestCartProduct( {
 			product_id: productId,
 			product_slug: productSlug,
+			extra: { isJetpackCheckout, jetpackSiteSlug, jetpackPurchaseToken },
 		} )
 	);
 }

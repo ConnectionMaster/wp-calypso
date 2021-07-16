@@ -21,6 +21,8 @@ import {
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
 import { isJetpackSite } from 'calypso/state/sites/selectors';
 import FormattedHeader from 'calypso/components/formatted-header';
+import ScreenOptionsTab from 'calypso/components/screen-options-tab';
+import config from '@automattic/calypso-config';
 
 /**
  * Style dependencies
@@ -55,8 +57,9 @@ const SectionExport = ( { isJetpack, canUserExport, site, translate } ) => {
 					brandFont
 					className="exporter__section-header"
 					headerText={ translate( 'Export Content' ) }
-					subHeaderText={ translate( 'Your content on WordPress.com is always yours.' ) }
+					subHeaderText={ translate( 'Back up or move your content to another site or platform.' ) }
 					align="left"
+					hasScreenOptions={ config.isEnabled( 'nav-unification/switcher' ) }
 				/>
 				<ExporterContainer />
 			</Fragment>
@@ -65,6 +68,7 @@ const SectionExport = ( { isJetpack, canUserExport, site, translate } ) => {
 
 	return (
 		<Main>
+			<ScreenOptionsTab wpAdminPath="export.php" />
 			<DocumentHead title={ translate( 'Export' ) } />
 			<SidebarNavigation />
 			{ sectionContent }

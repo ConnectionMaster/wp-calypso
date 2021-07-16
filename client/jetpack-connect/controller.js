@@ -10,7 +10,7 @@ import { get, some } from 'lodash';
  * Internal Dependencies
  */
 import { recordPageView } from 'calypso/lib/analytics/page-view';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import InstallInstructions from './install-instructions';
 import JetpackAuthorize from './authorize';
 import JetpackConnect from './main';
@@ -20,8 +20,7 @@ import NoDirectAccessError from './no-direct-access-error';
 import OrgCredentialsForm from './remote-credentials';
 import SearchPurchase from './search';
 import StoreHeader from './store-header';
-import StoreFooter from './store-footer';
-import { getCurrentUserId } from 'calypso/state/current-user/selectors';
+import { getCurrentUserId, isUserLoggedIn } from 'calypso/state/current-user/selectors';
 import { getLocaleFromPath, removeLocaleFromPath } from 'calypso/lib/i18n-utils';
 import { hideMasterbar, showMasterbar } from 'calypso/state/ui/actions';
 import { OFFER_RESET_FLOW_TYPES } from './flow-types';
@@ -34,9 +33,11 @@ import {
 import { login } from 'calypso/lib/paths';
 import { parseAuthorizationQuery } from './utils';
 import {
+	clearPlan,
 	isCalypsoStartedConnection,
 	persistMobileRedirect,
 	retrieveMobileRedirect,
+	retrievePlan,
 	storePlan,
 } from './persistence-utils';
 import { startAuthorizeStep } from 'calypso/state/jetpack-connect/actions';
@@ -47,13 +48,11 @@ import { isCurrentPlanPaid, isJetpackSite } from 'calypso/state/sites/selectors'
 import {
 	PLAN_JETPACK_BUSINESS,
 	PLAN_JETPACK_BUSINESS_MONTHLY,
+	PLAN_JETPACK_FREE,
 	PLAN_JETPACK_PERSONAL,
 	PLAN_JETPACK_PERSONAL_MONTHLY,
 	PLAN_JETPACK_PREMIUM,
 	PLAN_JETPACK_PREMIUM_MONTHLY,
-} from 'calypso/lib/plans/constants';
-
-import {
 	JETPACK_SEARCH_PRODUCTS,
 	PRODUCT_JETPACK_BACKUP_DAILY,
 	PRODUCT_JETPACK_BACKUP_DAILY_MONTHLY,
@@ -65,12 +64,11 @@ import {
 	PRODUCT_JETPACK_SCAN_MONTHLY,
 	PRODUCT_JETPACK_ANTI_SPAM,
 	PRODUCT_JETPACK_ANTI_SPAM_MONTHLY,
-} from 'calypso/lib/products-values/constants';
-import { getProductFromSlug } from 'calypso/lib/products-values/get-product-from-slug';
-import { getJetpackProductDisplayName } from 'calypso/lib/products-values/get-jetpack-product-display-name';
-import { externalRedirect } from 'calypso/lib/route/path';
-import { getJetpackCROActiveVersion } from 'calypso/my-sites/plans/jetpack-plans/abtest';
-import { Iterations } from 'calypso/my-sites/plans/jetpack-plans/iterations';
+	getProductFromSlug,
+	getJetpackProductDisplayName,
+} from '@automattic/calypso-products';
+import { navigate } from 'calypso/lib/navigate';
+import { addQueryArgs } from 'calypso/lib/route';
 
 /**
  * Module variables
@@ -100,7 +98,7 @@ export function offerResetRedirects( context, next ) {
 		: null;
 	if ( isAutomatedTransfer ) {
 		debug( 'controller: offerResetRedirects -> redirecting WoA back to wp-admin', context.params );
-		return externalRedirect( selectedSite.URL + JETPACK_ADMIN_PATH );
+		return navigate( selectedSite.URL + JETPACK_ADMIN_PATH );
 	}
 
 	// If site has a paid plan or is not a Jetpack site, redirect to Calypso's Plans page
@@ -111,7 +109,19 @@ export function offerResetRedirects( context, next ) {
 			'controller: offerResetRedirects -> redirecting to /plans since site has a plan or is not a Jetpack site',
 			context.params
 		);
-		return externalRedirect( CALYPSO_PLANS_PAGE + selectedSite.slug );
+		return navigate( CALYPSO_PLANS_PAGE + selectedSite.slug );
+	}
+
+	// If the user previously selected Jetpack Free, redirect them to their wp-admin page
+	const storedPlan = retrievePlan();
+	clearPlan();
+	if ( storedPlan === PLAN_JETPACK_FREE ) {
+		debug(
+			'controller: offerResetRedirects -> redirecting to wp-admin because the user got here by clicking Jetpack Free',
+			context.params
+		);
+		navigate( context.query.redirect || selectedSite.options.admin_url );
+		return;
 	}
 
 	// If current user is not an admin (can't purchase plans), redirect the user to /posts if
@@ -127,9 +137,9 @@ export function offerResetRedirects( context, next ) {
 
 		const queryRedirect = context.query.redirect;
 		if ( queryRedirect ) {
-			externalRedirect( queryRedirect );
+			navigate( queryRedirect );
 		} else if ( selectedSite ) {
-			externalRedirect( selectedSite.URL + JETPACK_ADMIN_PATH );
+			navigate( selectedSite.URL + JETPACK_ADMIN_PATH );
 		}
 	}
 
@@ -140,10 +150,6 @@ export function offerResetRedirects( context, next ) {
 export function offerResetContext( context, next ) {
 	debug( 'controller: offerResetContext', context.params );
 	context.header = <StoreHeader urlQueryArgs={ context.query } />;
-
-	if ( getJetpackCROActiveVersion() !== Iterations.I5 ) {
-		context.footer = <StoreFooter />;
-	}
 
 	next();
 }
@@ -229,7 +235,7 @@ export function loginBeforeJetpackSearch( context, next ) {
 	// Log in to WP.com happens at the start of the flow for Search products
 	// ( to facilitate site selection ).
 	if ( JETPACK_SEARCH_PRODUCTS.includes( type ) && isLoggedOut ) {
-		return page( login( { isNative: true, isJetpack: true, redirectTo: path } ) );
+		return page( login( { isJetpack: true, redirectTo: path } ) );
 	}
 	next();
 }
@@ -248,7 +254,14 @@ export function connect( context, next ) {
 		const product = getProductFromSlug( planSlug );
 		analyticsPageTitle = getJetpackProductDisplayName( product );
 	}
-	recordPageView( pathname, analyticsPageTitle || 'Jetpack Connect' );
+	recordPageView(
+		pathname,
+		analyticsPageTitle || 'Jetpack Connect',
+		{},
+		{
+			useJetpackGoogleAnalytics: true,
+		}
+	);
 
 	// Not clearing the plan here, because other flows can set the cookie before arriving here.
 	planSlug && storePlan( planSlug );
@@ -258,8 +271,6 @@ export function connect( context, next ) {
 			<SearchPurchase
 				ctaFrom={ query.cta_from /* origin tracking params */ }
 				ctaId={ query.cta_id /* origin tracking params */ }
-				locale={ params.locale }
-				path={ path }
 				type={ type }
 				url={ query.url }
 			/>
@@ -283,7 +294,14 @@ export function connect( context, next ) {
 }
 
 export function instructions( context, next ) {
-	recordPageView( 'jetpack/connect/instructions', 'Jetpack Manual Install Instructions' );
+	recordPageView(
+		'jetpack/connect/instructions',
+		'Jetpack Manual Install Instructions',
+		{},
+		{
+			useJetpackGoogleAnalytics: true,
+		}
+	);
 
 	const url = context.query.url;
 	if ( ! url ) {
@@ -294,12 +312,19 @@ export function instructions( context, next ) {
 }
 
 export function signupForm( context, next ) {
-	recordPageView( 'jetpack/connect/authorize', 'Jetpack Authorize' );
+	recordPageView(
+		'jetpack/connect/authorize',
+		'Jetpack Authorize',
+		{},
+		{
+			useJetpackGoogleAnalytics: true,
+		}
+	);
 
 	const isLoggedIn = !! getCurrentUserId( context.store.getState() );
 	if ( retrieveMobileRedirect() && ! isLoggedIn ) {
 		// Force login for mobile app flow. App will intercept this request and prompt native login.
-		return window.location.replace( login( { isNative: true, redirectTo: context.path } ) );
+		return window.location.replace( login( { redirectTo: context.path } ) );
 	}
 
 	const { query } = context;
@@ -324,7 +349,14 @@ export function credsForm( context, next ) {
 }
 
 export function authorizeForm( context, next ) {
-	recordPageView( 'jetpack/connect/authorize', 'Jetpack Authorize' );
+	recordPageView(
+		'jetpack/connect/authorize',
+		'Jetpack Authorize',
+		{},
+		{
+			useJetpackGoogleAnalytics: true,
+		}
+	);
 
 	const { query } = context;
 	const transformedQuery = parseAuthorizationQuery( query );
@@ -342,7 +374,14 @@ export function sso( context, next ) {
 	const analyticsBasePath = '/jetpack/sso';
 	const analyticsPageTitle = 'Jetpack SSO';
 
-	recordPageView( analyticsBasePath, analyticsPageTitle );
+	recordPageView(
+		analyticsBasePath,
+		analyticsPageTitle,
+		{},
+		{
+			useJetpackGoogleAnalytics: true,
+		}
+	);
 
 	context.primary = (
 		<JetpackSsoForm
@@ -352,5 +391,40 @@ export function sso( context, next ) {
 			ssoNonce={ context.params.ssoNonce }
 		/>
 	);
+	next();
+}
+
+export function authorizeOrSignup( context, next ) {
+	const isLoggedIn = isUserLoggedIn( context.store.getState() );
+
+	if ( isLoggedIn ) {
+		authorizeForm( context, next );
+		return;
+	}
+
+	signupForm( context, next );
+}
+
+export function redirectToLoginIfLoggedOut( context, next ) {
+	const isLoggedIn = isUserLoggedIn( context.store.getState() );
+
+	if ( ! isLoggedIn ) {
+		page( login( { isJetpack: true, redirectTo: context.path } ) );
+		return;
+	}
+
+	next();
+}
+
+export function redirectToSiteLessCheckout( context, next ) {
+	const { type, interval } = context.params;
+
+	const planSlug = getPlanSlugFromFlowType( type, interval );
+
+	if ( config.isEnabled( 'jetpack/siteless-checkout' ) ) {
+		page( addQueryArgs( context.query, `/checkout/jetpack/${ planSlug }` ) );
+		return;
+	}
+
 	next();
 }

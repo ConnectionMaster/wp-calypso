@@ -3,14 +3,15 @@
  */
 import React from 'react';
 import { connect } from 'react-redux';
-import { get, isArray, isEqual, mapValues, omit, pickBy, partial } from 'lodash';
+import { get, isEqual, mapValues, omit, pickBy, partial } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
  * Internal dependencies
  */
 import { Card, Button } from '@automattic/components';
-import { hasSiteSeoFeature } from './utils';
+import hasActiveSiteFeature from 'calypso/state/selectors/has-active-site-feature';
+import isAtomicSite from 'calypso/state/selectors/is-site-automated-transfer';
 import { PRODUCT_UPSELLS_BY_FEATURE } from 'calypso/my-sites/plans/jetpack-plans/constants';
 import SettingsSectionHeader from 'calypso/my-sites/site-settings/settings-section-header';
 import MetaTitleEditor from 'calypso/components/seo/meta-title-editor';
@@ -33,6 +34,7 @@ import {
 } from 'calypso/state/site-settings/selectors';
 import { getSelectedSite, getSelectedSiteId } from 'calypso/state/ui/selectors';
 import getCurrentRouteParameterized from 'calypso/state/selectors/get-current-route-parameterized';
+import getJetpackModules from 'calypso/state/selectors/get-jetpack-modules';
 import isHiddenSite from 'calypso/state/selectors/is-hidden-site';
 import isJetpackModuleActive from 'calypso/state/selectors/is-jetpack-module-active';
 import isPrivateSite from 'calypso/state/selectors/is-private-site';
@@ -47,9 +49,8 @@ import {
 	FEATURE_ADVANCED_SEO,
 	FEATURE_SEO_PREVIEW_TOOLS,
 	TYPE_BUSINESS,
-	JETPACK_RESET_PLANS,
-} from 'calypso/lib/plans/constants';
-import { findFirstSimilarPlanKey } from 'calypso/lib/plans';
+	findFirstSimilarPlanKey,
+} from '@automattic/calypso-products';
 import QueryJetpackModules from 'calypso/components/data/query-jetpack-modules';
 import QueryJetpackPlugins from 'calypso/components/data/query-jetpack-plugins';
 import QuerySiteSettings from 'calypso/components/data/query-site-settings';
@@ -93,7 +94,6 @@ export class SeoForm extends React.Component {
 		// are in progress and haven't yet been saved
 		// to the server
 		dirtyFields: new Set(),
-		invalidatedSiteObject: this.props.selectedSite,
 	};
 
 	componentDidMount() {
@@ -130,7 +130,6 @@ export class SeoForm extends React.Component {
 				{
 					...stateForSite( nextSite ),
 					seoTitleFormats: nextProps.storedTitleFormats,
-					invalidatedSiteObject: nextSite,
 					dirtyFields: new Set(),
 				},
 				this.refreshCustomTitles
@@ -225,7 +224,7 @@ export class SeoForm extends React.Component {
 		// We will pass an empty string in this case.
 		updatedOptions.advanced_seo_title_formats = mapValues(
 			updatedOptions.advanced_seo_title_formats,
-			( format ) => ( isArray( format ) && 0 === format.length ? '' : format )
+			( format ) => ( Array.isArray( format ) && 0 === format.length ? '' : format )
 		);
 
 		this.props.saveSiteSettings( siteId, updatedOptions );
@@ -254,14 +253,9 @@ export class SeoForm extends React.Component {
 	};
 
 	refreshCustomTitles = () => {
-		const { refreshSiteData, selectedSite, siteId } = this.props;
+		const { refreshSiteData, siteId } = this.props;
 
-		this.setState(
-			{
-				invalidatedSiteObject: selectedSite,
-			},
-			() => refreshSiteData( siteId )
-		);
+		refreshSiteData( siteId );
 	};
 
 	showPreview = () => {
@@ -280,6 +274,7 @@ export class SeoForm extends React.Component {
 			siteIsJetpack,
 			siteIsComingSoon,
 			showAdvancedSeo,
+			isAtomic,
 			showWebsiteMeta,
 			selectedSite,
 			isSeoToolsActive,
@@ -306,23 +301,24 @@ export class SeoForm extends React.Component {
 
 		const generalTabUrl = getGeneralTabUrl( slug );
 
-		const upsellProps = siteIsJetpack
-			? {
-					title: translate( 'Boost your search engine ranking' ),
-					feature: FEATURE_SEO_PREVIEW_TOOLS,
-					href: `/checkout/${ slug }/${ PRODUCT_UPSELLS_BY_FEATURE[ FEATURE_ADVANCED_SEO ] }`,
-			  }
-			: {
-					title: translate(
-						'Boost your search engine ranking with the powerful SEO tools in the Business plan'
-					),
-					feature: FEATURE_ADVANCED_SEO,
-					plan:
-						selectedSite.plan &&
-						findFirstSimilarPlanKey( selectedSite.plan.product_slug, {
-							type: TYPE_BUSINESS,
-						} ),
-			  };
+		const upsellProps =
+			siteIsJetpack && ! isAtomic
+				? {
+						title: translate( 'Boost your search engine ranking' ),
+						feature: FEATURE_SEO_PREVIEW_TOOLS,
+						href: `/checkout/${ slug }/${ PRODUCT_UPSELLS_BY_FEATURE[ FEATURE_ADVANCED_SEO ] }`,
+				  }
+				: {
+						title: translate(
+							'Boost your search engine ranking with the powerful SEO tools in the Business plan'
+						),
+						feature: FEATURE_ADVANCED_SEO,
+						plan:
+							selectedSite.plan &&
+							findFirstSimilarPlanKey( selectedSite.plan.product_slug, {
+								type: TYPE_BUSINESS,
+							} ),
+				  };
 
 		// To ensure two Coming Soon badges don't appear while sites with Coming Soon v1 (isSitePrivate && siteIsComingSoon) still exist.
 		const isPublicComingSoon = ! isSitePrivate && siteIsComingSoon;
@@ -332,7 +328,7 @@ export class SeoForm extends React.Component {
 				<QuerySiteSettings siteId={ siteId } />
 				{ siteId && <QueryJetpackPlugins siteIds={ [ siteId ] } /> }
 				{ siteIsJetpack && <QueryJetpackModules siteId={ siteId } /> }
-				{ ( isSitePrivate || isSiteHidden ) && hasSiteSeoFeature( selectedSite ) && (
+				{ ( isSitePrivate || isSiteHidden ) && showAdvancedSeo && (
 					<Notice
 						status="is-warning"
 						showDismiss={ false }
@@ -368,19 +364,17 @@ export class SeoForm extends React.Component {
 						</NoticeAction>
 					</Notice>
 				) }
-
-				{ ! this.props.hasSeoPreviewFeature &&
-					! this.props.hasAdvancedSEOFeature &&
-					selectedSite.plan && (
-						<UpsellNudge
-							{ ...upsellProps }
-							description={ translate(
-								'Get tools to optimize your site for improved search engine results.'
-							) }
-							event={ 'calypso_seo_settings_upgrade_nudge' }
-							showIcon={ true }
-						/>
-					) }
+				{ ! showAdvancedSeo && selectedSite.plan && (
+					<UpsellNudge
+						forceDisplay={ siteIsJetpack }
+						{ ...upsellProps }
+						description={ translate(
+							'Get tools to optimize your site for improved search engine results.'
+						) }
+						event={ 'calypso_seo_settings_upgrade_nudge' }
+						showIcon={ true }
+					/>
+				) }
 				<form onChange={ this.props.markChanged } className="seo-settings__seo-form">
 					{ showAdvancedSeo && ! conflictedSeoPlugin && (
 						<div>
@@ -482,13 +476,14 @@ export class SeoForm extends React.Component {
 
 const mapStateToProps = ( state ) => {
 	const selectedSite = getSelectedSite( state );
-	// SEO Tools are available with Business plan on WordPress.com, and with Premium plan on Jetpack sites
-	const isAdvancedSeoEligible =
-		selectedSite.plan &&
-		( hasSiteSeoFeature( selectedSite ) ||
-			JETPACK_RESET_PLANS.includes( selectedSite.plan.product_slug ) );
 	const siteId = getSelectedSiteId( state );
 	const siteIsJetpack = isJetpackSite( state, siteId );
+	// SEO Tools are available with Business plan on WordPress.com, and
+	// will soon be available on all Jetpack sites, so we're checking
+	// the availability of the module.
+	const isAdvancedSeoEligible =
+		hasActiveSiteFeature( state, siteId, FEATURE_ADVANCED_SEO ) &&
+		( ! siteIsJetpack || get( getJetpackModules( state, siteId ), 'seo-tools.available', false ) );
 
 	const activePlugins = getPlugins( state, [ siteId ], 'active' );
 	const conflictedSeoPlugin = siteIsJetpack
@@ -502,6 +497,7 @@ const mapStateToProps = ( state ) => {
 		selectedSite,
 		storedTitleFormats: getSeoTitleFormatsForSite( getSelectedSite( state ) ),
 		showAdvancedSeo: isAdvancedSeoEligible,
+		isAtomic: isAtomicSite( state, siteId ),
 		showWebsiteMeta: !! get( selectedSite, 'options.advanced_seo_front_page_description', '' ),
 		isSeoToolsActive: isJetpackModuleActive( state, siteId, 'seo-tools' ),
 		isSiteHidden: isHiddenSite( state, siteId ),
@@ -529,9 +525,4 @@ const mapDispatchToProps = {
 	),
 };
 
-export default connect(
-	mapStateToProps,
-	mapDispatchToProps,
-	undefined,
-	{ pure: false } // defaults to true, but this component has internal state
-)( protectForm( localize( SeoForm ) ) );
+export default connect( mapStateToProps, mapDispatchToProps )( protectForm( localize( SeoForm ) ) );

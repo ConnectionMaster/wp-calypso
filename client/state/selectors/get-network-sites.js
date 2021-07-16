@@ -1,13 +1,7 @@
 /**
- * External dependencies
- */
-
-import { filter } from 'lodash';
-
-/**
  * Internal dependencies
  */
-import createSelector from 'calypso/lib/create-selector';
+import { createSelector } from '@automattic/state-utils';
 import getSitesItems from 'calypso/state/selectors/get-sites-items';
 import isMainSiteOf from 'calypso/state/selectors/is-main-site-of';
 import { getSite, isJetpackSiteMainNetworkSite } from 'calypso/state/sites/selectors';
@@ -26,10 +20,9 @@ export default createSelector(
 			return null;
 		}
 
-		return filter(
-			getSitesItems( state ),
-			( site ) => mainSiteId === site.ID || isMainSiteOf( state, mainSiteId, site.ID )
-		).map( ( site ) => getSite( state, site.ID ) );
+		return Object.values( getSitesItems( state ) )
+			.filter( ( site ) => mainSiteId === site.ID || isMainSiteOf( state, mainSiteId, site.ID ) )
+			.map( ( site ) => getSite( state, site.ID ) );
 	},
 	( state ) => [ getSitesItems( state ), state.currentUser.capabilities ]
 );

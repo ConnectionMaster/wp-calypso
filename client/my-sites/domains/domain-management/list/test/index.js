@@ -9,7 +9,6 @@ import deepFreeze from 'deep-freeze';
 import React from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { shallow, mount } from 'enzyme';
-import { noop } from 'lodash';
 import { ShoppingCartProvider, getEmptyResponseCart } from '@automattic/shopping-cart';
 
 /**
@@ -18,10 +17,13 @@ import { ShoppingCartProvider, getEmptyResponseCart } from '@automattic/shopping
 import { List as DomainList } from '..';
 import { createReduxStore } from 'calypso/state';
 
+const noop = () => {};
+
 jest.mock( 'calypso/lib/wp', () => ( {
 	undocumented: () => ( {
 		getProducts: () => {},
 		getSitePlans: () => {},
+		getSiteFeatures: () => {},
 	} ),
 } ) );
 
@@ -73,6 +75,7 @@ describe( 'index', () => {
 		userCanManageOptions: true,
 		successNotice: noop,
 		errorNotice: noop,
+		translate: ( string ) => string,
 	} );
 
 	function renderWithProps( props = defaultProps ) {

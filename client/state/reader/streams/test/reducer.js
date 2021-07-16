@@ -26,8 +26,7 @@ import {
 	PENDING_ITEMS_DEFAULT,
 } from '../reducer';
 
-jest.mock( 'calypso/lib/warn', () => () => {} );
-jest.mock( 'calypso/lib/user', () => () => {} );
+jest.mock( '@wordpress/warning', () => () => {} );
 
 const TIME1 = '2018-01-01T00:00:00.000Z';
 const TIME2 = '2018-01-02T00:00:00.000Z';

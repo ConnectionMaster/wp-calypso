@@ -1,18 +1,11 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import * as driverHelper from '../../driver-helper';
 import GutenbergBlockComponent from './gutenberg-block-component';
 
 class ContactInfoBlockComponent extends GutenbergBlockComponent {
 	static blockTitle = 'Contact Info';
 	static blockName = 'jetpack/contact-info';
-	static blockFrontendSelector = By.css( '.entry-content .wp-block-jetpack-contact-info' );
+	static blockFrontendLocator = By.css( '.entry-content .wp-block-jetpack-contact-info' );
 
 	async fillUp( {
 		email,

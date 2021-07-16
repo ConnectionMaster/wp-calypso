@@ -2,10 +2,6 @@
  * @jest-environment jsdom
  */
 
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: () => '',
-} ) );
-
 jest.mock( 'store', () => ( {
 	get: () => {},
 	User: () => {},
@@ -19,7 +15,7 @@ jest.mock(
 		}
 );
 
-jest.mock( 'calypso/config', () => {
+jest.mock( '@automattic/calypso-config', () => {
 	const mock = jest.fn();
 	mock.isEnabled = jest.fn();
 
@@ -33,7 +29,7 @@ import { shallow } from 'enzyme';
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import React from 'react';
-import { createStore } from 'redux';
+import { applyMiddleware, createStore } from 'redux';
 import { Provider } from 'react-redux';
 import {
 	PLAN_FREE,
@@ -44,7 +40,8 @@ import {
 	PLAN_PREMIUM_2_YEARS,
 	PLAN_PERSONAL,
 	PLAN_PERSONAL_2_YEARS,
-} from 'calypso/lib/plans/constants';
+} from '@automattic/calypso-products';
+import thunkMiddleware from 'redux-thunk';
 
 /**
  * Internal dependencies
@@ -74,7 +71,11 @@ const initialReduxState = {
 };
 
 function renderWithRedux( ui ) {
-	const store = createStore( ( state ) => state, initialReduxState );
+	const store = createStore(
+		( state ) => state,
+		initialReduxState,
+		applyMiddleware( thunkMiddleware )
+	);
 	return render( <Provider store={ store }>{ ui }</Provider> );
 }
 
@@ -93,7 +94,7 @@ const props = {
 	moment,
 };
 
-describe( 'SiteSettingsFormGeneral ', () => {
+describe( 'SiteSettingsFormGeneral', () => {
 	test( 'should not blow up and have proper CSS class', () => {
 		const comp = shallow( <SiteSettingsFormGeneral { ...props } /> );
 		expect( comp.find( '.site-settings__site-options' ).length ).toBe( 1 );
@@ -232,22 +233,6 @@ describe( 'SiteSettingsFormGeneral ', () => {
 
 			// We want to show the coming soon setting for existing coming soon v1 sites that have not migrated
 			describe( 'support existing coming soon v1 sites that have not migrated', () => {
-				test( 'Coming soon option should be selected when a site is private and unlaunched (coming soon mode v1 by default)', () => {
-					const newProps = {
-						...testProps,
-						fields: {
-							blog_public: -1,
-						},
-						isUnlaunchedSite: true,
-						// So renderLaunchSite() runs smoothly.
-						siteDomains: [ 'test.com' ],
-					};
-
-					const { getByLabelText } = renderWithRedux( <SiteSettingsFormGeneral { ...newProps } /> );
-					const radioButton = getByLabelText( 'Coming soon', { exact: false } );
-					expect( radioButton ).toBeChecked();
-				} );
-
 				test( 'Should check private option when site is private, but not in coming soon v1 and not private and unlaunched', () => {
 					const newProps = {
 						...testProps,
@@ -306,6 +291,20 @@ describe( 'SiteSettingsFormGeneral ', () => {
 			} );
 		} );
 
+		describe( 'unlaunched site', () => {
+			it( 'Should not show the site settings UI', () => {
+				testProps = {
+					...testProps,
+					isUnlaunchedSite: true,
+					siteDomains: [ 'example.wordpress.com' ],
+				};
+
+				const { container } = renderWithRedux( <SiteSettingsFormGeneral { ...testProps } /> );
+
+				expect( container.querySelectorAll( '#site-privacy-settings' ) ).toHaveLength( 0 );
+			} );
+		} );
+
 		describe( 'Coming soon plugin availability', () => {
 			test( 'Should hide Coming Soon form element when the site is not atomic or the editing toolkit plugin is not disabled', () => {
 				const newProps = {
@@ -352,6 +351,19 @@ describe( 'SiteSettingsFormGeneral ', () => {
 					}
 				);
 				expect( hiddenCheckbox ).toBeChecked();
+			} );
+		} );
+
+		describe( 'P2 Hub', () => {
+			it( 'Should not show the privacy settings UI', () => {
+				testProps = {
+					...testProps,
+					isP2HubSite: true,
+				};
+
+				const { container } = renderWithRedux( <SiteSettingsFormGeneral { ...testProps } /> );
+
+				expect( container.querySelectorAll( '#site-privacy-settings' ) ).toHaveLength( 0 );
 			} );
 		} );
 	} );

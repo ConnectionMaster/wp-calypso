@@ -4,7 +4,6 @@
 import PropTypes from 'prop-types';
 import React, { PureComponent } from 'react';
 import { Provider } from 'react-redux';
-import { noop } from 'lodash';
 
 /**
  * Internal dependencies
@@ -28,6 +27,7 @@ import './boot/stylesheets/style.scss';
 
 let client;
 
+const noop = () => {};
 const globalData = {};
 
 repliesCache.cleanup();
@@ -73,7 +73,7 @@ export class Notifications extends PureComponent {
 			customEnhancer,
 			customMiddleware: mergeHandlers( customMiddleware, {
 				APP_REFRESH_NOTES: [
-					( store, action ) => {
+					( _store, action ) => {
 						if ( ! client ) {
 							return;
 						}
@@ -98,7 +98,7 @@ export class Notifications extends PureComponent {
 		 * Initialize store with actions that need to occur on
 		 * transitions from open to close or close to open
 		 *
-		 * @TODO: Pass this information directly into the Redux initial state
+		 * @todo Pass this information directly into the Redux initial state
 		 */
 		store.dispatch( { type: SET_IS_SHOWING, isShowing } );
 

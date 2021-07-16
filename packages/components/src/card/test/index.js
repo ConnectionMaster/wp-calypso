@@ -1,12 +1,5 @@
-/**
- * External dependencies
- */
 import { shallow } from 'enzyme';
 import React from 'react';
-
-/**
- * Internal dependencies
- */
 import Card from '../';
 import CompactCard from '../compact';
 
@@ -80,7 +73,7 @@ describe( 'CompactCard', () => {
 	// test for card component
 	test( 'should use the card component', () => {
 		const compactCard = shallow( <CompactCard /> );
-		expect( compactCard.find( 'Card' ) ).toHaveLength( 1 );
+		expect( compactCard.find( Card ) ).toHaveLength( 1 );
 		expect( compactCard ).toMatchSnapshot();
 	} );
 } );

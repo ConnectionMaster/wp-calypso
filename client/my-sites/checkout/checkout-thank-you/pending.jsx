@@ -6,7 +6,6 @@ import { localize } from 'i18n-calypso';
 import React, { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { identity } from 'lodash';
 
 /**
  * Internal dependencies
@@ -27,14 +26,7 @@ class CheckoutPending extends PureComponent {
 		siteSlug: PropTypes.string.isRequired,
 		transaction: PropTypes.object,
 		error: PropTypes.object,
-		errorNotice: PropTypes.func,
-		localize: PropTypes.func,
 		redirectTo: PropTypes.string,
-	};
-
-	static defaultProps = {
-		localize: identity,
-		errorNotice: identity,
 	};
 
 	UNSAFE_componentWillReceiveProps( nextProps ) {
@@ -58,8 +50,12 @@ class CheckoutPending extends PureComponent {
 			if ( ORDER_TRANSACTION_STATUS.SUCCESS === processingStatus ) {
 				const { receiptId } = transaction;
 
-				const redirectPath = redirectTo.replace( 'pending', receiptId );
-				page( redirectPath );
+				if ( redirectTo.startsWith( '/' ) ) {
+					const redirectPath = redirectTo.replace( 'pending', receiptId );
+					page( redirectPath );
+				} else {
+					window.location.href = redirectTo;
+				}
 
 				return;
 			}

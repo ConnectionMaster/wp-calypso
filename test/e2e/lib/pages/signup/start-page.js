@@ -1,14 +1,7 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
+import AsyncBaseContainer from '../../async-base-container';
 import * as dataHelper from '../../data-helper';
 import * as driverHelper from '../../driver-helper';
-import AsyncBaseContainer from '../../async-base-container';
 
 export default class StartPage extends AsyncBaseContainer {
 	constructor( driver, url ) {
@@ -19,10 +12,13 @@ export default class StartPage extends AsyncBaseContainer {
 
 	async _postInit() {
 		if ( this.visiting ) {
-			await this.setABTestControlGroupsInLocalStorage();
+			await this.waitForPage();
 			await this.driver.get( this.startURL ); // this is the actual calculated start URL
 		}
-		return await driverHelper.waitTillPresentAndDisplayed( this.driver, By.css( '.step-wrapper' ) );
+		return await driverHelper.waitUntilElementLocatedAndVisible(
+			this.driver,
+			By.css( '.step-wrapper' )
+		);
 	}
 
 	static getStartURL( { culture = 'en', flow = 'domains', query = '' } = {} ) {

@@ -4,8 +4,7 @@
 import React from 'react';
 import { localize } from 'i18n-calypso';
 import { connect } from 'react-redux';
-import { includes, uniq } from 'lodash';
-import { isEnabled } from 'calypso/config';
+import { includes } from 'lodash';
 
 /**
  * Internal dependencies
@@ -24,7 +23,7 @@ import { fetchPluginData as wporgFetchPluginData } from 'calypso/state/plugins/w
 import PluginNotices from 'calypso/my-sites/plugins/notices';
 import MainComponent from 'calypso/components/main';
 import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
-import JetpackManageErrorPage from 'calypso/my-sites/jetpack-manage-error-page';
+import EmptyContent from 'calypso/components/empty-content';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import PluginSections from 'calypso/my-sites/plugins/plugin-sections';
 import PluginSectionsCustom from 'calypso/my-sites/plugins/plugin-sections/custom';
@@ -48,6 +47,7 @@ import {
 	isRequestingForSites,
 } from 'calypso/state/plugins/installed/selectors';
 import { INSTALL_PLUGIN } from 'calypso/lib/plugins/constants';
+import { siteObjectsToSiteIds } from 'calypso/my-sites/plugins/utils';
 
 function goBack() {
 	window.history.back();
@@ -105,8 +105,8 @@ class SinglePlugin extends React.Component {
 		return ! shouldUseHistoryBack ? '/plugins/manage/' + ( siteUrl || '' ) : null;
 	};
 
-	displayHeader( calypsoify ) {
-		if ( ! this.props.selectedSite || calypsoify ) {
+	displayHeader() {
+		if ( ! this.props.selectedSite ) {
 			return <Card className="plugins__installed-header" />;
 		}
 
@@ -169,7 +169,7 @@ class SinglePlugin extends React.Component {
 
 		return (
 			<MainComponent>
-				<JetpackManageErrorPage
+				<EmptyContent
 					title={ translate( "Oops! We can't find this plugin!" ) }
 					line={ translate( "The plugin you are looking for doesn't exist." ) }
 					actionURL={ actionUrl }
@@ -274,7 +274,6 @@ class SinglePlugin extends React.Component {
 		}
 
 		const isWpcom = selectedSite && ! this.props.isJetpackSite;
-		const calypsoify = this.props.isAtomicSite && isEnabled( 'calypsoify/plugins' );
 		const analyticsPath = selectedSite ? '/plugins/:plugin/:site' : '/plugins/:plugin';
 
 		return (
@@ -286,7 +285,7 @@ class SinglePlugin extends React.Component {
 				<PluginNotices pluginId={ plugin.id } sites={ this.props.sites } plugins={ [ plugin ] } />
 
 				<div className="plugin__page">
-					{ this.displayHeader( calypsoify ) }
+					{ this.displayHeader() }
 					<PluginMeta
 						plugin={ plugin }
 						siteUrl={ this.props.siteUrl }
@@ -295,7 +294,6 @@ class SinglePlugin extends React.Component {
 						isInstalledOnSite={ this.isPluginInstalledOnsite() }
 						isInstalling={ this.props.isInstallingPlugin }
 						allowedActions={ allowedPluginActions }
-						calypsoify={ calypsoify }
 					/>
 					{ plugin.wporg ? (
 						<PluginSections plugin={ plugin } isWpcom={ isWpcom } />
@@ -313,9 +311,7 @@ export default connect(
 	( state, props ) => {
 		const selectedSiteId = getSelectedSiteId( state );
 		const sites = getSelectedOrAllSitesWithPlugins( state );
-
-		// eslint-disable-next-line wpcalypso/redux-no-bound-selectors
-		const siteIds = uniq( sites.map( ( site ) => site.ID ) );
+		const siteIds = [ ...new Set( siteObjectsToSiteIds( sites ) ) ];
 
 		return {
 			plugin: getPluginOnSites( state, siteIds, props.pluginSlug ),

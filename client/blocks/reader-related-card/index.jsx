@@ -4,7 +4,7 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import classnames from 'classnames';
-import { get, noop, partial } from 'lodash';
+import { get, partial } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
@@ -28,6 +28,7 @@ import ReaderAuthorLink from 'calypso/blocks/reader-author-link';
 import './style.scss';
 
 const RELATED_IMAGE_WIDTH = 385; // usual width of featured images in related post card
+const noop = () => {};
 
 function AuthorAndSiteFollow( { post, site, onSiteClick, followSource } ) {
 	const siteUrl = getStreamUrl( post.feed_ID, post.site_ID );
@@ -163,7 +164,7 @@ export function RelatedPostCard( {
 				<div className="reader-related-card__site-info">
 					<h1 className="reader-related-card__title">{ post.title }</h1>
 					<div className="reader-related-card__excerpt post-excerpt">
-						{ !! post.canonical_media ? post.short_excerpt : post.better_excerpt_no_html }
+						{ post.canonical_media ? post.short_excerpt : post.better_excerpt_no_html }
 					</div>
 				</div>
 			</a>

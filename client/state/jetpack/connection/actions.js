@@ -7,9 +7,6 @@ import {
 	JETPACK_CONNECTION_STATUS_REQUEST_SUCCESS,
 	JETPACK_CONNECTION_STATUS_REQUEST_FAILURE,
 	JETPACK_DISCONNECT_RECEIVE,
-	JETPACK_DISCONNECT_REQUEST,
-	JETPACK_DISCONNECT_REQUEST_FAILURE,
-	JETPACK_DISCONNECT_REQUEST_SUCCESS,
 	JETPACK_USER_CONNECTION_CHANGE_OWNER,
 	JETPACK_USER_CONNECTION_DATA_RECEIVE,
 	JETPACK_USER_CONNECTION_DATA_REQUEST,
@@ -17,6 +14,7 @@ import {
 	JETPACK_USER_CONNECTION_DATA_REQUEST_FAILURE,
 } from 'calypso/state/action-types';
 import wp from 'calypso/lib/wp';
+import { fetchCurrentUser } from 'calypso/state/current-user/actions';
 
 import 'calypso/state/data-layer/wpcom/jetpack/connection/owner';
 import 'calypso/state/jetpack/init';
@@ -83,39 +81,21 @@ export const requestJetpackUserConnectionData = ( siteId ) => {
 	};
 };
 
-export const disconnect = ( siteId ) => {
-	return ( dispatch ) => {
-		dispatch( {
-			type: JETPACK_DISCONNECT_REQUEST,
-			siteId,
+export const disconnect = ( siteId ) => ( dispatch ) =>
+	wp
+		.undocumented()
+		.disconnectJetpack( siteId )
+		.then( ( response ) => {
+			dispatch( {
+				type: JETPACK_DISCONNECT_RECEIVE,
+				siteId,
+				status: response,
+			} );
+			dispatch( fetchCurrentUser() );
 		} );
 
-		return wp
-			.undocumented()
-			.disconnectJetpack( siteId )
-			.then( ( response ) => {
-				dispatch( {
-					type: JETPACK_DISCONNECT_RECEIVE,
-					siteId,
-					status: response,
-				} );
-				dispatch( {
-					type: JETPACK_DISCONNECT_REQUEST_SUCCESS,
-					siteId,
-				} );
-			} )
-			.catch( ( error ) => {
-				dispatch( {
-					type: JETPACK_DISCONNECT_REQUEST_FAILURE,
-					siteId,
-					error: error.message,
-				} );
-			} );
-	};
-};
-
 /**
- * Change the jetpack master user.
+ * Change the jetpack connection owner.
  *
  * @param {number} siteId the site ID
  * @param {number} newOwnerWporgId the wporg user ID of the new owner

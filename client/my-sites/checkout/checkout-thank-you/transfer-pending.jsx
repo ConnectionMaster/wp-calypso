@@ -6,7 +6,6 @@ import { localize } from 'i18n-calypso';
 import React, { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
-import { identity } from 'lodash';
 import Gridicon from 'calypso/components/gridicon';
 
 /**
@@ -21,20 +20,23 @@ import { getSiteSlug } from 'calypso/state/sites/selectors';
 import getAtomicTransfer from 'calypso/state/selectors/get-atomic-transfer';
 import { transferStates } from 'calypso/state/atomic-transfer/constants';
 import WordPressLogo from 'calypso/components/wordpress-logo';
+import { hideMasterbar, showMasterbar } from 'calypso/state/ui/masterbar-visibility/actions';
 
 class TransferPending extends PureComponent {
 	static propTypes = {
 		error: PropTypes.object,
-		localize: PropTypes.func,
 		showErrorNotice: PropTypes.func,
 		siteId: PropTypes.number.isRequired,
 		transfer: PropTypes.object,
 	};
 
-	static defaultProps = {
-		localize: identity,
-		errorNotice: identity,
-	};
+	componentDidMount() {
+		this.props.hideMasterbar();
+	}
+
+	componentWillUnmount() {
+		this.props.showMasterbar();
+	}
 
 	UNSAFE_componentWillReceiveProps( nextProps ) {
 		const { transfer, error } = nextProps;
@@ -139,5 +141,9 @@ export default connect(
 		siteSlug: getSiteSlug( state, siteId ),
 		transfer: getAtomicTransfer( state, siteId ),
 	} ),
-	{ showErrorNotice: errorNotice }
+	{
+		showErrorNotice: errorNotice,
+		hideMasterbar,
+		showMasterbar,
+	}
 )( localize( TransferPending ) );

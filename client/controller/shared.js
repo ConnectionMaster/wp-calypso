@@ -2,16 +2,17 @@
  * External dependencies
  */
 import React from 'react';
-import { noop } from 'lodash';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { getCurrentUser } from 'calypso/state/current-user/selectors';
 import { setSection } from 'calypso/state/ui/actions';
 import { setLocale } from 'calypso/state/ui/language/actions';
 import { isTranslatedIncompletely } from 'calypso/lib/i18n-utils/utils';
+
+const noop = () => {};
 
 export function makeLayoutMiddleware( LayoutComponent ) {
 	return ( context, next ) => {
@@ -63,4 +64,25 @@ export function setLocaleMiddleware( context, next ) {
 
 	context.store.dispatch( setLocale( context.lang || config( 'i18n_default_locale_slug' ) ) );
 	next();
+}
+
+/**
+ * Composes multiple handlers into one.
+ *
+ * @param { ...( context, next ) => void } handlers - A list of route handlers to compose
+ * @returns  { ( context, next ) => void } - A new route handler that executes the handlers in succession
+ */
+export function composeHandlers( ...handlers ) {
+	return ( context, next ) => {
+		const it = handlers.values();
+		function handleNext() {
+			const nextHandler = it.next().value;
+			if ( ! nextHandler ) {
+				next();
+			} else {
+				nextHandler( context, handleNext );
+			}
+		}
+		handleNext();
+	};
 }

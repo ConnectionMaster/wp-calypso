@@ -1,41 +1,42 @@
 /**
  * External dependencies
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import classNames from 'classnames';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 /**
  * Internal dependencies
  */
 import { recordTracksEvent } from 'calypso/state/analytics/actions/record';
-import PlansFilterBar from 'calypso/my-sites/plans/jetpack-plans/plans-filter-bar';
 import { EXTERNAL_PRODUCTS_LIST } from 'calypso/my-sites/plans/jetpack-plans/constants';
-import { checkout, manageSitePurchase } from 'calypso/my-sites/plans/jetpack-plans/utils';
-import QueryProducts from 'calypso/my-sites/plans/jetpack-plans/query-products';
+import { getYearlySlugFromMonthly } from 'calypso/my-sites/plans/jetpack-plans/convert-slug-terms';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
-import { getYearlyPlanByMonthly } from 'calypso/lib/plans';
-import { getProductYearlyVariant, isJetpackPlan } from 'calypso/lib/products-values';
-import { TERM_ANNUALLY } from 'calypso/lib/plans/constants';
+import { TERM_ANNUALLY } from '@automattic/calypso-products';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'calypso/state/ui/selectors';
 import Main from 'calypso/components/main';
-import QuerySitePurchases from 'calypso/components/data/query-site-purchases';
-import QuerySites from 'calypso/components/data/query-sites';
 import QueryProductsList from 'calypso/components/data/query-products-list';
-import {
-	getGridComponent,
-	showFilterBarInSelector,
-} from 'calypso/my-sites/plans/jetpack-plans/iterations';
+import QuerySites from 'calypso/components/data/query-sites';
+import QuerySiteProducts from 'calypso/components/data/query-site-products';
+import QuerySitePurchases from 'calypso/components/data/query-site-purchases';
+import getViewTrackerPath from './get-view-tracker-path';
+import ProductGrid from './product-grid';
+import buildCheckoutURL from './build-checkout-url';
+import { managePurchase } from 'calypso/me/purchases/paths';
+import isJetpackCloud from 'calypso/lib/jetpack/is-jetpack-cloud';
+import { getForCurrentCROIteration, Iterations } from './iterations';
 
 /**
  * Type dependencies
  */
 import type {
 	Duration,
+	ScrollCardIntoViewCallback,
 	SelectorPageProps,
 	SelectorProduct,
 	PurchaseCallback,
+	PurchaseURLCallback,
 } from 'calypso/my-sites/plans/jetpack-plans/types';
-import type { ProductSlug } from 'calypso/lib/products-values/types';
 
 import './style.scss';
 
@@ -46,6 +47,8 @@ const SelectorPage: React.FC< SelectorPageProps > = ( {
 	urlQueryArgs,
 	header,
 	footer,
+	planRecommendation,
+	highlightedProducts = [],
 }: SelectorPageProps ) => {
 	const dispatch = useDispatch();
 
@@ -53,12 +56,70 @@ const SelectorPage: React.FC< SelectorPageProps > = ( {
 	const siteSlugState = useSelector( ( state ) => getSelectedSiteSlug( state ) ) || '';
 	const siteSlug = siteSlugProp || siteSlugState;
 	const [ currentDuration, setDuration ] = useState< Duration >( defaultDuration );
+	const viewTrackerPath = getViewTrackerPath( rootUrl, siteSlugProp );
+	const viewTrackerProps = siteId ? { site: siteSlug } : {};
 
-	const Grid = useMemo( () => getGridComponent(), [] );
+	useEffect( () => {
+		dispatch(
+			recordTracksEvent( 'calypso_jetpack_pricing_page_visit', {
+				site: siteSlug,
+				path: viewTrackerPath,
+				root_path: rootUrl,
+			} )
+		);
+	}, [ dispatch, rootUrl, siteSlug, viewTrackerPath ] );
+
+	const { unlinked, purchasetoken, purchaseNonce, site } = urlQueryArgs;
+	const canDoSiteOnlyCheckout = unlinked && !! site && !! ( purchasetoken || purchaseNonce );
+	useEffect( () => {
+		if ( canDoSiteOnlyCheckout ) {
+			dispatch(
+				recordTracksEvent( 'calypso_jetpack_siteonly_pricing_page_visit', {
+					site: siteSlug,
+					path: viewTrackerPath,
+					root_path: rootUrl,
+				} )
+			);
+		}
+	}, [ canDoSiteOnlyCheckout, dispatch, rootUrl, siteSlug, viewTrackerPath ] );
 
 	useEffect( () => {
 		setDuration( defaultDuration );
 	}, [ defaultDuration ] );
+
+	const scrollCardIntoView: ScrollCardIntoViewCallback = useCallback(
+		( element, productSlug ) => {
+			if ( highlightedProducts.includes( productSlug ) ) {
+				// Timeout to make sure everything has rendered before
+				// before scrolling the element into view.
+				element.scrollIntoView( {
+					behavior: 'smooth',
+				} );
+			}
+		},
+		[ highlightedProducts ]
+	);
+
+	const createProductURL: PurchaseURLCallback = (
+		product: SelectorProduct,
+		isUpgradeableToYearly = false,
+		purchase
+	) => {
+		if ( EXTERNAL_PRODUCTS_LIST.includes( product.productSlug ) ) {
+			return product.externalUrl || '';
+		}
+		if ( purchase && isUpgradeableToYearly ) {
+			const { productSlug: slug } = product;
+			const yearlySlug = getYearlySlugFromMonthly( slug );
+			return yearlySlug ? buildCheckoutURL( siteSlug, yearlySlug, urlQueryArgs ) : undefined;
+		}
+		if ( purchase ) {
+			const relativePath = managePurchase( siteSlug, purchase.id );
+			return isJetpackCloud() ? `https://wordpress.com${ relativePath }` : relativePath;
+		}
+
+		return buildCheckoutURL( siteSlug, product.productSlug, urlQueryArgs );
+	};
 
 	// Sends a user to a page based on whether there are subtypes.
 	const selectProduct: PurchaseCallback = (
@@ -66,58 +127,38 @@ const SelectorPage: React.FC< SelectorPageProps > = ( {
 		isUpgradeableToYearly = false,
 		purchase
 	) => {
+		const trackingProps = {
+			site_id: siteId || undefined,
+			product_slug: product.productSlug,
+			duration: currentDuration,
+			path: viewTrackerPath,
+		};
+
 		if ( EXTERNAL_PRODUCTS_LIST.includes( product.productSlug ) ) {
-			dispatch(
-				recordTracksEvent( 'calypso_product_external_click', {
-					site_id: siteId || undefined,
-					product_slug: product.productSlug,
-					duration: currentDuration,
-				} )
-			);
-			window.location.href = product.externalUrl || '';
+			dispatch( recordTracksEvent( 'calypso_product_external_click', trackingProps ) );
 			return;
 		}
 
 		if ( purchase && isUpgradeableToYearly ) {
-			dispatch(
-				recordTracksEvent( 'calypso_product_checkout_click', {
-					site_id: siteId || undefined,
-					product_slug: product.productSlug,
-					duration: currentDuration,
-				} )
-			);
+			// Name of `calypso_product_checkout_click` is misleading, since it's only triggered
+			// for Jetpack products. Leaving it here to not break current analysis, but please
+			// use `calypso_jetpack_pricing_page_product_click` instead when using tracking tools.
+			dispatch( recordTracksEvent( 'calypso_product_checkout_click', trackingProps ) );
+			dispatch( recordTracksEvent( 'calypso_jetpack_pricing_page_product_click', trackingProps ) );
 
-			const { productSlug: slug } = product;
-			const yearlyItem = isJetpackPlan( slug )
-				? getYearlyPlanByMonthly( slug )
-				: getProductYearlyVariant( slug as ProductSlug );
-
-			if ( yearlyItem ) {
-				checkout( siteSlug, yearlyItem, urlQueryArgs );
-			}
 			return;
 		}
 
 		if ( purchase ) {
-			dispatch(
-				recordTracksEvent( 'calypso_product_manage_click', {
-					site_id: siteId || undefined,
-					product_slug: product.productSlug,
-					duration: currentDuration,
-				} )
-			);
-			manageSitePurchase( siteSlug, purchase.id );
+			dispatch( recordTracksEvent( 'calypso_product_manage_click', trackingProps ) );
 			return;
 		}
 
-		dispatch(
-			recordTracksEvent( 'calypso_product_checkout_click', {
-				site_id: siteId || undefined,
-				product_slug: product.productSlug,
-				duration: currentDuration,
-			} )
-		);
-		checkout( siteSlug, product.productSlug, urlQueryArgs );
+		// Name of `calypso_product_checkout_click` is misleading, since it's only triggered
+		// for Jetpack products. Leaving it here to not break current analysis, but please
+		// use `calypso_jetpack_pricing_page_product_click` instead when using tracking tools.
+		dispatch( recordTracksEvent( 'calypso_product_checkout_click', trackingProps ) );
+		dispatch( recordTracksEvent( 'calypso_jetpack_pricing_page_product_click', trackingProps ) );
 	};
 
 	const trackDurationChange = ( selectedDuration: Duration ) => {
@@ -134,30 +175,32 @@ const SelectorPage: React.FC< SelectorPageProps > = ( {
 		setDuration( selectedDuration );
 	};
 
-	const viewTrackerPath = siteId ? `${ rootUrl }/:site` : rootUrl;
-	const viewTrackerProps = siteId ? { site: siteSlug } : {};
+	const iterationClassName = getForCurrentCROIteration(
+		( variation: Iterations | null ) => `jetpack-plans__iteration--${ variation ?? 'default' }`
+	);
 
 	return (
-		<Main className="selector__main" wideLayout>
-			<PageViewTracker path={ viewTrackerPath } properties={ viewTrackerProps } title="Plans" />
+		<Main className={ classNames( 'selector__main', iterationClassName ) } wideLayout>
+			<PageViewTracker
+				path={ viewTrackerPath }
+				properties={ viewTrackerProps }
+				title="Plans"
+				options={ { useJetpackGoogleAnalytics: ! isJetpackCloud() } }
+			/>
 
 			{ header }
 
-			{ showFilterBarInSelector() && (
-				<PlansFilterBar onDurationChange={ trackDurationChange } duration={ currentDuration } />
-			) }
+			<ProductGrid
+				duration={ currentDuration }
+				urlQueryArgs={ urlQueryArgs }
+				planRecommendation={ planRecommendation }
+				onSelectProduct={ selectProduct }
+				onDurationChange={ trackDurationChange }
+				scrollCardIntoView={ scrollCardIntoView }
+				createButtonURL={ createProductURL }
+			/>
 
-			{ Grid && (
-				<Grid
-					duration={ currentDuration }
-					onSelectProduct={ selectProduct }
-					urlQueryArgs={ urlQueryArgs }
-					{ ...( ! showFilterBarInSelector() && { onDurationChange: trackDurationChange } ) }
-				/>
-			) }
-
-			<QueryProductsList />
-			<QueryProducts />
+			{ siteId ? <QuerySiteProducts siteId={ siteId } /> : <QueryProductsList type="jetpack" /> }
 			{ siteId && <QuerySitePurchases siteId={ siteId } /> }
 			{ siteId && <QuerySites siteId={ siteId } /> }
 

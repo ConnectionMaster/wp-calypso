@@ -12,25 +12,16 @@ import { shallow } from 'enzyme';
  * Internal dependencies
  */
 import { MySitesSidebar } from '..';
-import config from 'calypso/config';
-import { abtest } from 'calypso/lib/abtest';
+import config from '@automattic/calypso-config';
 
-jest.mock( 'calypso/lib/user', () => () => null );
-jest.mock( 'calypso/lib/user/index', () => () => {} );
 jest.mock( 'calypso/lib/analytics/tracks', () => ( {} ) );
 jest.mock( 'calypso/lib/analytics/page-view', () => ( {} ) );
-jest.mock( 'calypso/lib/abtest', () => ( {
-	abtest: jest.fn( () => {
-		return 'sidebarUpsells';
-	} ),
-} ) );
-jest.mock( 'calypso/lib/cart/store/index', () => null );
 jest.mock( 'calypso/lib/analytics/track-component-view', () => 'TrackComponentView' );
 jest.mock( 'calypso/my-sites/sidebar/utils', () => ( {
 	itemLinkMatches: jest.fn( () => true ),
 } ) );
 
-jest.mock( 'calypso/config', () => {
+jest.mock( '@automattic/calypso-config', () => {
 	const configMock = () => '';
 	configMock.isEnabled = jest.fn( () => true );
 	return configMock;
@@ -46,49 +37,13 @@ describe( 'MySitesSidebar', () => {
 
 		beforeEach( () => {
 			config.isEnabled.mockImplementation( () => true );
-			abtest.mockImplementation( () => 'sidebarUpsells' );
 		} );
 
-		test( 'Should return null item if woocommerce/extension-dashboard is disabled', () => {
-			config.isEnabled.mockImplementation(
-				( feature ) => feature !== 'woocommerce/extension-dashboard'
-			);
-			const Sidebar = new MySitesSidebar( {
-				isSiteAutomatedTransfer: false,
-				canUserUpgradeSite: true,
-				...defaultProps,
-				site: {
-					plan: {
-						product_slug: 'business-bundle',
-					},
-				},
-			} );
-			const Store = () => Sidebar.store();
-
-			const wrapper = shallow( <Store /> );
-			expect( wrapper.html() ).toEqual( null );
-		} );
-
-		test( 'Should return store menu item if user can use store on this site', () => {
-			const Sidebar = new MySitesSidebar( {
-				canUserUseCalypsoStore: true,
-				...defaultProps,
-				site: {
-					plan: {
-						product_slug: 'business-bundle',
-					},
-				},
-			} );
-			const Store = () => Sidebar.store();
-
-			const wrapper = shallow( <Store /> );
-			expect( wrapper.props().link ).toEqual( '/store/mysite.com' );
-		} );
-
-		test( 'Should return Calypsoified store menu item if user can use store on this site and the site is an ecommerce plan', () => {
+		test( 'Should return wp-admin menu item if user can use store on this site and the site is an ecommerce plan', () => {
 			const Sidebar = new MySitesSidebar( {
 				canUserUseCalypsoStore: true,
 				canUserUseWooCommerceCoreStore: true,
+				isSiteWpcomStore: true,
 				...defaultProps,
 				site: {
 					options: {
@@ -105,8 +60,28 @@ describe( 'MySitesSidebar', () => {
 			expect( wrapper.props().link ).toEqual( 'http://test.com/wp-admin/admin.php?page=wc-admin' );
 		} );
 
-		test( 'Should return null item if user who can upgrade can not use store on this site (control a/b group)', () => {
-			abtest.mockImplementation( () => 'control' );
+		test( 'Should not return store menu item if a business site does not have the store installed', () => {
+			const Sidebar = new MySitesSidebar( {
+				canUserUseCalypsoStore: true,
+				canUserUseWooCommerceCoreStore: true,
+				isSiteWpcomStore: false,
+				...defaultProps,
+				site: {
+					options: {
+						admin_url: 'http://test.com/wp-admin/',
+					},
+					plan: {
+						product_slug: 'business-bundle',
+					},
+				},
+			} );
+			const Store = () => Sidebar.store();
+
+			const wrapper = shallow( <Store /> );
+			expect( wrapper ).toEqual( {} );
+		} );
+
+		test( 'Should return null item if user who can upgrade can not use store on this site', () => {
 			const Sidebar = new MySitesSidebar( {
 				canUserUseCalypsoStore: false,
 				canUserUpgradeSite: true,
@@ -123,11 +98,10 @@ describe( 'MySitesSidebar', () => {
 			expect( wrapper.html() ).toEqual( null );
 		} );
 
-		test( "Should return null if user who can't upgrade user can not use store on this site (control a/b group)", () => {
-			abtest.mockImplementation( () => 'control' );
+		test( "Should return null if user who can't upgrade user can not use store on this site", () => {
 			const Sidebar = new MySitesSidebar( {
 				canUserUseCalypsoStore: false,
-				canUserUpgradeSite: true,
+				canUserUpgradeSite: false,
 				...defaultProps,
 				site: {
 					plan: {
@@ -151,28 +125,6 @@ describe( 'MySitesSidebar', () => {
 
 		beforeEach( () => {
 			config.isEnabled.mockImplementation( () => true );
-		} );
-
-		test( 'Should return null item if woocommerce/store-deprecated and woocommerce/store-removed is disabled', () => {
-			// Enable all features except for store deprecation and removal
-			config.isEnabled.mockImplementation( ( feature ) => {
-				return (
-					feature !== 'woocommerce/store-deprecated' && feature !== 'woocommerce/store-removed'
-				);
-			} );
-			const Sidebar = new MySitesSidebar( {
-				canUserUseWooCommerceCoreStore: true,
-				...defaultProps,
-				site: {
-					plan: {
-						product_slug: 'business-bundle',
-					},
-				},
-			} );
-			const WooCommerce = () => Sidebar.woocommerce();
-
-			const wrapper = shallow( <WooCommerce /> );
-			expect( wrapper.html() ).toEqual( null );
 		} );
 
 		test( 'Should return null item if site has Personal plan', () => {
@@ -236,6 +188,7 @@ describe( 'MySitesSidebar', () => {
 					},
 				},
 				isSiteWpcomStore: true,
+				woocommerceUrl: 'http://test.com/wp-admin/admin.php?page=wc-admin&from-calypso',
 			} );
 			const WooCommerce = () => Sidebar.woocommerce();
 
@@ -246,7 +199,7 @@ describe( 'MySitesSidebar', () => {
 			);
 		} );
 
-		test( 'Should return WooCommerce menu item linking to Store UI dashboard if site has Business plan, WooCommerce plugin not installed yet, and user can use store', () => {
+		test( 'Should return WooCommerce menu item linking to installation page if site has Business plan, WooCommerce plugin not installed yet, and user can use store', () => {
 			const Sidebar = new MySitesSidebar( {
 				canUserUseWooCommerceCoreStore: true,
 				...defaultProps,
@@ -264,7 +217,7 @@ describe( 'MySitesSidebar', () => {
 
 			const wrapper = shallow( <WooCommerce /> );
 			expect( wrapper.html() ).not.toEqual( null );
-			expect( wrapper.props().link ).toEqual( '/store/mysite.com?redirect_after_install' );
+			expect( wrapper.props().link ).toEqual( '/woocommerce-installation/mysite.com' );
 		} );
 	} );
 
@@ -291,7 +244,7 @@ describe( 'MySitesSidebar', () => {
 			expect( wrapper.html() ).toEqual( null );
 		} );
 
-		test( 'Should return null item if signup/wpforteams enabled and isSiteWPForTeams', () => {
+		test( 'Should return null item if isSiteWPForTeams', () => {
 			const Sidebar = new MySitesSidebar( {
 				isSiteWPForTeams: true,
 				...defaultProps,

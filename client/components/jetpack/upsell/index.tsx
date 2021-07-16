@@ -21,6 +21,7 @@ interface Props {
 	headerText: TranslateResult;
 	iconComponent?: ReactNode;
 	onClick?: () => void;
+	openButtonLinkOnNewTab?: boolean;
 	secondaryButtonLink?: TranslateResult;
 	secondaryButtonText?: TranslateResult;
 	secondaryOnClick?: () => void;
@@ -30,6 +31,7 @@ const JetpackCloudUpsell: FunctionComponent< Props > = ( {
 	bodyText,
 	buttonLink,
 	buttonText,
+	openButtonLinkOnNewTab = true,
 	headerText,
 	iconComponent,
 	onClick,
@@ -42,15 +44,15 @@ const JetpackCloudUpsell: FunctionComponent< Props > = ( {
 	return (
 		<div className="upsell">
 			{ iconComponent }
-			<h2>{ headerText }</h2>
-			<p>{ bodyText }</p>
+			<h2 className="upsell__header-text">{ headerText }</h2>
+			<p className="upsell__body-text">{ bodyText }</p>
 			{ buttonLink && (
 				<Button
 					className="upsell__button"
 					href={ buttonLink }
 					onClick={ onClick }
 					primary
-					target="_blank"
+					target={ openButtonLinkOnNewTab ? '_blank' : '_self' }
 				>
 					{ buttonText || translate( 'Upgrade now' ) }
 				</Button>

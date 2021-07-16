@@ -11,9 +11,10 @@ import classnames from 'classnames';
  * Internal dependencies
  */
 import Spinner from 'calypso/components/spinner';
-import { skipCurrentViewHomeLayout } from 'calypso/state/home/actions';
 import { savePreference } from 'calypso/state/preferences/actions';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
+import { composeAnalytics, recordTracksEvent } from 'calypso/state/analytics/actions';
+import useSkipCurrentViewMutation from 'calypso/data/home/use-skip-current-view-mutation';
 
 /**
  * Image dependencies
@@ -30,10 +31,12 @@ const CelebrateNotice = ( {
 	skipText,
 	siteId,
 	title,
+	tracksEventExtras = {},
 } ) => {
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ isVisible, setIsVisible ] = useState( true );
 	const dispatch = useDispatch();
+	const { skipCurrentView } = useSkipCurrentViewMutation( siteId );
 
 	if ( ! isVisible ) {
 		return null;
@@ -43,13 +46,31 @@ const CelebrateNotice = ( {
 
 	const showNextTask = () => {
 		setIsLoading( true );
-		dispatch( skipCurrentViewHomeLayout( siteId ) );
+		skipCurrentView();
+
+		dispatch(
+			composeAnalytics(
+				recordTracksEvent( 'calypso_customer_home_notice_show_next', {
+					notice: noticeId,
+					...tracksEventExtras,
+				} )
+			)
+		);
 	};
 
 	const skip = () => {
 		setIsVisible( false );
 		dispatch( savePreference( dismissalPreferenceKey, true ) );
 		onSkip && onSkip();
+
+		dispatch(
+			composeAnalytics(
+				recordTracksEvent( 'calypso_customer_home_notice_skip', {
+					notice: noticeId,
+					...tracksEventExtras,
+				} )
+			)
+		);
 	};
 
 	return (
@@ -83,8 +104,11 @@ const CelebrateNotice = ( {
 	);
 };
 
-const mapStateToProps = ( state ) => ( {
-	siteId: getSelectedSiteId( state ),
-} );
+const mapStateToProps = ( state ) => {
+	const siteId = getSelectedSiteId( state );
+	return {
+		siteId,
+	};
+};
 
 export default connect( mapStateToProps )( CelebrateNotice );

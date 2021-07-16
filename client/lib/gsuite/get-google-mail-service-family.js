@@ -1,7 +1,6 @@
 /**
  * Internal Dependencies
  */
-import config from 'calypso/config';
 import {
 	GSUITE_PRODUCT_FAMILY,
 	GOOGLE_WORKSPACE_PRODUCT_FAMILY,
@@ -16,13 +15,11 @@ export function getGoogleMailServiceFamily( productSlug = null ) {
 			case GSUITE_BASIC_SLUG:
 			case GSUITE_BUSINESS_SLUG:
 				return GSUITE_PRODUCT_FAMILY;
+
 			case GOOGLE_WORKSPACE_BUSINESS_STARTER_YEARLY:
 				return GOOGLE_WORKSPACE_PRODUCT_FAMILY;
 		}
 	}
 
-	if ( config.isEnabled( 'google-workspace-migration' ) ) {
-		return GOOGLE_WORKSPACE_PRODUCT_FAMILY;
-	}
-	return GSUITE_PRODUCT_FAMILY;
+	return GOOGLE_WORKSPACE_PRODUCT_FAMILY;
 }

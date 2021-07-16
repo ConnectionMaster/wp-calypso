@@ -29,6 +29,7 @@ import isDomainOnlySite from 'calypso/state/selectors/is-domain-only-site';
  * Style dependencies
  */
 import './style.scss';
+import { getWpcomDomain } from 'calypso/lib/domains/get-wpcom-domain';
 
 class Edit extends React.Component {
 	render() {
@@ -42,10 +43,7 @@ class Edit extends React.Component {
 
 		return (
 			<Main>
-				<Header
-					onClick={ this.goToDomainManagement }
-					selectedDomainName={ this.props.selectedDomainName }
-				>
+				<Header onClick={ this.goToDomainManagement }>
 					{ this.props.translate( '%(domainType)s Settings', {
 						args: {
 							domainType: this.getDomainTypeText( domain ),
@@ -99,7 +97,15 @@ class Edit extends React.Component {
 			);
 		}
 
-		return <Details domain={ domain } selectedSite={ this.props.selectedSite } />;
+		const wpcomDomain = getWpcomDomain( this.props.domains );
+
+		return (
+			<Details
+				domain={ domain }
+				wpcomDomainName={ wpcomDomain?.domain }
+				selectedSite={ this.props.selectedSite }
+			/>
+		);
 	};
 
 	goToDomainManagement = () => {

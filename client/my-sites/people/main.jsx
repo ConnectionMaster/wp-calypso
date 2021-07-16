@@ -14,7 +14,6 @@ import FollowersList from './followers-list';
 import ViewersList from './viewers-list';
 import TeamList from 'calypso/my-sites/people/team-list';
 import EmptyContent from 'calypso/components/empty-content';
-import PeopleNotices from 'calypso/my-sites/people/people-notices';
 import PeopleSectionNav from 'calypso/my-sites/people/people-section-nav';
 import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
 import FormattedHeader from 'calypso/components/formatted-header';
@@ -25,6 +24,8 @@ import isPrivateSite from 'calypso/state/selectors/is-private-site';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import titlecase from 'to-title-case';
 import isSiteComingSoon from 'calypso/state/selectors/is-site-coming-soon';
+import ScreenOptionsTab from 'calypso/components/screen-options-tab';
+import config from '@automattic/calypso-config';
 
 class People extends React.Component {
 	renderPeopleList() {
@@ -34,30 +35,28 @@ class People extends React.Component {
 			case 'team':
 				return <TeamList site={ site } search={ search } />;
 			case 'followers':
-				/* We're using the `key` prop here to make sure a fresh instance
-				   is mounted in case a user changes their site. That way we don't
-				   have to deal with resetting internal state. Same goes for email
-				   followers. */
-				return <FollowersList key={ `people-followers-${ site.ID }` } site={ site } />;
+				return <FollowersList site={ site } />;
 			case 'email-followers':
-				return (
-					<FollowersList
-						key={ `people-email-followers-${ site.ID }` }
-						site={ site }
-						search={ search }
-						type="email"
-					/>
-				);
+				return <FollowersList site={ site } search={ search } type="email" />;
 			case 'viewers':
-				return (
-					<ViewersList
-						key={ `people-viewers-${ site.ID }` }
-						site={ site }
-						label={ translate( 'Viewers' ) }
-					/>
-				);
+				return <ViewersList site={ site } label={ translate( 'Viewers' ) } />;
 			default:
 				return null;
+		}
+	}
+
+	renderSubheaderText() {
+		const { translate, filter } = this.props;
+
+		switch ( filter ) {
+			case 'followers':
+				return translate(
+					'People who have subscribed to your site using their WordPress.com account.'
+				);
+			case 'email-followers':
+				return translate( 'People who have subscribed to your site using their email address.' );
+			default:
+				return translate( 'Invite contributors to your site and manage their access settings.' );
 		}
 	}
 
@@ -91,6 +90,7 @@ class People extends React.Component {
 		}
 		return (
 			<Main>
+				<ScreenOptionsTab wpAdminPath="users.php" />
 				<PageViewTracker
 					path={ `/people/${ filter }/:site` }
 					title={ `People > ${ titlecase( filter ) }` }
@@ -100,7 +100,9 @@ class People extends React.Component {
 					brandFont
 					className="people__page-heading"
 					headerText={ translate( 'People' ) }
+					subHeaderText={ this.renderSubheaderText() }
 					align="left"
+					hasScreenOptions={ config.isEnabled( 'nav-unification/switcher' ) }
 				/>
 				<div>
 					{
@@ -114,7 +116,6 @@ class People extends React.Component {
 							site={ site }
 						/>
 					}
-					<PeopleNotices />
 					{ this.renderPeopleList() }
 				</div>
 			</Main>

@@ -1,9 +1,6 @@
-/**
- * Internal dependencies
- */
-import CloseAccountPage from '../pages/account/close-account-page';
 import LoggedOutMasterbarComponent from '../components/logged-out-masterbar-component';
 import AccountSettingsPage from '../pages/account/account-settings-page';
+import CloseAccountPage from '../pages/account/close-account-page';
 import * as SlackNotifier from '../slack-notifier';
 
 export default class DeleteAccountFlow {
@@ -19,7 +16,7 @@ export default class DeleteAccountFlow {
 			const closeAccountPage = await CloseAccountPage.Expect( this.driver );
 			await closeAccountPage.chooseCloseAccount();
 			await closeAccountPage.enterAccountNameAndClose( name );
-			await closeAccountPage.ConfirmAccountHasBeenClosed();
+			await closeAccountPage.confirmAccountHasBeenClosed();
 			return await LoggedOutMasterbarComponent.Expect( this.driver );
 		} )().catch( ( err ) => {
 			SlackNotifier.warn(

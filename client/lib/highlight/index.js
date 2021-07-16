@@ -2,7 +2,7 @@
  * External dependencies
  */
 
-import { compact, toArray } from 'lodash';
+import { compact } from 'lodash';
 import debugFactory from 'debug';
 const debug = debugFactory( 'calypso:highlight' );
 
@@ -42,6 +42,7 @@ function highlightNode( node, term, wrapperNode ) {
 		remainingText = node.nodeValue;
 	}
 
+	// eslint-disable-next-line no-constant-condition
 	while ( true ) {
 		pos = remainingText.toLowerCase().indexOf( term.toLowerCase() );
 		if ( ! remainingText || pos === -1 ) {
@@ -72,7 +73,7 @@ function walk( node, term, wrapperNode ) {
 	let children;
 	debug( 'Node type', node.nodeName );
 	if ( node.childNodes.length ) {
-		children = toArray( node.childNodes );
+		children = Array.from( node.childNodes );
 
 		for ( let i = 0; i < children.length; i++ ) {
 			walk( children[ i ], term, wrapperNode );

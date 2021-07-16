@@ -3,11 +3,11 @@
  */
 import * as React from 'react';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useI18n } from '@automattic/react-i18n';
+import { useI18n } from '@wordpress/react-i18n';
 import { Icon } from '@wordpress/icons';
 import classnames from 'classnames';
 import { useViewportMatch } from '@wordpress/compose';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 
 /**
  * Internal dependencies

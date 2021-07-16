@@ -1,25 +1,24 @@
 /**
  * External dependencies
  */
-import PropTypes from 'prop-types';
 import React from 'react';
-import createReactClass from 'create-react-class';
 import TransitionGroup from 'react-transition-group/TransitionGroup';
 import CSSTransition from 'react-transition-group/CSSTransition';
 import { localize } from 'i18n-calypso';
 import debugFactory from 'debug';
 import emailValidator from 'email-validator';
-import { debounce, flowRight as compose, get, has, map, size, update } from 'lodash';
+import { debounce, flowRight as compose, get, has, map, size } from 'lodash';
 import { connect } from 'react-redux';
+import { ToggleControl } from '@wordpress/components';
 
 /**
  * Internal dependencies
  */
 import LanguagePicker from 'calypso/components/language-picker';
+import SectionHeader from 'calypso/components/section-header';
 import MeSidebarNavigation from 'calypso/me/sidebar-navigation';
 import { protectForm } from 'calypso/lib/protect-form';
-import formBase from 'calypso/me/form-base';
-import config, { isEnabled } from 'calypso/config';
+import config from '@automattic/calypso-config';
 import languages from '@automattic/languages';
 import { supportsCssCustomProperties } from 'calypso/lib/feature-detection';
 import { Card, Button } from '@automattic/components';
@@ -39,16 +38,15 @@ import ReauthRequired from 'calypso/me/reauth-required';
 import twoStepAuthorization from 'calypso/lib/two-step-authorization';
 import Notice from 'calypso/components/notice';
 import NoticeAction from 'calypso/components/notice/notice-action';
-import observe from 'calypso/lib/mixins/data-observe'; // eslint-disable-line no-restricted-imports
 import Main from 'calypso/components/main';
 import SitesDropdown from 'calypso/components/sites-dropdown';
 import ColorSchemePicker from 'calypso/blocks/color-scheme-picker';
-import { successNotice, errorNotice } from 'calypso/state/notices/actions';
-import { getLanguage, isLocaleVariant, canBeTranslated } from 'calypso/lib/i18n-utils';
+import { successNotice, errorNotice, removeNotice } from 'calypso/state/notices/actions';
+import { getLanguage, isLocaleVariant, canBeTranslated, localizeUrl } from 'calypso/lib/i18n-utils';
 import isRequestingMissingSites from 'calypso/state/selectors/is-requesting-missing-sites';
 import getOnboardingUrl from 'calypso/state/selectors/get-onboarding-url';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
-import { canDisplayCommunityTranslator } from 'calypso/components/community-translator/utils';
+import canDisplayCommunityTranslator from 'calypso/state/selectors/can-display-community-translator';
 import { ENABLE_TRANSLATOR_KEY } from 'calypso/lib/i18n-utils/constants';
 import AccountSettingsCloseLink from './close-link';
 import { requestGeoLocation } from 'calypso/state/data-getters';
@@ -61,14 +59,39 @@ import {
 } from 'calypso/state/current-user/selectors';
 import FormattedHeader from 'calypso/components/formatted-header';
 import wpcom from 'calypso/lib/wp';
-import user from 'calypso/lib/user';
+import { saveUnsavedUserSettings } from 'calypso/state/user-settings/thunks';
+import {
+	cancelPendingEmailChange,
+	clearUnsavedUserSettings,
+	removeUnsavedUserSetting,
+	setUserSetting,
+} from 'calypso/state/user-settings/actions';
+import getUserSettings from 'calypso/state/selectors/get-user-settings';
+import getUnsavedUserSettings from 'calypso/state/selectors/get-unsaved-user-settings';
+import isPendingEmailChange from 'calypso/state/selectors/is-pending-email-change';
+import QueryUserSettings from 'calypso/components/data/query-user-settings';
+import isNavUnificationEnabled from 'calypso/state/selectors/is-nav-unification-enabled';
+import InlineSupportLink from 'calypso/components/inline-support-link';
+import { clearStore } from 'calypso/lib/user/store';
+import { getPreference } from 'calypso/state/preferences/selectors';
+import { savePreference } from 'calypso/state/preferences/actions';
+import isRequestingAllDomains from 'calypso/state/selectors/is-requesting-all-domains';
+import { getFlatDomainsList } from 'calypso/state/sites/domains/selectors';
+import QueryAllDomains from 'calypso/components/data/query-all-domains';
+import { type as domainTypes } from 'calypso/lib/domains/constants';
+
+export const noticeId = 'me-settings-notice';
+const noticeOptions = {
+	id: noticeId,
+};
 
 /**
  * Style dependencies
  */
 import './style.scss';
 
-const colorSchemeKey = 'calypso_preferences.colorScheme';
+const linkDestinationKey = 'linkDestination';
+const colorSchemeKey = 'colorScheme';
 
 /**
  * Debug instance
@@ -77,62 +100,93 @@ const debug = debugFactory( 'calypso:me:account' );
 
 const ALLOWED_USERNAME_CHARACTERS_REGEX = /^[a-z0-9]+$/;
 const USERNAME_MIN_LENGTH = 4;
+const ACCOUNT_FORM_NAME = 'account';
+const INTERFACE_FORM_NAME = 'interface';
+const ACCOUNT_FIELDS = [ 'user_login', 'user_email', 'user_URL', 'primary_site_ID' ];
+const INTERFACE_FIELDS = [
+	'locale_variant',
+	'language',
+	'i18n_empathy_mode',
+	'use_fallback_for_incomplete_languages',
+	'enable_translator',
+	'calypso_preferences',
+];
 
-/* eslint-disable react/prefer-es6-class */
-const Account = createReactClass( {
-	displayName: 'Account',
+class Account extends React.Component {
+	constructor( props ) {
+		super( props );
 
-	// form-base mixin is needed for getDisabledState() (and possibly other uses?)
-	mixins: [ formBase, observe( 'userSettings' ) ],
+		this.props.removeUnsavedUserSetting( 'user_login' );
+	}
 
-	propTypes: {
-		userSettings: PropTypes.object.isRequired,
-		showNoticeInitially: PropTypes.bool,
-	},
+	state = {
+		redirect: false,
+		submittingForm: false,
+		formsSubmitting: {},
+		usernameAction: 'new',
+		validationResult: false,
+	};
 
-	UNSAFE_componentWillMount() {
-		// Clear any username changes that were previously made
-		this.clearUsernameValidation();
-		this.props.userSettings.removeUnsavedSetting( 'user_login' );
-	},
-
-	componentDidMount() {
-		debug( this.constructor.displayName + ' component is mounted.' );
-		this.debouncedUsernameValidate = debounce( this.validateUsername, 600 );
-	},
+	componentDidUpdate() {
+		if ( ! this.hasUnsavedUserSettings( ACCOUNT_FIELDS.concat( INTERFACE_FIELDS ) ) ) {
+			this.props.markSaved();
+		}
+	}
 
 	componentWillUnmount() {
 		debug( this.constructor.displayName + ' component is unmounting.' );
-	},
+
+		// Silently clean up unsavedSettings before unmounting
+		this.props.clearUnsavedUserSettings();
+	}
+
+	getDisabledState( formName ) {
+		return formName ? this.state.formsSubmitting[ formName ] : this.state.submittingForm;
+	}
 
 	getUserSetting( settingName ) {
-		return this.props.userSettings.getSetting( settingName );
-	},
+		return (
+			get( this.props.unsavedUserSettings, settingName ) ??
+			this.getUserOriginalSetting( settingName )
+		);
+	}
 
 	getUserOriginalSetting( settingName ) {
-		return this.props.userSettings.getOriginalSetting( settingName );
-	},
+		return get( this.props.userSettings, settingName );
+	}
+
+	hasUnsavedUserSetting( settingName ) {
+		return has( this.props.unsavedUserSettings, settingName );
+	}
+
+	hasUnsavedUserSettings( settingNames ) {
+		return settingNames.reduce(
+			( acc, settingName ) => this.hasUnsavedUserSetting( settingName ) || acc,
+			false
+		);
+	}
 
 	updateUserSetting( settingName, value ) {
-		this.props.userSettings.updateSetting( settingName, value );
-	},
+		this.props.setUserSetting( settingName, value );
+	}
 
-	updateUserSettingInput( event ) {
+	updateUserSettingInput = ( event ) => {
 		this.updateUserSetting( event.target.name, event.target.value );
-	},
+	};
 
-	updateUserSettingCheckbox( event ) {
+	updateUserSettingCheckbox = ( event ) => {
 		this.updateUserSetting( event.target.name, event.target.checked );
-	},
+	};
 
-	updateCommunityTranslatorSetting( event ) {
+	updateCommunityTranslatorSetting = ( event ) => {
 		const { name, checked } = event.target;
 		this.updateUserSetting( name, checked );
 		const redirect = '/me/account';
 		this.setState( { redirect } );
-	},
+		this.saveInterfaceSettings( event );
+	};
 
-	updateLanguage( event ) {
+	updateLanguage = ( event ) => {
 		const { value, empathyMode, useFallbackForIncompleteLanguages } = event.target;
 		this.updateUserSetting( 'language', value );
 
@@ -147,55 +201,69 @@ const Account = createReactClass( {
 			);
 		}
 
-		const shouldRedirect =
-			value !== this.getUserOriginalSetting( 'language' ) ||
-			value !== this.getUserOriginalSetting( 'locale_variant' ) ||
-			( typeof empathyMode !== 'undefined' &&
-				empathyMode !== this.getUserOriginalSetting( 'i18n_empathy_mode' ) );
-
-		const redirect = shouldRedirect ? '/me/account' : false;
-		// store any selected locale variant so we can test it against those with no GP translation sets
 		const localeVariantSelected = isLocaleVariant( value ) ? value : '';
+
+		const originalSlug =
+			this.getUserSetting( 'locale_variant' ) || this.getUserSetting( 'language' ) || '';
+
+		const languageHasChanged = originalSlug !== value;
+		const formHasChanged = languageHasChanged;
+		if ( formHasChanged ) {
+			this.props.markChanged();
+		}
+
+		const redirect = formHasChanged ? '/me/account' : false;
+		// store any selected locale variant so we can test it against those with no GP translation sets
 		this.setState( { redirect, localeVariantSelected } );
-	},
 
-	updateColorScheme( colorScheme ) {
-		// Set a fallback color scheme if no default value is provided by the API.
-		// This is a workaround that allows us to use userSettings.updateSetting() without an
-		// existing value. Without this workaround the save button wouldn't become active.
-		// TODO: the API should provide a default value, which would make this line obsolete
-		update( this.props.userSettings.settings, colorSchemeKey, ( value ) => value || 'default' );
+		if ( formHasChanged ) {
+			this.props.recordTracksEvent( 'calypso_user_language_switch', {
+				new_language: value,
+				previous_language:
+					this.getUserOriginalSetting( 'locale_variant' ) ||
+					this.getUserOriginalSetting( 'language' ),
+				country_code: this.props.countryCode,
+			} );
+			this.saveInterfaceSettings( event );
+		}
+	};
 
+	updateColorScheme = ( colorScheme ) => {
 		this.props.recordTracksEvent( 'calypso_color_schemes_select', { color_scheme: colorScheme } );
 		this.props.recordGoogleEvent( 'Me', 'Selected Color Scheme', 'scheme', colorScheme );
-		this.updateUserSetting( colorSchemeKey, colorScheme );
-	},
+		this.props.saveColorSchemePreference( colorScheme );
+		this.props.recordTracksEvent( 'calypso_color_schemes_save', {
+			color_scheme: colorScheme,
+		} );
+		this.props.recordGoogleEvent( 'Me', 'Saved Color Scheme', 'scheme', colorScheme );
+		this.props.bumpStat( 'calypso_changed_color_scheme', colorScheme );
+	};
 
 	getEmailAddress() {
 		return this.hasPendingEmailChange()
 			? this.getUserSetting( 'new_user_email' )
 			: this.getUserSetting( 'user_email' );
-	},
+	}
 
-	updateEmailAddress( event ) {
+	updateEmailAddress = ( event ) => {
 		const { value } = event.target;
 		const emailValidationError =
 			( '' === value && 'empty' ) || ( ! emailValidator.validate( value ) && 'invalid' ) || false;
 		this.setState( { emailValidationError } );
 		this.updateUserSetting( 'user_email', value );
-	},
+	};
 
-	updateUserLoginConfirm( event ) {
+	updateUserLoginConfirm = ( event ) => {
 		this.setState( { userLoginConfirm: event.target.value } );
-	},
+	};
 
-	async validateUsername() {
-		const { translate } = this.props;
+	validateUsername = debounce( async () => {
+		const { currentUserName, translate } = this.props;
 		const username = this.getUserSetting( 'user_login' );
 
 		debug( 'Validating username ' + username );
 
-		if ( username === user().get().username ) {
+		if ( username === currentUserName ) {
 			this.setState( { validationResult: false } );
 			return;
 		}
@@ -221,10 +289,9 @@ const Account = createReactClass( {
 		}
 
 		try {
-			const { success, allowed_actions } = await wpcom
-				.undocumented()
-				.me()
-				.validateUsername( username );
+			const { success, allowed_actions } = await wpcom.req.get(
+				`/me/username/validate/${ username }`
+			);
 
 			this.setState( {
 				validationResult: { success, allowed_actions, validatedUsername: username },
@@ -232,11 +299,11 @@ const Account = createReactClass( {
 		} catch ( error ) {
 			this.setState( { validationResult: error } );
 		}
-	},
+	}, 600 );
 
 	hasEmailValidationError() {
 		return !! this.state.emailValidationError;
-	},
+	}
 
 	shouldDisplayCommunityTranslator() {
 		const locale = this.getUserSetting( 'language' );
@@ -263,7 +330,7 @@ const Account = createReactClass( {
 		}
 
 		return true;
-	},
+	}
 
 	communityTranslator() {
 		if ( ! this.shouldDisplayCommunityTranslator() ) {
@@ -277,7 +344,7 @@ const Account = createReactClass( {
 					<FormCheckbox
 						checked={ this.getUserSetting( ENABLE_TRANSLATOR_KEY ) }
 						onChange={ this.updateCommunityTranslatorSetting }
-						disabled={ this.getDisabledState() }
+						disabled={ this.getDisabledState( INTERFACE_FORM_NAME ) }
 						id={ ENABLE_TRANSLATOR_KEY }
 						name={ ENABLE_TRANSLATOR_KEY }
 						onClick={ this.getCheckboxHandler( 'Community Translator' ) }
@@ -299,7 +366,7 @@ const Account = createReactClass( {
 				</FormLabel>
 			</FormFieldset>
 		);
-	},
+	}
 
 	thankTranslationContributors() {
 		if ( ! this.shouldDisplayCommunityTranslator() ) {
@@ -328,50 +395,12 @@ const Account = createReactClass( {
 				) }
 			</FormSettingExplanation>
 		);
-	},
+	}
 
-	cancelEmailChange() {
-		const { translate, userSettings } = this.props;
-		userSettings.cancelPendingEmailChange( ( error, response ) => {
-			if ( error ) {
-				debug( 'Error canceling email change: ' + JSON.stringify( error ) );
-				this.props.errorNotice(
-					translate( 'There was a problem canceling the email change. Please, try again.' )
-				);
-			} else {
-				debug( JSON.stringify( 'Email change canceled successfully' + response ) );
-				this.props.successNotice( translate( 'The email change has been successfully canceled.' ) );
-			}
-		} );
-	},
-
-	handleRadioChange( event ) {
+	handleRadioChange = ( event ) => {
 		const { name, value } = event.currentTarget;
 		this.setState( { [ name ]: value } );
-	},
-
-	handleSubmitButtonClick() {
-		const { unsavedSettings } = this.props.userSettings;
-		this.recordClickEvent( 'Save Account Settings Button' );
-		if ( has( unsavedSettings, colorSchemeKey ) ) {
-			const colorScheme = get( unsavedSettings, colorSchemeKey );
-			this.props.recordTracksEvent( 'calypso_color_schemes_save', {
-				color_scheme: colorScheme,
-			} );
-			this.props.recordGoogleEvent( 'Me', 'Saved Color Scheme', 'scheme', colorScheme );
-			this.props.bumpStat( 'calypso_changed_color_scheme', colorScheme );
-		}
-
-		if ( has( unsavedSettings, 'language' ) ) {
-			this.props.recordTracksEvent( 'calypso_user_language_switch', {
-				new_language: this.getUserSetting( 'language' ),
-				previous_language:
-					this.getUserOriginalSetting( 'locale_variant' ) ||
-					this.getUserOriginalSetting( 'language' ),
-				country_code: this.props.countryCode,
-			} );
-		}
-	},
+	};
 
 	/**
 	 * We handle the username (user_login) change manually through an onChange handler
@@ -379,15 +408,15 @@ const Account = createReactClass( {
 	 *
 	 * @param {object} event Event from onChange of user_login input
 	 */
-	handleUsernameChange( event ) {
-		this.debouncedUsernameValidate();
+	handleUsernameChange = ( event ) => {
+		this.validateUsername();
 		this.updateUserSetting( 'user_login', event.currentTarget.value );
 		this.setState( { usernameAction: null } );
-	},
+	};
 
-	recordClickEvent( action ) {
+	recordClickEvent = ( action ) => {
 		this.props.recordGoogleEvent( 'Me', 'Clicked on ' + action );
-	},
+	};
 
 	getClickHandler( action, callback ) {
 		return () => {
@@ -397,11 +426,11 @@ const Account = createReactClass( {
 				callback();
 			}
 		};
-	},
+	}
 
 	getFocusHandler( action ) {
 		return () => this.props.recordGoogleEvent( 'Me', 'Focused on ' + action );
-	},
+	}
 
 	getCheckboxHandler( checkboxName ) {
 		return ( event ) => {
@@ -410,39 +439,41 @@ const Account = createReactClass( {
 
 			this.props.recordGoogleEvent( 'Me', action, 'checked', value );
 		};
-	},
+	}
 
-	handleUsernameChangeBlogRadio( event ) {
+	handleUsernameChangeBlogRadio = ( event ) => {
 		this.props.recordGoogleEvent(
 			'Me',
 			'Clicked Username Change Blog Action radio',
 			'checked',
 			event.target.value
 		);
-	},
+	};
 
-	cancelUsernameChange() {
+	cancelUsernameChange = () => {
 		this.setState( {
 			userLoginConfirm: null,
 			usernameAction: null,
 		} );
 
 		this.clearUsernameValidation();
-		this.props.userSettings.removeUnsavedSetting( 'user_login' );
+		this.props.removeUnsavedUserSetting( 'user_login' );
 
-		if ( ! this.props.userSettings.hasUnsavedSettings() ) {
+		const { user_login, ...otherUnsavedSettings } = this.props.unsavedUserSettings;
+
+		if ( ! Object.keys( otherUnsavedSettings ).length ) {
 			this.props.markSaved();
 		}
-	},
+	};
 
-	async submitUsernameForm() {
+	submitUsernameForm = async () => {
 		const username = this.getUserSetting( 'user_login' );
 		const action = this.state.usernameAction ? this.state.usernameAction : 'none';
 
 		this.setState( { submittingForm: true } );
 
 		try {
-			await wpcom.undocumented().me().changeUsername( username, action );
+			await wpcom.req.post( '/me/username', { username, action } );
 			this.setState( { submittingForm: false } );
 
 			this.props.markSaved();
@@ -454,33 +485,33 @@ const Account = createReactClass( {
 			this.setState( { submittingForm: false, validationResult: error } );
 			this.props.errorNotice( error.message );
 		}
-	},
+	};
 
 	isUsernameValid() {
 		return this.state.validationResult?.success === true;
-	},
+	}
 
 	getUsernameValidationFailureMessage() {
 		return this.state.validationResult?.message ?? null;
-	},
+	}
 
 	getAllowedActions() {
 		return this.state.validationResult?.allowed_actions ?? {};
-	},
+	}
 
 	getValidatedUsername() {
 		return this.state.validationResult?.validatedUsername ?? null;
-	},
+	}
 
 	clearUsernameValidation() {
 		this.setState( { validationResult: false } );
-	},
+	}
 
-	onSiteSelect( siteId ) {
+	onSiteSelect = ( siteId ) => {
 		if ( siteId ) {
 			this.updateUserSetting( 'primary_site_ID', siteId );
 		}
-	},
+	};
 
 	renderJoinDate() {
 		const { currentUserDate, translate, moment } = this.props;
@@ -496,41 +527,66 @@ const Account = createReactClass( {
 				} ) }
 			</span>
 		);
-	},
+	}
 
 	hasPendingEmailChange() {
-		return this.props.userSettings.isPendingEmailChange();
-	},
+		return this.props.isPendingEmailChange;
+	}
 
 	renderPendingEmailChange() {
 		const { translate } = this.props;
+		const editContactInfoInBulkUrl = `/domains/manage?site=all&action=edit-contact-email`;
 
 		if ( ! this.hasPendingEmailChange() ) {
 			return null;
 		}
 
+		let text = translate(
+			'Your email change is pending. Please take a moment to check %(email)s for an email with the subject "[WordPress.com] New Email Address" to confirm your change.',
+			{
+				args: {
+					email: this.getUserSetting( 'new_user_email' ),
+				},
+			}
+		);
+
+		if ( this.hasCustomDomains() ) {
+			text = translate(
+				'Your email change is pending. Please take a moment to:{{br/}}1. Check %(email)s for an email with the subject "[WordPress.com] New Email Address" to confirm your change.{{br/}}2. Update contact information on your domain names if necessary {{link}}here{{/link}}.',
+				{
+					args: {
+						email: this.getUserSetting( 'new_user_email' ),
+					},
+					components: {
+						br: <br />,
+						link: <a href={ editContactInfoInBulkUrl } />,
+					},
+				}
+			);
+		}
+
 		return (
-			<Notice
-				showDismiss={ false }
-				status="is-info"
-				text={ translate(
-					'There is a pending change of your email to %(email)s. Please check your inbox for a confirmation link.',
-					{
-						args: {
-							email: this.getUserSetting( 'new_user_email' ),
-						},
-					}
-				) }
-			>
-				<NoticeAction onClick={ this.cancelEmailChange }>{ translate( 'Cancel' ) }</NoticeAction>
+			<Notice showDismiss={ false } status="is-info" text={ text }>
+				<NoticeAction onClick={ () => this.props.cancelPendingEmailChange() }>
+					{ translate( 'Cancel' ) }
+				</NoticeAction>
 			</Notice>
 		);
-	},
+	}
+
+	hasCustomDomains() {
+		if ( this.props.requestingFlatDomains ) {
+			return false;
+		}
+		return this.props.domainsList.some( ( domain ) => {
+			return domainTypes.REGISTERED === domain.type;
+		} );
+	}
 
 	renderUsernameValidation() {
-		const { translate, userSettings } = this.props;
+		const { translate } = this.props;
 
-		if ( ! userSettings.isSettingUnsaved( 'user_login' ) ) {
+		if ( ! this.hasUnsavedUserSetting( 'user_login' ) ) {
 			return null;
 		}
 
@@ -555,7 +611,7 @@ const Account = createReactClass( {
 				/>
 			);
 		}
-	},
+	}
 
 	renderUsernameConfirmNotice() {
 		const { translate } = this.props;
@@ -570,7 +626,7 @@ const Account = createReactClass( {
 		}
 
 		return <Notice showDismiss={ false } status={ status } text={ text } />;
-	},
+	}
 
 	renderPrimarySite() {
 		const { onboardingUrl, requestingMissingSites, translate, visibleSiteCount } = this.props;
@@ -596,12 +652,12 @@ const Account = createReactClass( {
 				onSiteSelect={ this.onSiteSelect }
 			/>
 		);
-	},
+	}
 
 	renderEmailValidation() {
-		const { translate, userSettings } = this.props;
+		const { translate } = this.props;
 
-		if ( ! userSettings.isSettingUnsaved( 'user_email' ) ) {
+		if ( ! this.hasUnsavedUserSetting( 'user_email' ) ) {
 			return null;
 		}
 
@@ -621,25 +677,113 @@ const Account = createReactClass( {
 		}
 
 		return <FormTextValidation isError={ true } text={ notice } />;
-	},
+	}
+
+	shouldDisableAccountSubmitButton() {
+		return (
+			! this.hasUnsavedUserSettings( ACCOUNT_FIELDS ) ||
+			this.getDisabledState( ACCOUNT_FORM_NAME ) ||
+			this.hasEmailValidationError()
+		);
+	}
+
+	shouldDisableInterfaceSubmitButton() {
+		return (
+			! this.hasUnsavedUserSettings( INTERFACE_FIELDS ) ||
+			this.getDisabledState( INTERFACE_FORM_NAME )
+		);
+	}
+
+	handleSubmitError( error, formName = '' ) {
+		debug( 'Error saving settings: ' + JSON.stringify( error ) );
+
+		if ( error.message ) {
+			this.props.errorNotice( error.message, noticeOptions );
+		} else {
+			this.props.errorNotice(
+				this.props.translate( 'There was a problem saving your changes.' ),
+				noticeOptions
+			);
+		}
+
+		this.setState( {
+			submittingForm: false,
+			formsSubmitting: {
+				...this.state.formsSubmitting,
+				...( formName && { [ formName ]: false } ),
+			},
+		} );
+	}
+
+	isSubmittingForm( formName ) {
+		return formName ? this.state.formsSubmitting[ formName ] : this.state.submittingForm;
+	}
+
+	async handleSubmitSuccess( response, formName = '' ) {
+		if ( ! this.hasUnsavedUserSettings( ACCOUNT_FIELDS.concat( INTERFACE_FIELDS ) ) ) {
+			this.props.markSaved();
+		}
+
+		if ( this.state.redirect ) {
+			await clearStore();
+
+			// Sometimes changes in settings require a url refresh to update the UI.
+			// For example when the user changes the language.
+			window.location = this.state.redirect + '?updated=success';
+
+			return;
+		}
+
+		this.setState(
+			{
+				submittingForm: false,
+				formsSubmitting: {
+					...this.state.formsSubmitting,
+					...( formName && { [ formName ]: false } ),
+				},
+			},
+			() => {
+				this.props.successNotice(
+					this.props.translate( 'Settings saved successfully!' ),
+					noticeOptions
+				);
+			}
+		);
+		debug( 'Settings saved successfully ' + JSON.stringify( response ) );
+	}
+
+	async submitForm( event, fields, formName = '' ) {
+		event?.preventDefault && event.preventDefault();
+		debug( 'Submitting form' );
+
+		this.setState( {
+			submittingForm: true,
+			formsSubmitting: {
+				...this.state.formsSubmitting,
+				...( formName && { [ formName ]: true } ),
+			},
+		} );
+
+		try {
+			const response = await this.props.saveUnsavedUserSettings( fields );
+			this.handleSubmitSuccess( response, formName );
+		} catch ( error ) {
+			this.handleSubmitError( error, formName );
+		}
+	}
 
 	/*
 	 * These form fields are displayed when there is not a username change in progress.
 	 */
 	renderAccountFields() {
-		const { translate, userSettings } = this.props;
-
-		const isSubmitButtonDisabled =
-			! userSettings.hasUnsavedSettings() ||
-			this.getDisabledState() ||
-			this.hasEmailValidationError();
+		const { translate } = this.props;
 
 		return (
 			<div className="account__settings-form" key="settingsForm">
 				<FormFieldset>
 					<FormLabel htmlFor="user_email">{ translate( 'Email address' ) }</FormLabel>
 					<FormTextInput
-						disabled={ this.getDisabledState() || this.hasPendingEmailChange() }
+						disabled={ this.getDisabledState( ACCOUNT_FORM_NAME ) || this.hasPendingEmailChange() }
 						id="user_email"
 						name="user_email"
 						isError={ !! this.state.emailValidationError }
@@ -648,10 +792,10 @@ const Account = createReactClass( {
 						onChange={ this.updateEmailAddress }
 					/>
 					{ this.renderEmailValidation() }
-					{ this.renderPendingEmailChange() }
 					<FormSettingExplanation>
 						{ translate( 'Will not be publicly displayed' ) }
 					</FormSettingExplanation>
+					{ this.renderPendingEmailChange() }
 				</FormFieldset>
 
 				<FormFieldset>
@@ -662,7 +806,7 @@ const Account = createReactClass( {
 				<FormFieldset>
 					<FormLabel htmlFor="user_URL">{ translate( 'Web address' ) }</FormLabel>
 					<FormTextInput
-						disabled={ this.getDisabledState() }
+						disabled={ this.getDisabledState( ACCOUNT_FORM_NAME ) }
 						id="user_URL"
 						name="user_URL"
 						type="url"
@@ -675,62 +819,18 @@ const Account = createReactClass( {
 					</FormSettingExplanation>
 				</FormFieldset>
 
-				<FormFieldset>
-					<FormLabel id="account__language" htmlFor="language">
-						{ translate( 'Interface language' ) }
-					</FormLabel>
-					<LanguagePicker
-						disabled={ this.getDisabledState() }
-						languages={ languages }
-						onClick={ this.getClickHandler( 'Interface Language Field' ) }
-						valueKey="langSlug"
-						value={
-							this.getUserSetting( 'locale_variant' ) || this.getUserSetting( 'language' ) || ''
-						}
-						empathyMode={ this.getUserSetting( 'i18n_empathy_mode' ) }
-						useFallbackForIncompleteLanguages={ this.getUserSetting(
-							'use_fallback_for_incomplete_languages'
-						) }
-						onChange={ this.updateLanguage }
-					/>
-					<FormSettingExplanation>
-						{ translate(
-							'This is the language of the interface you see across WordPress.com as a whole.'
-						) }
-					</FormSettingExplanation>
-					{ this.thankTranslationContributors() }
-				</FormFieldset>
-
-				{ canDisplayCommunityTranslator( this.getUserSetting( 'language' ) ) &&
-					this.communityTranslator() }
-
-				{ config.isEnabled( 'me/account/color-scheme-picker' ) && supportsCssCustomProperties() && (
-					<FormFieldset>
-						<FormLabel id="account__color_scheme" htmlFor="color_scheme">
-							{ translate( 'Dashboard color scheme' ) }
-						</FormLabel>
-						<ColorSchemePicker
-							temporarySelection
-							defaultSelection={
-								isEnabled( 'nav-unification' ) ? 'classic-dark' : 'classic-bright'
-							}
-							onSelection={ this.updateColorScheme }
-						/>
-					</FormFieldset>
-				) }
-
 				<FormButton
-					isSubmitting={ this.state.submittingForm }
-					disabled={ isSubmitButtonDisabled }
+					isSubmitting={ this.isSubmittingForm( ACCOUNT_FORM_NAME ) }
+					disabled={ this.shouldDisableAccountSubmitButton() }
 					onClick={ this.handleSubmitButtonClick }
 				>
-					{ this.state.submittingForm
+					{ this.isSubmittingForm( ACCOUNT_FORM_NAME )
 						? translate( 'Saving…' )
 						: translate( 'Save account settings' ) }
 				</FormButton>
 			</div>
 		);
-	},
+	}
 
 	renderBlogActionFields() {
 		const { translate } = this.props;
@@ -764,7 +864,7 @@ const Account = createReactClass( {
 				}
 			</FormFieldset>
 		);
-	},
+	}
 
 	/*
 	 * These form fields are displayed when a username change is in progress.
@@ -792,7 +892,7 @@ const Account = createReactClass( {
 						id="username_confirm"
 						name="username_confirm"
 						onFocus={ this.getFocusHandler( 'Username Confirm Field' ) }
-						value={ this.state.userLoginConfirm }
+						value={ this.state.userLoginConfirm ?? '' }
 						onChange={ this.updateUserLoginConfirm }
 					/>
 					{ this.renderUsernameConfirmNotice() }
@@ -876,22 +976,33 @@ const Account = createReactClass( {
 				</FormButtonsBar>
 			</div>
 		);
-	},
+	}
+
+	saveAccountSettings = ( event ) => {
+		this.submitForm( event, ACCOUNT_FIELDS, ACCOUNT_FORM_NAME );
+	};
+
+	saveInterfaceSettings = ( event ) => {
+		this.submitForm( event, INTERFACE_FIELDS, INTERFACE_FORM_NAME );
+	};
 
 	render() {
-		const { markChanged, translate, userSettings } = this.props;
+		const { markChanged, translate } = this.props;
 		// Is a username change in progress?
-		const renderUsernameForm = userSettings.isSettingUnsaved( 'user_login' );
+		const renderUsernameForm = this.hasUnsavedUserSetting( 'user_login' );
 
 		return (
-			<Main className="account is-wide-layout">
+			<Main wideLayout className="account">
+				<QueryAllDomains />
+				<QueryUserSettings />
 				<PageViewTracker path="/me/account" title="Me > Account Settings" />
 				<MeSidebarNavigation />
 				<ReauthRequired twoStepAuthorization={ twoStepAuthorization } />
-				<FormattedHeader brandFont headerText={ translate( 'Account Settings' ) } align="left" />
+				<FormattedHeader brandFont headerText={ translate( 'Account settings' ) } align="left" />
 
+				<SectionHeader label={ translate( 'Account Information' ) } />
 				<Card className="account__settings">
-					<form onChange={ markChanged } onSubmit={ this.submitForm }>
+					<form onChange={ markChanged } onSubmit={ this.saveAccountSettings }>
 						<FormFieldset>
 							<FormLabel htmlFor="user_login">{ translate( 'Username' ) }</FormLabel>
 							<FormTextInput
@@ -900,7 +1011,8 @@ const Account = createReactClass( {
 								autoCorrect="off"
 								className="account__username"
 								disabled={
-									this.getDisabledState() || ! this.getUserSetting( 'user_login_can_be_changed' )
+									this.getDisabledState( ACCOUNT_FORM_NAME ) ||
+									! this.getUserSetting( 'user_login_can_be_changed' )
 								}
 								id="user_login"
 								name="user_login"
@@ -925,24 +1037,130 @@ const Account = createReactClass( {
 					</form>
 				</Card>
 
+				<SectionHeader label={ translate( 'Interface settings' ) } />
+				<Card className="account__settings">
+					<form onSubmit={ this.saveInterfaceSettings }>
+						<FormFieldset>
+							<FormLabel id="account__language" htmlFor="language">
+								{ translate( 'Interface language' ) }
+							</FormLabel>
+							<LanguagePicker
+								disabled={ this.getDisabledState( INTERFACE_FORM_NAME ) }
+								languages={ languages }
+								onClick={ this.getClickHandler( 'Interface Language Field' ) }
+								valueKey="langSlug"
+								value={
+									this.getUserSetting( 'locale_variant' ) || this.getUserSetting( 'language' ) || ''
+								}
+								empathyMode={ this.getUserSetting( 'i18n_empathy_mode' ) }
+								useFallbackForIncompleteLanguages={ this.getUserSetting(
+									'use_fallback_for_incomplete_languages'
+								) }
+								onChange={ this.updateLanguage }
+							/>
+							<FormSettingExplanation>
+								{ translate(
+									'This is the language of the interface you see across WordPress.com as a whole.'
+								) }
+							</FormSettingExplanation>
+							{ this.thankTranslationContributors() }
+						</FormFieldset>
+
+						{ this.props.canDisplayCommunityTranslator && this.communityTranslator() }
+
+						{ this.props.isNavUnificationEnabled && (
+							<FormFieldset className="account__link-destination">
+								<FormLabel id="account__link_destination" htmlFor="link_destination">
+									{ translate( 'Dashboard appearance' ) }
+								</FormLabel>
+								<ToggleControl
+									checked={ this.props.linkDestination }
+									onChange={ this.props.saveLinkDestinationPreference }
+									disabled={ this.getDisabledState( INTERFACE_FORM_NAME ) }
+									label={
+										<>
+											{ translate(
+												'{{spanlead}}Show wp-admin pages if available{{/spanlead}} {{spanextra}}Replace your dashboard pages with more advanced wp-admin equivalents.{{/spanextra}}',
+												{
+													components: {
+														spanlead: <strong className="account__link-destination-label-lead" />,
+														spanextra: <span className="account__link-destination-label-extra" />,
+													},
+												}
+											) }
+											<InlineSupportLink
+												supportPostId={ 80368 }
+												supportLink={ localizeUrl(
+													'https://wordpress.com/support/account-settings/#dashboard-appearance'
+												) }
+											/>
+										</>
+									}
+								/>
+							</FormFieldset>
+						) }
+
+						{ config.isEnabled( 'me/account/color-scheme-picker' ) &&
+							supportsCssCustomProperties() && (
+								<FormFieldset>
+									<FormLabel id="account__color_scheme" htmlFor="color_scheme">
+										{ translate( 'Dashboard color scheme' ) }
+									</FormLabel>
+									<ColorSchemePicker
+										temporarySelection
+										disabled={ this.getDisabledState( INTERFACE_FORM_NAME ) }
+										defaultSelection={
+											this.props.isNavUnificationEnabled ? 'classic-dark' : 'classic-bright'
+										}
+										onSelection={ this.updateColorScheme }
+									/>
+								</FormFieldset>
+							) }
+					</form>
+				</Card>
+
 				{ config.isEnabled( 'me/account-close' ) && <AccountSettingsCloseLink /> }
 			</Main>
 		);
-	},
-} );
+	}
+}
 
 export default compose(
 	connect(
 		( state ) => ( {
-			requestingMissingSites: isRequestingMissingSites( state ),
+			canDisplayCommunityTranslator: canDisplayCommunityTranslator( state ),
 			countryCode: requestGeoLocation().data,
 			currentUserDate: getCurrentUserDate( state ),
 			currentUserDisplayName: getCurrentUserDisplayName( state ),
 			currentUserName: getCurrentUserName( state ),
+			isPendingEmailChange: isPendingEmailChange( state ),
+			requestingMissingSites: isRequestingMissingSites( state ),
+			userSettings: getUserSettings( state ),
+			unsavedUserSettings: getUnsavedUserSettings( state ),
 			visibleSiteCount: getCurrentUserVisibleSiteCount( state ),
 			onboardingUrl: getOnboardingUrl( state ),
+			isNavUnificationEnabled: isNavUnificationEnabled( state ),
+			linkDestination: getPreference( state, linkDestinationKey ),
+			requestingFlatDomains: isRequestingAllDomains( state ),
+			domainsList: getFlatDomainsList( state ),
 		} ),
-		{ bumpStat, errorNotice, recordGoogleEvent, recordTracksEvent, successNotice }
+		{
+			bumpStat,
+			cancelPendingEmailChange,
+			clearUnsavedUserSettings,
+			errorNotice,
+			removeNotice,
+			recordGoogleEvent,
+			recordTracksEvent,
+			removeUnsavedUserSetting,
+			saveUnsavedUserSettings,
+			setUserSetting,
+			successNotice,
+			saveLinkDestinationPreference: ( linkDestination ) =>
+				savePreference( linkDestinationKey, linkDestination ),
+			saveColorSchemePreference: ( newColorScheme ) =>
+				savePreference( colorSchemeKey, newColorScheme ),
+		}
 	),
 	localize,
 	withLocalizedMoment,

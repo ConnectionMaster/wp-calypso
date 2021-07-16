@@ -11,15 +11,17 @@ import { dispatch, select } from '@wordpress/data-controls';
 import guessTimezone from '../../../../lib/i18n-utils/guess-timezone';
 import { getLanguage } from 'calypso/lib/i18n-utils';
 import { __ } from '@wordpress/i18n';
+import { isBlankCanvasDesign } from '@automattic/design-picker';
+import type { Design, FontPair } from '@automattic/design-picker';
 
 /**
  * Internal dependencies
  */
-import type { Design, SiteVertical } from './types';
+
 import { STORE_KEY as ONBOARD_STORE } from './constants';
 import { SITE_STORE } from '../site';
 import type { State } from '.';
-import type { FontPair } from '../../constants';
+import type { SiteVertical } from './types';
 
 type CreateSiteParams = Site.CreateSiteParams;
 type DomainSuggestion = DomainSuggestions.DomainSuggestion;
@@ -41,7 +43,7 @@ export interface CreateSiteActionParameters {
 	visibility: number;
 	anchorFmPodcastId: string | null;
 	anchorFmEpisodeId: string | null;
-	anchorFmSpotifyShowUrl: string | null;
+	anchorFmSpotifyUrl: string | null;
 }
 
 export function* createSite( {
@@ -51,7 +53,7 @@ export function* createSite( {
 	visibility = Site.Visibility.PublicNotIndexed,
 	anchorFmPodcastId = null,
 	anchorFmEpisodeId = null,
-	anchorFmSpotifyShowUrl = null,
+	anchorFmSpotifyUrl = null,
 }: CreateSiteActionParameters ) {
 	const {
 		domain,
@@ -102,13 +104,18 @@ export function* createSite( {
 			...( anchorFmEpisodeId && {
 				anchor_fm_episode_id: anchorFmEpisodeId,
 			} ),
-			...( anchorFmSpotifyShowUrl && {
-				anchor_fm_spotify_show_url: anchorFmSpotifyShowUrl,
+			...( anchorFmSpotifyUrl && {
+				anchor_fm_spotify_url: anchorFmSpotifyUrl,
 			} ),
+			...( selectedDesign && { is_blank_canvas: isBlankCanvasDesign( selectedDesign ) } ),
 		},
 		...( bearerToken && { authToken: bearerToken } ),
 	};
-	const success = yield dispatch( SITE_STORE, 'createSite', params );
+	const success: Site.NewSiteBlogDetails | undefined = yield dispatch(
+		SITE_STORE,
+		'createSite',
+		params
+	);
 
 	return success;
 }
@@ -165,6 +172,11 @@ export const setHasUsedPlansStep = ( hasUsedPlansStep: boolean ) => ( {
 export const setIsRedirecting = ( isRedirecting: boolean ) => ( {
 	type: 'SET_IS_REDIRECTING' as const,
 	isRedirecting,
+} );
+
+export const setLastLocation = ( path: string ) => ( {
+	type: 'SET_LAST_LOCATION' as const,
+	path,
 } );
 
 export const setPlanProductId = ( planProductId: number | undefined ) => ( {
@@ -233,6 +245,7 @@ export type OnboardAction = ReturnType<
 	| typeof setHasUsedDomainsStep
 	| typeof setHasUsedPlansStep
 	| typeof setIsRedirecting
+	| typeof setLastLocation
 	| typeof setPlanProductId
 	| typeof setRandomizedDesigns
 	| typeof setSelectedDesign

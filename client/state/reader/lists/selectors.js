@@ -7,7 +7,7 @@ import { filter, find, has, includes } from 'lodash';
  * Internal dependencies
  */
 import { withoutHttp } from 'calypso/lib/url';
-import createSelector from 'calypso/lib/create-selector';
+import { createSelector } from '@automattic/state-utils';
 import getCurrentIntlCollator from 'calypso/state/selectors/get-current-intl-collator';
 import 'calypso/state/reader/init';
 
@@ -182,10 +182,5 @@ export function isSubscribedByOwnerAndSlug( state, owner, slug ) {
  * @returns {boolean} Is the list missing?
  */
 export function isMissingByOwnerAndSlug( state, owner, slug ) {
-	const preparedOwner = owner.toLowerCase();
-	const preparedSlug = slug.toLowerCase();
-
-	return !! find( state.reader.lists.missingLists, ( list ) => {
-		return list.owner === preparedOwner && list.slug === preparedSlug;
-	} );
+	return ! state.reader?.lists?.isRequestingLists && ! getListByOwnerAndSlug( state, owner, slug );
 }

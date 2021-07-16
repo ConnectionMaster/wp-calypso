@@ -3,34 +3,27 @@
  */
 import React from 'react';
 import { connect } from 'react-redux';
-import { flow } from 'lodash';
 import { localize } from 'i18n-calypso';
 
 /**
  * Internal dependencies
  */
 import { Button } from '@automattic/components';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import ProfileGravatar from 'calypso/me/profile-gravatar';
-import {
-	addCreditCard,
-	billingHistory,
-	pendingPayments,
-	purchasesRoot,
-	deprecated as deprecatedPaths,
-} from 'calypso/me/purchases/paths';
+import { purchasesRoot } from 'calypso/me/purchases/paths';
 import Sidebar from 'calypso/layout/sidebar';
 import SidebarFooter from 'calypso/layout/sidebar/footer';
-import SidebarHeading from 'calypso/layout/sidebar/heading';
 import SidebarItem from 'calypso/layout/sidebar/item';
 import SidebarMenu from 'calypso/layout/sidebar/menu';
 import SidebarRegion from 'calypso/layout/sidebar/region';
-import user from 'calypso/lib/user';
-import userUtilities from 'calypso/lib/user/utils';
 import { getCurrentUser } from 'calypso/state/current-user/selectors';
 import { logoutUser } from 'calypso/state/logout/actions';
 import { recordGoogleEvent } from 'calypso/state/analytics/actions';
 import { setNextLayoutFocus } from 'calypso/state/ui/layout-focus/actions';
+import { itemLinkMatches } from 'calypso/my-sites/sidebar-unified/utils';
+import { clearStore, disablePersistence } from 'calypso/lib/user/store';
+import { redirectToLogout } from 'calypso/state/current-user/actions';
 
 /**
  * Style dependencies
@@ -56,18 +49,15 @@ class MeSidebar extends React.Component {
 			redirectTo = '/?apppromo';
 		}
 
-		if ( config.isEnabled( 'login/wp-login' ) ) {
-			try {
-				const { redirect_to } = await this.props.logoutUser( redirectTo );
-				await user().clear();
-				window.location.href = redirect_to || '/';
-			} catch {
-				// The logout endpoint might fail if the nonce has expired.
-				// In this case, redirect to wp-login.php?action=logout to get a new nonce generated
-				userUtilities.logout( redirectTo );
-			}
-		} else {
-			userUtilities.logout( redirectTo );
+		try {
+			const { redirect_to } = await this.props.logoutUser( redirectTo );
+			disablePersistence();
+			await clearStore();
+			window.location.href = redirect_to || '/';
+		} catch {
+			// The logout endpoint might fail if the nonce has expired.
+			// In this case, redirect to wp-login.php?action=logout to get a new nonce generated
+			this.props.redirectToLogout( redirectTo );
 		}
 
 		this.props.recordGoogleEvent( 'Me', 'Clicked on Sidebar Sign Out Link' );
@@ -75,41 +65,7 @@ class MeSidebar extends React.Component {
 
 	render() {
 		const { context, translate } = this.props;
-		const filterMap = {
-			'/me': 'profile',
-			'/me/security/account-recovery': 'security',
-			'/me/security/connected-applications': 'security',
-			'/me/security/password': 'security',
-			'/me/security/social-login': 'security',
-			'/me/security/two-step': 'security',
-			'me/privacy': 'privacy',
-			'/me/notifications/comments': 'notifications',
-			'/me/notifications/updates': 'notifications',
-			'/me/notifications/subscriptions': 'notifications',
-			'/help/contact': 'help',
-			[ purchasesRoot ]: 'purchases',
-			[ billingHistory ]: 'purchases',
-			[ addCreditCard ]: 'purchases',
-			[ deprecatedPaths.upcomingCharges ]: 'purchases',
-			[ pendingPayments ]: 'purchases',
-			[ deprecatedPaths.otherPurchases ]: 'purchases',
-			'/me/chat': 'happychat',
-			'/me/site-blocks': 'site-blocks',
-		};
-		const filteredPath = context.path.replace( /\/\d+$/, '' ); // Remove ID from end of path
-		let selected;
-
-		/*
-		 * Determine currently-active path to use for 'selected' menu highlight
-		 *
-		 * Most routes within /me follow the pattern of `/me/{selected}`. But, there are a few unique cases.
-		 * filterMap is an object that maps those special cases to the correct selected value.
-		 */
-		if ( filterMap[ filteredPath ] ) {
-			selected = filterMap[ filteredPath ];
-		} else {
-			selected = context.path.split( '/' ).pop();
-		}
+		const path = context.path.replace( '/me', '' ); // Remove base path.
 
 		return (
 			<Sidebar>
@@ -128,23 +84,17 @@ class MeSidebar extends React.Component {
 					</div>
 
 					<SidebarMenu>
-						<SidebarHeading>{ translate( 'Profile' ) }</SidebarHeading>
-
 						<SidebarItem
-							selected={ selected === 'profile' }
-							link={
-								config.isEnabled( 'me/my-profile' ) ? '/me' : '//wordpress.com/me/public-profile'
-							}
+							selected={ itemLinkMatches( '', path ) }
+							link={ '/me' }
 							label={ translate( 'My Profile' ) }
 							materialIcon="person"
 							onNavigate={ this.onNavigate }
 						/>
 
 						<SidebarItem
-							selected={ selected === 'account' }
-							link={
-								config.isEnabled( 'me/account' ) ? '/me/account' : '//wordpress.com/me/account'
-							}
+							selected={ itemLinkMatches( '/account', path ) }
+							link={ '/me/account' }
 							label={ translate( 'Account Settings' ) }
 							materialIcon="settings"
 							onNavigate={ this.onNavigate }
@@ -152,16 +102,16 @@ class MeSidebar extends React.Component {
 						/>
 
 						<SidebarItem
-							selected={ selected === 'purchases' }
+							selected={ itemLinkMatches( '/purchases', path ) }
 							link={ purchasesRoot }
-							label={ translate( 'Manage Purchases' ) }
+							label={ translate( 'Purchases' ) }
 							materialIcon="credit_card"
 							onNavigate={ this.onNavigate }
 							preloadSectionName="purchases"
 						/>
 
 						<SidebarItem
-							selected={ selected === 'security' }
+							selected={ itemLinkMatches( '/security', path ) }
 							link={ '/me/security' }
 							label={ translate( 'Security' ) }
 							materialIcon="lock"
@@ -170,7 +120,7 @@ class MeSidebar extends React.Component {
 						/>
 
 						<SidebarItem
-							selected={ selected === 'privacy' }
+							selected={ itemLinkMatches( '/privacy', path ) }
 							link={ '/me/privacy' }
 							label={ translate( 'Privacy' ) }
 							materialIcon="visibility"
@@ -179,12 +129,14 @@ class MeSidebar extends React.Component {
 						/>
 
 						<SidebarItem
-							selected={ selected === 'notifications' }
-							link={
-								config.isEnabled( 'me/notifications' )
-									? '/me/notifications'
-									: '//wordpress.com/me/notifications'
-							}
+							link={ 'https://dashboard.wordpress.com/wp-admin/index.php?page=my-blogs' }
+							label={ translate( 'Manage Blogs' ) }
+							materialIcon="apps"
+						/>
+
+						<SidebarItem
+							selected={ itemLinkMatches( '/notifications', path ) }
+							link={ '/me/notifications' }
 							label={ translate( 'Notification Settings' ) }
 							materialIcon="notifications"
 							onNavigate={ this.onNavigate }
@@ -192,20 +144,16 @@ class MeSidebar extends React.Component {
 						/>
 
 						<SidebarItem
-							selected={ selected === 'site-blocks' }
+							selected={ itemLinkMatches( '/site-blocks', path ) }
 							link={ '/me/site-blocks' }
 							label={ translate( 'Blocked Sites' ) }
 							materialIcon="block"
 							onNavigate={ this.onNavigate }
 							preloadSectionName="site-blocks"
 						/>
-					</SidebarMenu>
-
-					<SidebarMenu>
-						<SidebarHeading>{ translate( 'Special' ) }</SidebarHeading>
 
 						<SidebarItem
-							selected={ selected === 'get-apps' }
+							selected={ itemLinkMatches( '/get-apps', path ) }
 							link={ '/me/get-apps' }
 							label={ translate( 'Get Apps' ) }
 							icon="my-sites"
@@ -219,18 +167,14 @@ class MeSidebar extends React.Component {
 	}
 }
 
-const enhance = flow(
-	localize,
-	connect(
-		( state ) => ( {
-			currentUser: getCurrentUser( state ),
-		} ),
-		{
-			logoutUser,
-			recordGoogleEvent,
-			setNextLayoutFocus,
-		}
-	)
-);
-
-export default enhance( MeSidebar );
+export default connect(
+	( state ) => ( {
+		currentUser: getCurrentUser( state ),
+	} ),
+	{
+		logoutUser,
+		recordGoogleEvent,
+		redirectToLogout,
+		setNextLayoutFocus,
+	}
+)( localize( MeSidebar ) );

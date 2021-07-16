@@ -1,5 +1,5 @@
-@import '~@wordpress/base-styles/breakpoints';
-@import '~@wordpress/base-styles/mixins';
+@import '@wordpress/base-styles/breakpoints';
+@import '@wordpress/base-styles/mixins';
 
 .more-info-box__more-container {
 	background-color: var( --color-surface );
@@ -21,13 +21,13 @@
 	padding-bottom: 15px;
 	font-size: 1.5rem;
 	font-weight: 700;
+	line-height: inherit;
 }
 
 .more-info-box__more-button.button {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 
-	max-width: 310px;
 	margin: 0 auto;
 	padding: 10px 16px 10px 40px;
 
@@ -44,7 +44,6 @@
 	margin-left: 8px;
 }
 
-/* I5 specifics */
 .is-section-jetpack-cloud-pricing {
 	.more-info-box__more-container {
 		background-color: rgba( var( --studio-jetpack-green-10-rgb ), 0.1 );

@@ -3,7 +3,6 @@
  */
 import React from 'react';
 import page from 'page';
-import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { filter, get, range } from 'lodash';
 import { localize } from 'i18n-calypso';
@@ -12,6 +11,7 @@ import { localize } from 'i18n-calypso';
  * Internal dependencies
  */
 import { CompactCard } from '@automattic/components';
+import EmptyContent from 'calypso/components/empty-content';
 import Notice from 'calypso/components/notice';
 import NoticeAction from 'calypso/components/notice/notice-action';
 import Spinner from 'calypso/components/spinner';
@@ -19,7 +19,6 @@ import QueryJetpackPlugins from 'calypso/components/data/query-jetpack-plugins';
 import QueryPluginKeys from 'calypso/components/data/query-plugin-keys';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import PluginIcon from 'calypso/my-sites/plugins/plugin-icon/plugin-icon';
-import JetpackManageErrorPage from 'calypso/my-sites/jetpack-manage-error-page';
 import PluginItem from 'calypso/my-sites/plugins/plugin-item/plugin-item';
 import { recordTracksEvent } from 'calypso/lib/analytics/tracks';
 import {
@@ -170,9 +169,7 @@ class PlansSetup extends React.Component {
 
 		const getPluginFromStore = function () {
 			if ( ! sitePlugin && requestingInstalledPlugins ) {
-				// if the Plugins are still being fetched, we wait. We are not using flux
-				// store events because it would be more messy to handle the one-time-only
-				// callback with bound parameters than to do it this way.
+				// if the Plugins are still being fetched, we wait.
 				return setTimeout( getPluginFromStore, 500 );
 			}
 			// Merge any site-specific info into the plugin object, setting a default plugin ID if needed
@@ -187,8 +184,7 @@ class PlansSetup extends React.Component {
 			error: 'wordpresscom',
 		} );
 		return (
-			<JetpackManageErrorPage
-				siteId={ this.props.siteId }
+			<EmptyContent
 				title={ this.props.translate(
 					'Oh no! You need to select a Jetpack site to be able to setup your plan'
 				) }
@@ -222,8 +218,7 @@ class PlansSetup extends React.Component {
 		}
 
 		return (
-			<JetpackManageErrorPage
-				siteId={ this.props.siteId }
+			<EmptyContent
 				action={ translate( 'Contact Support' ) }
 				actionURL={ JETPACK_CONTACT_SUPPORT }
 				title={ translate( "Oh no! We can't install plugins on this site." ) }
@@ -581,5 +576,5 @@ export default connect(
 			siteId,
 		};
 	},
-	( dispatch ) => bindActionCreators( { requestSites, fetchPluginData, installPlugin }, dispatch )
+	{ requestSites, fetchPluginData, installPlugin }
 )( localize( PlansSetup ) );

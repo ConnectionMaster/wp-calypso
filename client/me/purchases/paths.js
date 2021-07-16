@@ -10,6 +10,8 @@ export const paymentMethods = purchasesRoot + '/payment-methods';
 
 export const pendingPayments = purchasesRoot + '/pending';
 
+export const vatDetails = purchasesRoot + '/vat-details';
+
 export function billingHistoryReceipt( receiptId ) {
 	if ( process.env.NODE_ENV !== 'production' ) {
 		if ( 'undefined' === typeof receiptId ) {
@@ -46,6 +48,7 @@ export function confirmCancelDomain( siteName, purchaseId ) {
 	return managePurchase( siteName, purchaseId ) + '/confirm-cancel-domain';
 }
 
+// legacy path
 export function addCardDetails( siteName, purchaseId ) {
 	if ( process.env.NODE_ENV !== 'production' ) {
 		if ( 'undefined' === typeof siteName || 'undefined' === typeof purchaseId ) {
@@ -55,6 +58,7 @@ export function addCardDetails( siteName, purchaseId ) {
 	return managePurchase( siteName, purchaseId ) + '/payment/add';
 }
 
+// legacy path
 export function editCardDetails( siteName, purchaseId, cardId ) {
 	if ( process.env.NODE_ENV !== 'production' ) {
 		if (

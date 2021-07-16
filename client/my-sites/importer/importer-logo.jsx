@@ -8,9 +8,9 @@ import { includes } from 'lodash';
 /**
  * Internal dependencies
  */
-import GoDaddyGoCentralLogo from './logos/godaddy-gocentral';
 import WixLogo from './logos/wix';
 import MediumLogo from './logos/medium';
+import SubstackLogo from './logos/substack';
 import SocialLogo from 'calypso/components/social-logo';
 
 /**
@@ -27,12 +27,12 @@ const ImporterLogo = ( { icon } ) => {
 		return <WixLogo />;
 	}
 
-	if ( 'godaddy-gocentral' === icon ) {
-		return <GoDaddyGoCentralLogo />;
-	}
-
 	if ( 'medium' === icon ) {
 		return <MediumLogo />;
+	}
+
+	if ( 'substack' === icon ) {
+		return <SubstackLogo />;
 	}
 
 	return (

@@ -2,22 +2,23 @@
  * External dependencies
  */
 import { useRef } from 'react';
-import { StoreConfig } from '@wordpress/data';
+import type { StoreConfig } from '@wordpress/data';
+import type { DomainContactDetails } from '@automattic/shopping-cart';
+import type {
+	PossiblyCompleteDomainContactDetails,
+	WpcomStoreState,
+	ManagedContactDetails,
+	ManagedContactDetailsErrors,
+	ManagedContactDetailsRequiredMask,
+} from '@automattic/wpcom-checkout';
 
 /**
  * Internal dependencies
  */
 import {
-	WpcomStoreState,
 	getInitialWpcomStoreState,
-	ManagedContactDetails,
-	ManagedContactDetailsErrors,
 	managedContactDetailsUpdaters as updaters,
 } from '../types/wpcom-store-state';
-import {
-	PossiblyCompleteDomainContactDetails,
-	DomainContactDetails,
-} from '../types/backend/domain-contact-details-components';
 
 type WpcomStoreAction =
 	| {
@@ -33,6 +34,7 @@ type WpcomStoreAction =
 	| { type: 'UPDATE_PHONE'; payload: string }
 	| { type: 'UPDATE_PHONE_NUMBER_COUNTRY'; payload: string }
 	| { type: 'UPDATE_POSTAL_CODE'; payload: string }
+	| { type: 'UPDATE_REQUIRED_DOMAIN_FIELDS'; payload: ManagedContactDetailsRequiredMask }
 	| { type: 'TOUCH_CONTACT_DETAILS' }
 	| { type: 'UPDATE_COUNTRY_CODE'; payload: string }
 	| { type: 'LOAD_COUNTRY_CODE_FROM_GEOIP'; payload: string }
@@ -70,6 +72,8 @@ export function useWpcomStore(
 				return updaters.updatePhoneNumberCountry( state, action.payload );
 			case 'UPDATE_POSTAL_CODE':
 				return updaters.updatePostalCode( state, action.payload );
+			case 'UPDATE_REQUIRED_DOMAIN_FIELDS':
+				return updaters.updateRequiredDomainFields( state, action.payload );
 			case 'UPDATE_EMAIL':
 				return updaters.updateEmail( state, action.payload );
 			case 'UPDATE_COUNTRY_CODE':
@@ -159,6 +163,10 @@ export function useWpcomStore(
 
 			updatePostalCode( payload: string ): WpcomStoreAction {
 				return { type: 'UPDATE_POSTAL_CODE', payload };
+			},
+
+			updateRequiredDomainFields( payload: ManagedContactDetailsRequiredMask ): WpcomStoreAction {
+				return { type: 'UPDATE_REQUIRED_DOMAIN_FIELDS', payload };
 			},
 
 			updateEmail( payload: string ): WpcomStoreAction {

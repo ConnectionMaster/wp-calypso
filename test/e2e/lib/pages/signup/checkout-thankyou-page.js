@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../../driver-helper.js';
 import AsyncBaseContainer from '../../async-base-container';
+import * as driverHelper from '../../driver-helper.js';
 
 export default class CheckOutThankyouPage extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -22,8 +15,8 @@ export default class CheckOutThankyouPage extends AsyncBaseContainer {
 	}
 
 	async isPremiumPlan() {
-		const premiumPlanCardSelector = By.css( '.plan-thank-you-card.is-premium-plan' );
+		const premiumPlanCardLocator = By.css( '.plan-thank-you-card.is-premium-plan' );
 
-		return await driverHelper.isElementPresent( this.driver, premiumPlanCardSelector );
+		return await driverHelper.isElementLocated( this.driver, premiumPlanCardLocator );
 	}
 }

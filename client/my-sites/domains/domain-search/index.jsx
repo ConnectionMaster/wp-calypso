@@ -19,11 +19,11 @@ import SidebarNavigation from 'calypso/my-sites/sidebar-navigation';
 import RegisterDomainStep from 'calypso/components/domains/register-domain-step';
 import Main from 'calypso/components/main';
 import FormattedHeader from 'calypso/components/formatted-header';
-import { canDomainAddGSuite } from 'calypso/lib/gsuite';
+import canUserPurchaseGSuite from 'calypso/state/selectors/can-user-purchase-gsuite';
+import { canDomainAddGSuite, getProductType } from 'calypso/lib/gsuite';
 import {
 	hasPlan,
 	hasDomainInCart,
-	domainMapping,
 	domainTransfer,
 	domainRegistration,
 	updatePrivacyForDomain,
@@ -36,6 +36,7 @@ import {
 	getSelectedSiteId,
 	getSelectedSiteSlug,
 } from 'calypso/state/ui/selectors';
+import { GOOGLE_WORKSPACE_BUSINESS_STARTER_YEARLY } from 'calypso/lib/gsuite/constants';
 import QueryProductsList from 'calypso/components/data/query-products-list';
 import QuerySiteDomains from 'calypso/components/data/query-site-domains';
 import { getProductsList } from 'calypso/state/products-list/selectors';
@@ -47,6 +48,7 @@ import EmailVerificationGate from 'calypso/components/email-verification/email-v
 import { getSuggestionsVendor } from 'calypso/lib/domains/suggestions';
 import NewDomainsRedirectionNoticeUpsell from 'calypso/my-sites/domains/domain-management/components/domain/new-domains-redirection-notice-upsell';
 import HeaderCart from 'calypso/my-sites/checkout/cart/header-cart';
+import { domainMapping } from 'calypso/my-sites/domains/paths';
 import { fillInSingleCartItemAttributes } from 'calypso/lib/cart-values';
 
 /**
@@ -60,7 +62,6 @@ class DomainSearch extends Component {
 		basePath: PropTypes.string.isRequired,
 		context: PropTypes.object.isRequired,
 		domainsWithPlansOnly: PropTypes.bool.isRequired,
-		hasPlanInCart: PropTypes.bool,
 		isSiteUpgradeable: PropTypes.bool,
 		productsList: PropTypes.object.isRequired,
 		selectedSite: PropTypes.object,
@@ -91,13 +92,8 @@ class DomainSearch extends Component {
 	};
 
 	handleAddMapping = ( domain ) => {
-		this.props.shoppingCartManager
-			.addProductsToCart( [
-				fillInSingleCartItemAttributes( domainMapping( { domain } ), this.props.productsList ),
-			] )
-			.then( () => {
-				this.isMounted && page( '/checkout/' + this.props.selectedSiteSlug );
-			} );
+		const domainMappingUrl = domainMapping( this.props.selectedSiteSlug, domain );
+		this.isMounted && page( domainMappingUrl );
 	};
 
 	handleAddTransfer = ( domain ) => {
@@ -159,8 +155,15 @@ class DomainSearch extends Component {
 				fillInSingleCartItemAttributes( registration, this.props.productsList ),
 			] )
 			.then( () => {
-				if ( canDomainAddGSuite( domain ) ) {
-					page( '/domains/add/' + domain + '/google-apps/' + this.props.selectedSiteSlug );
+				if ( this.props.userCanPurchaseGSuite && canDomainAddGSuite( domain ) ) {
+					page(
+						'/domains/add/' +
+							domain +
+							'/' +
+							getProductType( GOOGLE_WORKSPACE_BUSINESS_STARTER_YEARLY ) +
+							'/' +
+							this.props.selectedSiteSlug
+					);
 				} else {
 					page( '/checkout/' + this.props.selectedSiteSlug );
 				}
@@ -193,11 +196,18 @@ class DomainSearch extends Component {
 	}
 
 	render() {
-		const { selectedSite, selectedSiteSlug, translate, isManagingAllDomains } = this.props;
+		const { selectedSite, selectedSiteSlug, translate, isManagingAllDomains, cart } = this.props;
+
+		if ( ! selectedSite ) {
+			return null;
+		}
+
 		const classes = classnames( 'main-column', {
 			'domain-search-page-wrapper': this.state.domainRegistrationAvailable,
 		} );
 		const { domainRegistrationMaintenanceEndTime } = this.state;
+
+		const hasPlanInCart = hasPlan( cart );
 
 		let content;
 
@@ -249,7 +259,7 @@ class DomainSearch extends Component {
 							noticeText={ translate( 'You must verify your email to register new domains.' ) }
 							noticeStatus="is-info"
 						>
-							{ ! this.props.hasPlanInCart && <NewDomainsRedirectionNoticeUpsell /> }
+							{ ! hasPlanInCart && <NewDomainsRedirectionNoticeUpsell /> }
 							<RegisterDomainStep
 								suggestion={ this.getInitialSuggestion() }
 								domainsWithPlansOnly={ this.props.domainsWithPlansOnly }
@@ -282,7 +292,7 @@ class DomainSearch extends Component {
 }
 
 export default connect(
-	( state, ownProps ) => {
+	( state ) => {
 		const siteId = getSelectedSiteId( state );
 
 		return {
@@ -293,7 +303,7 @@ export default connect(
 			domainsWithPlansOnly: currentUserHasFlag( state, DOMAINS_WITH_PLANS_ONLY ),
 			isSiteUpgradeable: isSiteUpgradeable( state, siteId ),
 			productsList: getProductsList( state ),
-			hasPlanInCart: hasPlan( ownProps.cart ),
+			userCanPurchaseGSuite: canUserPurchaseGSuite( state ),
 		};
 	},
 	{

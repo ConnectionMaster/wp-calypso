@@ -1,5 +1,12 @@
 $autobar-height: 20px;
 
+// Hide the masterbar on WP Mobile App views.
+.is-mobile-app-view {
+	.masterbar {
+		display: none;
+	}
+}
+
 // The WordPress.com Masterbar
 .masterbar {
 	background: var( --color-masterbar-background );
@@ -28,6 +35,14 @@ $autobar-height: 20px;
 		background-color: var( --color-jetpack-masterbar-background );
 		border-bottom: 1px solid var( --color-jetpack-masterbar-border );
 		color: var( --color-jetpack-masterbar-text );
+	}
+
+	@media ( -webkit-min-device-pixel-ratio: 1.25 ), ( min-resolution: 120dpi ) {
+		body.font-smoothing-antialiased & {
+			text-rendering: optimizeLegibility;
+			-moz-osx-font-smoothing: grayscale;
+			-webkit-font-smoothing: antialiased;
+		}
 	}
 }
 
@@ -272,6 +287,52 @@ $autobar-height: 20px;
 	&:hover,
 	&:focus {
 		background: transparent;
+	}
+}
+.masterbar__item-action-search {
+	@media only screen and ( max-width: 782px ) {
+		display: none !important; //Mobile styles not yet handled
+	}
+
+	cursor: pointer;
+	border: 1px solid;
+	border-color: var( --color-border );
+	border-radius: 2px;
+	height: 23px;
+	margin-top: 3px;
+	background: var( --color-masterbar-background );
+	color: var( --color-text-inverted );
+
+	.masterbar__item-content {
+		color: var( --color-text-inverted );
+	}
+
+	.gridicon {
+		fill: var( --color-text-inverted );
+	}
+
+	&:active {
+		background: var( --color-masterbar-background );
+		color: var( --color-text-inverted );
+		.masterbar__item-content {
+			color: var( --color-text-inverted );
+		}
+
+		.gridicon {
+			fill: var( --color-text-inverted );
+		}
+	}
+
+	&:hover {
+		border-color: var( --color-border-inverted );
+		background: var( --color-masterbar-text );
+		.masterbar__item-content {
+			color: var( --color-text );
+		}
+
+		.gridicon {
+			fill: var( --color-text );
+		}
 	}
 }
 

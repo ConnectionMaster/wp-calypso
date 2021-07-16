@@ -1,20 +1,14 @@
-/**
- * External dependencies
- */
-import { controls } from '@wordpress/data-controls';
 import { plugins, registerStore, use } from '@wordpress/data';
-
-/**
- * Internal dependencies
- */
-import { STORE_KEY } from './constants';
-import reducer, { State } from './reducer';
+import { controls } from '@wordpress/data-controls';
 import * as actions from './actions';
-import * as selectors from './selectors';
+import { STORE_KEY } from './constants';
 import persistOptions from './persist';
+import reducer, { State } from './reducer';
+import * as selectors from './selectors';
 import type { SelectFromMap, DispatchFromMap } from '../mapped-types';
 
 export type { State };
+export type { LaunchStepType } from './types';
 export { STORE_KEY };
 
 use( plugins.persistence, persistOptions );
@@ -33,10 +27,11 @@ export function register(): typeof STORE_KEY {
 				'domain',
 				'domainSearch',
 				'planProductId',
+				'planBillingPeriod',
 				'confirmedDomainSelection',
-				'isExperimental',
+				'isAnchorFm',
 				'isSiteTitleStepVisible',
-				'shouldDisplaySuccessView',
+				'siteTitle',
 			],
 		} );
 	}

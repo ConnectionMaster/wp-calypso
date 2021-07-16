@@ -16,18 +16,12 @@ import SharingConnections from './connections/connections';
 import Traffic from './traffic/';
 import UltimateTrafficGuide from './ultimate-traffic-guide';
 import { requestSite } from 'calypso/state/sites/actions';
-import {
-	getSiteSlug,
-	isJetpackSite,
-	isJetpackModuleActive,
-	getSiteOption,
-} from 'calypso/state/sites/selectors';
+import { getSiteSlug } from 'calypso/state/sites/selectors';
 import { errorNotice } from 'calypso/state/notices/actions';
 import { getSelectedSiteId } from 'calypso/state/ui/selectors';
 import { fetchPreferences } from 'calypso/state/preferences/actions';
 import { getPreference, hasReceivedRemotePreferences } from 'calypso/state/preferences/selectors';
 import canCurrentUser from 'calypso/state/selectors/can-current-user';
-import versionCompare from 'calypso/lib/version-compare';
 import { setExpandedService } from 'calypso/state/sharing/actions';
 
 export const redirectConnections = ( context ) => {
@@ -47,7 +41,11 @@ export const redirectDefaultConnectionsDomain = async ( context ) => {
 
 	let recentSiteSlug = getSiteSlug( state, recentSiteId );
 	if ( ! recentSiteSlug ) {
-		await dispatch( requestSite( recentSiteId ) );
+		try {
+			await dispatch( requestSite( recentSiteId ) );
+		} catch {
+			// proceed despite a failed site request
+		}
 		recentSiteSlug = getSiteSlug( getState(), recentSiteId );
 		if ( ! recentSiteSlug ) {
 			// TODO Maybe get the primary site slug, but for now redirect to site selection.
@@ -117,23 +115,6 @@ export const sharingButtons = ( context, next ) => {
 	if ( siteId && ! canCurrentUser( state, siteId, 'manage_options' ) ) {
 		store.dispatch(
 			errorNotice( translate( 'You are not authorized to manage sharing settings for this site.' ) )
-		);
-	}
-
-	const siteJetpackVersion = getSiteOption( state, siteId, 'jetpack_version' );
-
-	if (
-		siteId &&
-		isJetpackSite( state, siteId ) &&
-		( ! isJetpackModuleActive( state, siteId, 'sharedaddy' ) ||
-			versionCompare( siteJetpackVersion, '3.4-dev', '<' ) )
-	) {
-		store.dispatch(
-			errorNotice(
-				translate(
-					'This page is only available to Jetpack sites running version 3.4 or higher with the Sharing module activated.'
-				)
-			)
 		);
 	}
 

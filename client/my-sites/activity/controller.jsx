@@ -7,7 +7,7 @@ import { isEqual } from 'lodash';
 /**
  * Internal Dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import { recordTrack } from 'calypso/reader/stats';
 import { queryToFilterState } from 'calypso/state/activity-log/utils';
 import { setFilter } from 'calypso/state/activity-log/actions';
@@ -63,10 +63,7 @@ export function activity( context, next ) {
 	const queryFilter = queryToFilterState( context.query );
 
 	if ( ! isEqual( filter, queryFilter ) ) {
-		context.store.dispatch( {
-			...setFilter( siteId, queryFilter ),
-			meta: { skipUrlUpdate: true },
-		} );
+		context.store.dispatch( setFilter( siteId, queryFilter, true ) );
 	}
 
 	recordTrack( 'calypso_activitylog_view', queryFilterToStats( queryFilter ) );

@@ -1,11 +1,4 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
 import AsyncBaseContainer from '../async-base-container';
 import * as driverHelper from '../driver-helper.js';
 
@@ -15,15 +8,18 @@ class InlineHelpPopoverComponent extends AsyncBaseContainer {
 	}
 
 	async waitForToggleNotToBePresent() {
-		return driverHelper.waitTillNotPresent( this.driver, By.css( '.inline-help__button' ) );
+		return await driverHelper.waitUntilElementNotLocated(
+			this.driver,
+			By.css( '.inline-help__button' )
+		);
 	}
 
 	async isToggleVisible() {
-		return await driverHelper.isElementPresent( this.driver, By.css( '.inline-help__button' ) );
+		return await driverHelper.isElementLocated( this.driver, By.css( '.inline-help__button' ) );
 	}
 
 	async isPopoverVisible() {
-		return await driverHelper.isElementPresent( this.driver, By.css( '.inline-help__popover' ) );
+		return await driverHelper.isElementLocated( this.driver, By.css( '.inline-help__popover' ) );
 	}
 
 	async toggleOpen() {

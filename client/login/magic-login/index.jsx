@@ -13,7 +13,7 @@ import classNames from 'classnames';
 /**
  * Internal dependencies
  */
-import notices from 'calypso/notices';
+import config from '@automattic/calypso-config';
 import { login } from 'calypso/lib/paths';
 import { CHECK_YOUR_EMAIL_PAGE } from 'calypso/state/login/magic-login/constants';
 import getCurrentLocaleSlug from 'calypso/state/selectors/get-current-locale-slug';
@@ -67,7 +67,6 @@ class MagicLogin extends React.Component {
 		this.props.recordTracksEvent( 'calypso_login_email_link_page_click_back' );
 
 		const loginParameters = {
-			isNative: true,
 			isJetpack: this.props.isJetpackLogin,
 			isGutenboarding: this.props.isGutenboardingLogin,
 			locale: this.props.locale,
@@ -97,7 +96,6 @@ class MagicLogin extends React.Component {
 		// here deliberately, to ensure that if someone copies this link to
 		// paste somewhere else, their email address isn't included in it.
 		const loginParameters = {
-			isNative: true,
 			isJetpack: isJetpackLogin,
 			isGutenboarding: isGutenboardingLogin,
 			locale: locale,
@@ -142,6 +140,15 @@ class MagicLogin extends React.Component {
 	}
 
 	render() {
+		// If this is part of the Jetpack login flow and the `jetpack/magic-link-signup` feature
+		// flag is enabled, some steps will display a different UI
+		const requestLoginEmailFormProps = {
+			...( this.props.isJetpackLogin ? { flow: 'jetpack' } : {} ),
+			...( this.props.isJetpackLogin && config.isEnabled( 'jetpack/magic-link-signup' )
+				? { isJetpackMagicLinkSignUpEnabled: true }
+				: {} ),
+		};
+
 		return (
 			<Main
 				className={ classNames( 'magic-login', 'magic-login__request-link', {
@@ -153,9 +160,9 @@ class MagicLogin extends React.Component {
 
 				{ this.renderLocaleSuggestions() }
 
-				<GlobalNotices id="notices" notices={ notices.list } />
+				<GlobalNotices id="notices" />
 
-				<RequestLoginEmailForm />
+				<RequestLoginEmailForm { ...requestLoginEmailFormProps } />
 
 				{ this.renderLinks() }
 			</Main>

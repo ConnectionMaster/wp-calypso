@@ -1,16 +1,9 @@
-/**
- * External Dependencies
- */
 const path = require( 'path' );
-const webpack = require( 'webpack' );
-
-/**
- * Internal Dependencies
- */
-const { workerCount } = require( './webpack.common' );
 const TranspileConfig = require( '@automattic/calypso-build/webpack/transpile' );
 const { shouldTranspileDependency } = require( '@automattic/calypso-build/webpack/util' );
+const webpack = require( 'webpack' );
 const cacheIdentifier = require( '../build-tools/babel/babel-loader-cache-identifier' );
+const { workerCount } = require( './webpack.common' );
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 const cacheDirectory = path.resolve( '.cache', 'babel-desktop' );
@@ -43,6 +36,7 @@ module.exports = {
 				configFile: path.resolve( 'babel.config.js' ),
 				cacheDirectory,
 				cacheIdentifier,
+				cacheCompression: false,
 				exclude: /node_modules\//,
 			} ),
 			TranspileConfig.loader( {
@@ -50,6 +44,7 @@ module.exports = {
 				presets: [ require.resolve( '@automattic/calypso-build/babel/dependencies' ) ],
 				cacheDirectory,
 				cacheIdentifier,
+				cacheCompression: false,
 				include: shouldTranspileDependency,
 			} ),
 			{
@@ -87,7 +82,7 @@ module.exports = {
 		modules: [ __dirname, 'node_modules' ],
 		alias: {
 			config: 'calypso/server/config',
-			'calypso/config': 'calypso/server/config',
+			'@automattic/calypso-config': 'calypso/server/config',
 			// Alias calypso to ./client. This allows for smaller bundles, as it ensures that
 			// importing `./client/file.js` is the same thing than importing `calypso/file.js`
 			calypso: __dirname,

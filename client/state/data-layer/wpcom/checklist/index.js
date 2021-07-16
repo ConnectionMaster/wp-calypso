@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { get, noop } from 'lodash';
+import { get } from 'lodash';
 
 /**
  * Internal dependencies
@@ -13,8 +13,9 @@ import { receiveSiteChecklist } from 'calypso/state/checklist/actions';
 
 import { registerHandlers } from 'calypso/state/data-layer/handler-registry';
 
+const noop = () => {};
+
 export const CHECKLIST_KNOWN_TASKS = {
-	START_SITE_SETUP: 'start_site_setup',
 	DOMAIN_VERIFIED: 'domain_verified',
 	EMAIL_VERIFIED: 'email_verified',
 	BLOGNAME_SET: 'blogname_set',
@@ -22,6 +23,7 @@ export const CHECKLIST_KNOWN_TASKS = {
 	SITE_LAUNCHED: 'site_launched',
 	FRONT_PAGE_UPDATED: 'front_page_updated',
 	SITE_MENU_UPDATED: 'site_menu_updated',
+	SITE_THEME_SELECTED: 'site_theme_selected',
 	JETPACK_BACKUPS: 'jetpack_backups',
 	JETPACK_MONITOR: 'jetpack_monitor',
 	JETPACK_PLUGIN_UPDATES: 'jetpack_plugin_updates',
@@ -70,7 +72,7 @@ export const fetchChecklist = ( action ) =>
 		{
 			path: `/sites/${ action.siteId }/checklist`,
 			method: 'GET',
-			apiNamespace: 'rest/v1.2',
+			apiVersion: '1.2',
 			query: {
 				http_envelope: 1,
 				with_domain_verification: action.isSiteEligibleForFSE ? 1 : 0,
@@ -95,7 +97,7 @@ export const updateChecklistTask = ( action ) =>
 		{
 			path: `/sites/${ action.siteId }/checklist`,
 			method: 'POST',
-			apiNamespace: 'rest/v1.1',
+			apiVersion: '1.1',
 			query: {
 				http_envelope: 1,
 			},

@@ -1,17 +1,13 @@
 /**
  * Internal dependencies
  */
-import { getMonthlyPlanByYearly, getYearlyPlanByMonthly } from 'calypso/lib/plans';
-import { JETPACK_RESET_PLANS, JETPACK_SECURITY_PLANS } from 'calypso/lib/plans/constants';
-import { getJetpackCROActiveVersion } from 'calypso/my-sites/plans/jetpack-plans/abtest';
 import {
-	SELECTOR_PLANS_ALT_V1,
-	SELECTOR_PLANS_ALT_V2,
-	SELECTOR_PLANS_I5,
-	SELECTOR_PLANS_SPP,
-} from '../constants';
-import { getJetpackDescriptionWithOptions, slugToSelectorProduct } from '../utils';
-import { Iterations } from 'calypso/my-sites/plans/jetpack-plans/iterations';
+	JETPACK_RESET_PLANS,
+	getMonthlyPlanByYearly,
+	getYearlyPlanByMonthly,
+} from '@automattic/calypso-products';
+import { SELECTOR_PLANS } from '../constants';
+import slugToSelectorProduct from '../slug-to-selector-product';
 
 /**
  * Type dependencies
@@ -26,40 +22,19 @@ export const getPlansToDisplay = ( {
 	duration: Duration;
 	currentPlanSlug: string | null;
 } ): SelectorProduct[] => {
-	const iteration = getJetpackCROActiveVersion() as Iterations;
-	const plans =
-		{
-			[ Iterations.V1 ]: SELECTOR_PLANS_ALT_V1,
-			[ Iterations.V2 ]: SELECTOR_PLANS_ALT_V2,
-			[ Iterations.I5 ]: SELECTOR_PLANS_I5,
-			[ Iterations.SPP ]: SELECTOR_PLANS_SPP,
-		}[ iteration ] || [];
 	const currentPlanTerms = currentPlanSlug
 		? [ getMonthlyPlanByYearly( currentPlanSlug ), getYearlyPlanByMonthly( currentPlanSlug ) ]
 		: [];
 
-	const plansToDisplay = plans
-		.map( slugToSelectorProduct )
+	const plansToDisplay = SELECTOR_PLANS.map( slugToSelectorProduct )
 		// Remove plans that don't fit the filters or have invalid data.
 		.filter(
 			( product: SelectorProduct | null ): product is SelectorProduct =>
 				!! product &&
 				product.term === duration &&
 				// Don't include a plan the user already owns, regardless of the term
-				! currentPlanTerms.includes( product.productSlug ) &&
-				// In v1, we don't show both versions of Jetpack Security
-				! (
-					iteration === 'v1' &&
-					currentPlanSlug &&
-					JETPACK_SECURITY_PLANS.includes( currentPlanSlug ) &&
-					JETPACK_SECURITY_PLANS.includes( product.productSlug )
-				)
-		)
-		.map( ( product: SelectorProduct ) => ( {
-			...product,
-			description: getJetpackDescriptionWithOptions( product ),
-		} ) );
-
+				! currentPlanTerms.includes( product.productSlug )
+		);
 	if ( currentPlanSlug && JETPACK_RESET_PLANS.includes( currentPlanSlug ) ) {
 		const currentPlanSelectorProduct = slugToSelectorProduct( currentPlanSlug );
 		if ( currentPlanSelectorProduct ) {
@@ -106,10 +81,6 @@ export const getProductsToDisplay = ( {
 		[ ...purchasedProducts, ...filteredProducts ]
 			// Make sure we don't allow any null or invalid products
 			.filter( ( product ): product is SelectorProduct => !! product )
-			.map( ( product ) => ( {
-				...product,
-				description: getJetpackDescriptionWithOptions( product as SelectorProduct ),
-			} ) )
 	);
 };
 

@@ -10,7 +10,7 @@ import { trim } from 'lodash';
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import DocumentHead from 'calypso/components/data/document-head';
 import HeaderCake from 'calypso/components/header-cake';
 import Main from 'calypso/components/main';
@@ -42,11 +42,9 @@ import CountedTextareas from 'calypso/components/forms/counted-textarea/docs/exa
 import DatePicker from 'calypso/components/date-picker/docs/example';
 import DateRange from 'calypso/components/date-range/docs/example';
 import DiffViewerExample from 'calypso/components/diff-viewer/docs/example';
-import Disableable from 'calypso/components/disableable/docs/example';
 import DotPager from 'calypso/components/dot-pager/docs/example';
 import DropZones from 'calypso/components/drop-zone/docs/example';
 import EllipsisMenu from 'calypso/components/ellipsis-menu/docs/example';
-import EmbedDialog from 'calypso/components/tinymce/plugins/embed/docs/example';
 import EmojifyExample from 'calypso/components/emojify/docs/example';
 import EmptyContent from 'calypso/components/empty-content/docs/example';
 import ExternalLink from 'calypso/components/external-link/docs/example';
@@ -75,8 +73,8 @@ import InputChrono from 'calypso/components/input-chrono/docs/example';
 import JetpackColophonExample from 'calypso/components/jetpack-colophon/docs/example';
 import JetpackHeaderExample from 'calypso/components/jetpack-header/docs/example';
 import JetpackLogoExample from 'calypso/components/jetpack-logo/docs/example';
-import JetpackProductSlideOutCard from 'calypso/components/jetpack/card/jetpack-product-slide-out-card/docs/example';
 import LanguagePicker from 'calypso/components/language-picker/docs/example';
+import JetpackReviewPromptExample from 'calypso/blocks/jetpack-review-prompt/docs/example';
 import LayoutExample from 'calypso/components/layout/docs/example';
 import LineChart from 'calypso/components/line-chart/docs/example';
 import ListEnd from 'calypso/components/list-end/docs/example';
@@ -104,7 +102,6 @@ import SectionNav from 'calypso/components/section-nav/docs/example';
 import SegmentedControl from 'calypso/components/segmented-control/docs/example';
 import SelectDropdown from 'calypso/components/select-dropdown/docs/example';
 import ShareButton from 'calypso/components/share-button/docs/example';
-import SiteTitleControl from 'calypso/components/site-title/docs/example';
 import SocialLogos from 'calypso/components/social-logo/docs/example';
 import Spinner from 'calypso/components/spinner/docs/example';
 import SpinnerButton from 'calypso/components/spinner-button/docs/example';
@@ -201,11 +198,9 @@ export default class DesignAssets extends React.Component {
 					<DatePicker readmeFilePath="date-picker" />
 					<DateRange readmeFilePath="date-range" />
 					<DiffViewerExample readmeFilePath="diff-viewer" />
-					<Disableable readmeFilePath="disableable" />
 					<DotPager readmeFilePath="dot-pager" />
 					<DropZones searchKeywords="drag" readmeFilePath="drop-zone" />
 					<EllipsisMenu readmeFilePath="ellipsis-menu" />
-					<EmbedDialog readmeFilePath="tinymce/plugins/embed" />
 					<EmojifyExample readmeFilePath="emojify" />
 					<EmptyContent readmeFilePath="empty-content" />
 					<ExternalLink readmeFilePath="external-link" />
@@ -234,7 +229,7 @@ export default class DesignAssets extends React.Component {
 					<JetpackColophonExample readmeFilePath="jetpack-colophon" />
 					<JetpackHeaderExample readmeFilePath="jetpack-header" />
 					<JetpackLogoExample readmeFilePath="jetpack-logo" />
-					<JetpackProductSlideOutCard readmeFilePath="jetpack-product-slide-out-card" />
+					<JetpackReviewPromptExample readmeFilePath="jetpack/jetpack-review-prompt" />
 					<LanguagePicker readmeFilePath="language-picker" />
 					<LayoutExample readmeFilePath="layout" />
 					<LineChart readmeFilePath="line-chart" />
@@ -263,7 +258,6 @@ export default class DesignAssets extends React.Component {
 					<SegmentedControl readmeFilePath="segmented-control" />
 					<SelectDropdown searchKeywords="menu" readmeFilePath="select-dropdown" />
 					<ShareButton readmeFilePath="share-button" />
-					<SiteTitleControl readmeFilePath="site-title" />
 					<SocialLogos />
 					<Spinner searchKeywords="loading" readmeFilePath="spinner" />
 					<SpinnerButton searchKeywords="loading input submit" readmeFilePath="spinner-button" />

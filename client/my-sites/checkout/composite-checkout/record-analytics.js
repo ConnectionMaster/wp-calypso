@@ -44,6 +44,7 @@ export default function createAnalyticsEventHandler( reduxDispatch ) {
 							apple_pay_available: action.payload?.apple_pay_available,
 							product_slug: action.payload?.product_slug,
 							is_composite: true,
+							checkout_flow: action.payload?.checkout_flow,
 						} )
 					);
 					return reduxDispatch( recordTracksEvent( 'calypso_checkout_composite_loaded', {} ) );
@@ -308,13 +309,6 @@ export default function createAnalyticsEventHandler( reduxDispatch ) {
 						recordTracksEvent( 'calypso_checkout_composite_apple_pay_submit_clicked', {} )
 					);
 				}
-				case 'APPLE_PAY_LOADING_ERROR':
-					return reduxDispatch(
-						recordTracksEvent( 'calypso_checkout_composite_apple_pay_error', {
-							error_message: String( action.payload ),
-							is_loading_error: true,
-						} )
-					);
 				case 'VALIDATE_DOMAIN_CONTACT_INFO': {
 					// TODO: Decide what to do here
 					return;

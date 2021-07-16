@@ -2,14 +2,13 @@
  * External dependencies
  */
 import { stringify } from 'qs';
-import { every, get } from 'lodash';
+import { get } from 'lodash';
 
 /**
  * Internal dependencies
  */
 import { toApi, fromApi } from 'calypso/state/imports/api';
 import wpcom from 'calypso/lib/wp';
-import user from 'calypso/lib/user';
 import {
 	mapAuthor,
 	startMappingAuthors,
@@ -17,7 +16,6 @@ import {
 	finishUpload,
 } from 'calypso/state/imports/actions';
 import { recordTracksEvent, withAnalytics } from 'calypso/state/analytics/actions';
-import { setSelectedEditor } from 'calypso/state/selected-editor/actions';
 import {
 	SITE_IMPORTER_IMPORT_FAILURE,
 	SITE_IMPORTER_IMPORT_RESET,
@@ -30,6 +28,7 @@ import {
 } from 'calypso/state/action-types';
 import { getImporterStatus } from 'calypso/state/imports/selectors';
 import { prefetchmShotsPreview } from 'calypso/lib/mshots';
+import { getCurrentUser } from 'calypso/state/current-user/selectors';
 
 /**
  * Redux dependencies
@@ -81,7 +80,7 @@ export const startMappingSiteImporterAuthors = ( { importerStatus, site, targetS
 
 	// WXR was uploaded, map the authors
 	if ( singleAuthorSite ) {
-		const currentUserData = user().get();
+		const currentUserData = getCurrentUser( getState() );
 		const currentUser = {
 			...currentUserData,
 			name: currentUserData.display_name,
@@ -94,9 +93,8 @@ export const startMappingSiteImporterAuthors = ( { importerStatus, site, targetS
 
 		// Check if all authors are mapped before starting the import.
 		const newState = getImporterStatus( getState(), importerId );
-		const areAllAuthorsMapped = every(
-			get( newState, 'customData.sourceAuthors', [] ),
-			'mappedTo'
+		const areAllAuthorsMapped = get( newState, 'customData.sourceAuthors', [] ).every(
+			( { mappedTo } ) => mappedTo
 		);
 
 		if ( areAllAuthorsMapped ) {
@@ -146,13 +144,6 @@ export const importSite = ( {
 		.undocumented()
 		.importWithSiteImporter( siteId, toApi( importerStatus ), params, targetSiteUrl )
 		.then( ( response ) => {
-			// At this point we're assuming that an import is going to happen
-			// so we set the user's editor to Gutenberg in order to make sure
-			// that the posts aren't mangled by the classic editor.
-			if ( 'godaddy-gocentral' === engine ) {
-				dispatch( setSelectedEditor( siteId, 'gutenberg' ) );
-			}
-
 			dispatch( recordTracksEvent( 'calypso_site_importer_start_import_success', trackingParams ) );
 			dispatch( siteImporterImportSuccessful( response ) );
 

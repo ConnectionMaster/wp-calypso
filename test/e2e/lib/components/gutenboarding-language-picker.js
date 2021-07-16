@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
 import { By } from 'selenium-webdriver';
-
-/**
- * Internal dependencies
- */
-import * as driverHelper from '../driver-helper';
 import AsyncBaseContainer from '../async-base-container';
+import * as driverHelper from '../driver-helper';
 
 export default class GutenboardingLanguagePickerComponent extends AsyncBaseContainer {
 	constructor( driver ) {
@@ -15,7 +8,7 @@ export default class GutenboardingLanguagePickerComponent extends AsyncBaseConta
 	}
 
 	async switchLanguage( languageSlug ) {
-		await driverHelper.clickWhenClickable( this.driver, this.expectedElementSelector );
+		await driverHelper.clickWhenClickable( this.driver, this.expectedElementLocator );
 		await driverHelper.clickWhenClickable(
 			this.driver,
 			By.css( `.language-picker-component__language-button [lang="${ languageSlug }"]` )

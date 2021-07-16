@@ -6,10 +6,11 @@ import { omit, reduce } from 'lodash';
 /**
  * Internal dependencies
  */
+import { withStorageKey } from '@automattic/state-utils';
 import { NOTICE_CREATE, NOTICE_REMOVE, ROUTE_SET } from 'calypso/state/action-types';
-import { combineReducers, withoutPersistence, withStorageKey } from 'calypso/state/utils';
+import { combineReducers } from 'calypso/state/utils';
 
-export const items = withoutPersistence( ( state = {}, action ) => {
+export const items = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case NOTICE_CREATE: {
 			const { notice } = action;
@@ -51,9 +52,9 @@ export const items = withoutPersistence( ( state = {}, action ) => {
 	}
 
 	return state;
-} );
+};
 
-export const lastTimeShown = withoutPersistence( ( state = {}, action ) => {
+export const lastTimeShown = ( state = {}, action ) => {
 	switch ( action.type ) {
 		case NOTICE_CREATE: {
 			const { notice } = action;
@@ -65,7 +66,7 @@ export const lastTimeShown = withoutPersistence( ( state = {}, action ) => {
 	}
 
 	return state;
-} );
+};
 
 const combinedReducer = combineReducers( {
 	items,

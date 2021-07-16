@@ -112,13 +112,13 @@ const MembershipsHistory = ( { translate, subscriptions, moment } ) => {
 	}
 
 	return (
-		<Main className="memberships is-wide-layout">
+		<Main wideLayout className="memberships">
 			<DocumentHead title={ translate( 'Other Sites' ) } />
 			<PageViewTracker path="/me/purchases/other" title="Me > Other Sites" />
 			<FormattedHeader brandFont headerText={ titles.sectionTitle } align="left" />
 			<MeSidebarNavigation />
 			<QueryMembershipsSubscriptions />
-			<PurchasesNavigation section={ 'memberships' } />
+			<PurchasesNavigation section="activeUpgrades" />
 			{ content }
 		</Main>
 	);

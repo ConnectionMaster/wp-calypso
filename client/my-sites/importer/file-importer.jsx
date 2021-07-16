@@ -11,7 +11,7 @@ import { connect } from 'react-redux';
 /**
  * Internal dependencies
  */
-import { isEnabled as isConfigEnabled } from 'calypso/config';
+import { isEnabled as isConfigEnabled } from '@automattic/calypso-config';
 import { Card } from '@automattic/components';
 import ErrorPane from './error-pane';
 import ImporterHeader from './importer-header';
@@ -89,6 +89,7 @@ class FileImporter extends React.PureComponent {
 			description,
 			overrideDestination,
 			uploadDescription,
+			optionalUrl,
 		} = this.props.importerData;
 		const { importerStatus, site } = this.props;
 		const { errorData, importerState } = importerStatus;
@@ -132,6 +133,7 @@ class FileImporter extends React.PureComponent {
 						description={ uploadDescription }
 						importerStatus={ importerStatus }
 						site={ site }
+						optionalUrl={ optionalUrl }
 					/>
 				) }
 			</Card>

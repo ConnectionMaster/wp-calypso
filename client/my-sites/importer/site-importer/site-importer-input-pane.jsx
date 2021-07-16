@@ -5,21 +5,20 @@ import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { localize } from 'i18n-calypso';
-import { includes, isEmpty, noop, flowRight, has, trim, sortBy } from 'lodash';
+import { includes, isEmpty, flowRight, has, trim, sortBy } from 'lodash';
 import url from 'url'; // eslint-disable-line no-restricted-imports
 import moment from 'moment';
 
 /**
  * Internal dependencies
  */
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
 import wpcom from 'calypso/lib/wp';
 import { validateImportUrl } from 'calypso/lib/importer/url-validation';
 import TextInput from 'calypso/components/forms/form-text-input';
 import FormLabel from 'calypso/components/forms/form-label';
 import FormSelect from 'calypso/components/forms/form-select';
 import { recordTracksEvent } from 'calypso/state/analytics/actions';
-import { setSelectedEditor } from 'calypso/state/selected-editor/actions';
 import {
 	importSite,
 	validateSiteIsImportable,
@@ -46,6 +45,8 @@ import {
  * Style dependencies
  */
 import './site-importer-input-pane.scss';
+
+const noop = () => {};
 
 class SiteImporterInputPane extends React.Component {
 	static displayName = 'SiteImporterSitePreview';
@@ -299,7 +300,6 @@ export default flowRight(
 		} ),
 		{
 			recordTracksEvent,
-			setSelectedEditor,
 			importSite,
 			validateSiteIsImportable,
 			resetSiteImporterImport,

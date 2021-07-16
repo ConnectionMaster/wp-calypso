@@ -4,17 +4,29 @@
 import { use, select } from '@wordpress/data';
 import { registerPlugin } from '@wordpress/plugins';
 import { applyFilters } from '@wordpress/hooks';
-import { castArray, noop, find } from 'lodash';
+import { __ } from '@wordpress/i18n';
+import { find, isEqual } from 'lodash';
 import debugFactory from 'debug';
 
 /**
  * Internal dependencies
  */
 import tracksRecordEvent from './tracking/track-record-event';
-import delegateEventTracking from './tracking/delegate-event-tracking';
+import delegateEventTracking, {
+	registerSubscriber as registerDelegateEventSubscriber,
+} from './tracking/delegate-event-tracking';
+import { trackGlobalStylesTabSelected } from './tracking/wpcom-block-editor-global-styles-tab-selected';
+import {
+	buildGlobalStylesContentEvents,
+	getFlattenedBlockNames,
+	getBlockEventContextProperties,
+} from './utils';
 
 // Debugger.
 const debug = debugFactory( 'wpcom-block-editor:tracking' );
+
+const noop = () => {};
+let ignoreNextReplaceBlocksAction = false;
 
 /**
  * Global handler.
@@ -22,12 +34,21 @@ const debug = debugFactory( 'wpcom-block-editor:tracking' );
  * to get specific data and populate the record.
  *
  * @param {object} block - Block object data.
- * @param {object} parentBlock - Block object data.
  * @returns {object} Record properties object.
  */
-function globalEventPropsHandler( block, parentBlock ) {
+function globalEventPropsHandler( block ) {
 	if ( ! block?.name ) {
 		return {};
+	}
+
+	// `getActiveBlockVariation` selector is only available since Gutenberg 10.6.
+	// To avoid errors, we make sure the selector exists. If it doesn't,
+	// then we fallback to the old way.
+	const { getActiveBlockVariation } = select( 'core/blocks' );
+	if ( getActiveBlockVariation ) {
+		return {
+			variation_slug: getActiveBlockVariation( block.name, block.attributes )?.name,
+		};
 	}
 
 	// Pick up variation slug from `core/embed` block.
@@ -51,6 +72,69 @@ function globalEventPropsHandler( block, parentBlock ) {
 const getTypeForBlockId = ( blockId ) => {
 	const block = select( 'core/block-editor' ).getBlock( blockId );
 	return block ? block.name : null;
+};
+
+/**
+ * Guess which inserter was used to insert/replace blocks.
+ *
+ * @param {string[]} originalBlockIds ids or blocks that are being replaced
+ * @returns {'header-inserter'|'slash-inserter'|'quick-inserter'|'block-switcher'|undefined} ID representing the insertion method that was used
+ */
+const getBlockInserterUsed = ( originalBlockIds = [] ) => {
+	// Check if the main inserter (opened using the [+] button in the header) is open.
+	// If it is then the block was inserted using this menu. This inserter closes
+	// automatically when the user tries to use another form of block insertion
+	// (at least at the time of writing), which is why we can rely on this method.
+	if (
+		select( 'core/edit-post' )?.isInserterOpened() ||
+		select( 'core/edit-site' )?.isInserterOpened() ||
+		select( 'core/edit-widgets' )?.isInserterOpened() ||
+		document
+			.querySelector( '.customize-widgets-layout__inserter-panel' )
+			?.contains( document.activeElement )
+	) {
+		return 'header-inserter';
+	}
+
+	// The block switcher open state is not stored in Redux, it's component state
+	// inside a <Dropdown>, so we can't access it. Work around this by checking if
+	// the DOM elements are present on the page while the block is being replaced.
+	if (
+		originalBlockIds.length &&
+		document.querySelector( '.block-editor-block-switcher__container' )
+	) {
+		return 'block-switcher';
+	}
+
+	// Inserting a block using a slash command is always a block replacement of
+	// a paragraph block. Checks the block contents to see if it starts with '/'.
+	// This check must go _after_ the block switcher check because it's possible
+	// for the user to type something like "/abc" that matches no block type and
+	// then use the block switcher, and the following tests would incorrectly capture
+	// that case too.
+	if (
+		originalBlockIds.length === 1 &&
+		select( 'core/block-editor' ).getBlockName( originalBlockIds[ 0 ] ) === 'core/paragraph' &&
+		select( 'core/block-editor' )
+			.getBlockAttributes( originalBlockIds[ 0 ] )
+			.content.startsWith( '/' )
+	) {
+		return 'slash-inserter';
+	}
+
+	// The quick inserter open state is not stored in Redux, it's component state
+	// inside a <Dropdown>, so we can't access it. Work around this by checking if
+	// the DOM elements are present on the page while the block is being inserted.
+	if (
+		// The new quick-inserter UI, marked as __experimental
+		document.querySelector( '.block-editor-inserter__quick-inserter' ) ||
+		// Legacy block inserter UI
+		document.querySelector( '.block-editor-inserter__block-list' )
+	) {
+		return 'quick-inserter';
+	}
+
+	return undefined;
 };
 
 /**
@@ -87,7 +171,7 @@ const ensureBlockObject = ( block ) => {
  * @returns {void}
  */
 function trackBlocksHandler( blocks, eventName, propertiesHandler = noop, parentBlock ) {
-	const castBlocks = castArray( blocks );
+	const castBlocks = Array.isArray( blocks ) ? blocks : [ blocks ];
 	if ( ! castBlocks || ! castBlocks.length ) {
 		return;
 	}
@@ -97,7 +181,7 @@ function trackBlocksHandler( blocks, eventName, propertiesHandler = noop, parent
 		block = ensureBlockObject( block );
 
 		const eventProperties = {
-			...globalEventPropsHandler( block, parentBlock ),
+			...globalEventPropsHandler( block ),
 			...propertiesHandler( block, parentBlock ),
 			inner_block: !! parentBlock,
 		};
@@ -128,11 +212,38 @@ function trackBlocksHandler( blocks, eventName, propertiesHandler = noop, parent
  * @param {string} eventName event name
  * @returns {Function} track handler
  */
-const getBlocksTracker = ( eventName ) => ( blockIds ) => {
-	// track separately for each block
-	castArray( blockIds ).forEach( ( blockId ) => {
-		tracksRecordEvent( eventName, { block_name: getTypeForBlockId( blockId ) } );
-	} );
+const getBlocksTracker = ( eventName ) => ( blockIds, fromRootClientId, toRootClientId ) => {
+	const blockIdArray = Array.isArray( blockIds ) ? blockIds : [ blockIds ];
+
+	const fromContext = getBlockEventContextProperties( fromRootClientId );
+	const toContext = getBlockEventContextProperties( toRootClientId );
+
+	if ( toRootClientId === undefined || isEqual( fromContext, toContext ) ) {
+		// track separately for each block
+		blockIdArray.forEach( ( blockId ) => {
+			tracksRecordEvent( eventName, {
+				block_name: getTypeForBlockId( blockId ),
+				...fromContext,
+			} );
+		} );
+	} else {
+		const fromProps = {};
+		const toProps = {};
+		for ( const key of Object.keys( fromContext ) ) {
+			fromProps[ `from_${ key }` ] = fromContext[ key ];
+		}
+		for ( const key of Object.keys( toContext ) ) {
+			toProps[ `from_${ key }` ] = toContext[ key ];
+		}
+		// track separately for each block
+		blockIdArray.forEach( ( blockId ) => {
+			tracksRecordEvent( eventName, {
+				block_name: getTypeForBlockId( blockId ),
+				...fromProps,
+				...toProps,
+			} );
+		} );
+	}
 };
 
 /**
@@ -145,12 +256,34 @@ const getBlocksTracker = ( eventName ) => ( blockIds ) => {
  */
 const maybeTrackPatternInsertion = ( actionData ) => {
 	const meta = find( actionData, ( item ) => item?.patternName );
-	const patternName = meta?.patternName;
+	let patternName = meta?.patternName;
+
+	const rootClientId = actionData[ 1 ];
+	const context = getBlockEventContextProperties( rootClientId );
+
+	// Quick block inserter doesn't use an object to store the patternName
+	// in the metadata. The pattern name is just directly used as a string.
+	if ( ! patternName ) {
+		const patterns = select( 'core/block-editor' ).getSettings().__experimentalBlockPatterns;
+		const actionDataToCheck = Object.values( actionData ).filter(
+			( data ) => typeof data === 'string'
+		);
+		const foundPattern = patterns.find( ( pattern ) => actionDataToCheck.includes( pattern.name ) );
+		if ( foundPattern ) {
+			patternName = foundPattern.name;
+		}
+	}
 
 	if ( patternName ) {
+		const patternCategory =
+			// Pattern category dropdown in global inserter
+			document.querySelector( '.block-editor-inserter__panel-header-patterns select' )?.value;
+
 		tracksRecordEvent( 'wpcom_pattern_inserted', {
 			pattern_name: patternName,
+			pattern_category: patternCategory,
 			blocks_replaced: actionData?.blocks_replaced,
+			...context,
 		} );
 	}
 
@@ -167,10 +300,17 @@ const maybeTrackPatternInsertion = ( actionData ) => {
 const trackBlockInsertion = ( blocks, ...args ) => {
 	const patternName = maybeTrackPatternInsertion( { ...args, blocks_replaced: false } );
 
+	const [ , rootClientId ] = args;
+	const context = getBlockEventContextProperties( rootClientId );
+
+	const insert_method = getBlockInserterUsed();
+
 	trackBlocksHandler( blocks, 'wpcom_block_inserted', ( { name } ) => ( {
 		block_name: name,
 		blocks_replaced: false,
 		pattern_name: patternName,
+		insert_method,
+		...context,
 	} ) );
 };
 
@@ -181,8 +321,13 @@ const trackBlockInsertion = ( blocks, ...args ) => {
  * @returns {void}
  */
 const trackBlockRemoval = ( blocks ) => {
+	const rootClientId = select( 'core/block-editor' ).getBlockRootClientId(
+		Array.isArray( blocks ) ? blocks[ 0 ] : blocks
+	);
+	const context = getBlockEventContextProperties( rootClientId );
 	trackBlocksHandler( blocks, 'wpcom_block_deleted', ( { name } ) => ( {
 		block_name: name,
+		...context,
 	} ) );
 };
 
@@ -195,12 +340,26 @@ const trackBlockRemoval = ( blocks ) => {
  * @returns {void}
  */
 const trackBlockReplacement = ( originalBlockIds, blocks, ...args ) => {
+	if ( ignoreNextReplaceBlocksAction ) {
+		ignoreNextReplaceBlocksAction = false;
+		return;
+	}
+
 	const patternName = maybeTrackPatternInsertion( { ...args, blocks_replaced: true } );
+
+	const rootClientId = select( 'core/block-editor' ).getBlockRootClientId(
+		Array.isArray( originalBlockIds ) ? originalBlockIds[ 0 ] : originalBlockIds
+	);
+	const context = getBlockEventContextProperties( rootClientId );
+
+	const insert_method = getBlockInserterUsed( originalBlockIds );
 
 	trackBlocksHandler( blocks, 'wpcom_block_picker_block_inserted', ( { name } ) => ( {
 		block_name: name,
 		blocks_replaced: true,
 		pattern_name: patternName,
+		insert_method,
+		...context,
 	} ) );
 };
 
@@ -213,11 +372,46 @@ const trackBlockReplacement = ( originalBlockIds, blocks, ...args ) => {
  * @returns {void}
  */
 const trackInnerBlocksReplacement = ( rootClientId, blocks ) => {
+	/*
+		We are ignoring `replaceInnerBlocks` action for template parts and
+		reusable blocks for the following reasons:
+
+		1. Template Parts and Reusable Blocks are asynchronously loaded blocks.
+		   Content is fetched from the REST API so the inner blocks are
+		   populated when the response is received. We want to ignore
+		   `replaceInnerBlocks` action calls when the `innerBlocks` are replaced
+		   because the template part or reusable block just loaded.
+
+		2. Having multiple instances of the same template part or reusable block
+		   and making edits to a single instance will cause all the other instances
+		   to update via `replaceInnerBlocks`.
+
+		3. Performing undo or redo related to template parts and reusable blocks
+		   will update the instances via `replaceInnerBlocks`.
+	*/
+	const parentBlock = select( 'core/block-editor' ).getBlocksByClientId( rootClientId )?.[ 0 ];
+	if ( parentBlock ) {
+		const { name } = parentBlock;
+		if (
+			// Template Part
+			name === 'core/template-part' ||
+			// Reusable Block
+			name === 'core/block'
+		) {
+			return;
+		}
+	}
+	const context = getBlockEventContextProperties( rootClientId );
+
 	trackBlocksHandler( blocks, 'wpcom_block_inserted', ( { name } ) => ( {
 		block_name: name,
 		blocks_replaced: true,
-		// isInsertingPageTemplate filter is set by Starter Page Templates
-		from_template_selector: applyFilters( 'isInsertingPageTemplate', false ),
+		// isInsertingPagePattern filter is set by Starter Page Templates.
+		// Also support isInsertingPageTemplate filter as this was used in older ETK versions.
+		from_template_selector:
+			applyFilters( 'isInsertingPagePattern', false ) ||
+			applyFilters( 'isInsertingPageTemplate', false ),
+		...context,
 	} ) );
 };
 
@@ -246,6 +440,209 @@ const trackErrorNotices = ( content, options ) =>
 		notice_options: JSON.stringify( options ), // Returns undefined if options is undefined.
 	} );
 
+const trackEnableComplementaryArea = ( scope, id ) => {
+	const activeArea = select( 'core/interface' ).getActiveComplementaryArea( scope );
+	// We are tracking both global styles open here and when global styles
+	// is closed by opening another sidebar in its place.
+	if ( activeArea !== 'edit-site/global-styles' && id === 'edit-site/global-styles' ) {
+		trackGlobalStylesTabSelected( { tab: 'root', open: true } );
+	} else if ( activeArea === 'edit-site/global-styles' && id !== 'edit-site/global-styles' ) {
+		trackGlobalStylesTabSelected( { open: false } );
+	}
+};
+
+const trackDisableComplementaryArea = ( scope ) => {
+	const activeArea = select( 'core/interface' ).getActiveComplementaryArea( scope );
+	if ( activeArea === 'edit-site/global-styles' && scope === 'core/edit-site' ) {
+		trackGlobalStylesTabSelected( { open: false } );
+	}
+};
+
+const trackSaveEntityRecord = ( kind, name, record ) => {
+	if ( kind === 'postType' && name === 'wp_template_part' ) {
+		const variationSlug = record.area !== 'uncategorized' ? record.area : undefined;
+		if ( document.querySelector( '.edit-site-template-part-converter__modal' ) ) {
+			ignoreNextReplaceBlocksAction = true;
+			const convertedParentBlocks = select( 'core/block-editor' ).getBlocksByClientId(
+				select( 'core/block-editor' ).getSelectedBlockClientIds()
+			);
+			// We fire the event with and without the block names. We do this to
+			// make sure the event is tracked all the time. The block names
+			// might become a string that's too long and as a result it will
+			// fail because of URL length browser limitations.
+			tracksRecordEvent( 'wpcom_block_editor_convert_to_template_part', {
+				variation_slug: variationSlug,
+			} );
+			tracksRecordEvent( 'wpcom_block_editor_convert_to_template_part', {
+				variation_slug: variationSlug,
+				block_names: getFlattenedBlockNames( convertedParentBlocks ).join( ',' ),
+			} );
+		} else {
+			tracksRecordEvent( 'wpcom_block_editor_create_template_part', {
+				variation_slug: variationSlug,
+				content: record.content ? record.content : undefined,
+			} );
+		}
+	}
+};
+
+/**
+ * Track list view open and close events.
+ *
+ * @param {boolean} isOpen new state of the list view
+ */
+const trackListViewToggle = ( isOpen ) => {
+	tracksRecordEvent( 'wpcom_block_editor_list_view_toggle', {
+		is_open: isOpen,
+	} );
+};
+
+const trackSiteEditorBrowsingSidebarOpen = () => {
+	// We want to make sure the browsing sidebar is closed.
+	// This action is triggered even if the sidebar is open
+	// which we want to avoid tracking.
+	const isOpen = select( 'core/edit-site' ).isNavigationOpened();
+	if ( isOpen ) {
+		return;
+	}
+
+	tracksRecordEvent( 'wpcom_block_editor_nav_sidebar_open' );
+};
+
+const trackSiteEditorCreateTemplate = ( { slug } ) => {
+	tracksRecordEvent( 'wpcom_block_editor_nav_sidebar_item_add', {
+		item_type: 'template',
+		item_slug: slug,
+	} );
+};
+
+/**
+ * Flag used to track the first call of tracking
+ * `wpcom_block_editor_nav_sidebar_item_edit`. When the site editor is loaded
+ * with query params specified to load a specific template/template part, then
+ * `setTemplate`, `setTemplatePart` or `setPage` is called editor load. We don't
+ * want to track the first call so we use this flag to track it.
+ */
+let isSiteEditorFirstSidebarItemEditCalled = false;
+const trackSiteEditorChangeTemplate = ( id, slug ) => {
+	if ( ! isSiteEditorFirstSidebarItemEditCalled ) {
+		isSiteEditorFirstSidebarItemEditCalled = true;
+		return;
+	}
+
+	tracksRecordEvent( 'wpcom_block_editor_nav_sidebar_item_edit', {
+		item_type: 'template',
+		item_id: id,
+		item_slug: slug,
+	} );
+};
+
+const trackSiteEditorChangeTemplatePart = ( id ) => {
+	if ( ! isSiteEditorFirstSidebarItemEditCalled ) {
+		isSiteEditorFirstSidebarItemEditCalled = true;
+		return;
+	}
+
+	tracksRecordEvent( 'wpcom_block_editor_nav_sidebar_item_edit', {
+		item_type: 'template_part',
+		item_id: id,
+	} );
+};
+
+/**
+ * Variable used to track the time of the last `trackSiteEditorChange` function
+ * call. This is used to debounce the function because it's called twice due to
+ * a bug. We prefer the first call because that's when the
+ * `getNavigationPanelActiveMenu` function returns the actual active menu.
+ *
+ * Keep this for backward compatibility.
+ * Fixed in: https://github.com/WordPress/gutenberg/pull/33286
+ */
+let lastTrackSiteEditorChangeContentCall = 0;
+const trackSiteEditorChangeContent = ( { type, slug } ) => {
+	if ( Date.now() - lastTrackSiteEditorChangeContentCall < 50 ) {
+		return;
+	}
+
+	if ( ! isSiteEditorFirstSidebarItemEditCalled ) {
+		isSiteEditorFirstSidebarItemEditCalled = true;
+		return;
+	}
+
+	const activeMenu = select( 'core/edit-site' ).getNavigationPanelActiveMenu();
+	if ( ! type && activeMenu === 'content-categories' ) {
+		type = 'taxonomy_category';
+	}
+
+	tracksRecordEvent( 'wpcom_block_editor_nav_sidebar_item_edit', {
+		item_type: type,
+		item_slug: slug,
+	} );
+
+	lastTrackSiteEditorChangeContentCall = Date.now();
+};
+
+/**
+ * Tracks editEntityRecord for global styles updates.
+ *
+ * @param {string} kind    Kind of the edited entity record.
+ * @param {string} type    Name of the edited entity record.
+ * @param {number} id      Record ID of the edited entity record.
+ * @param {object} updates The edits made to the record.
+ */
+const trackEditEntityRecord = ( kind, type, id, updates ) => {
+	// When the site editor is loaded without query params specified to which
+	// template or template part to load, then the `setPage`, `setTemplate` and
+	// `setTemplatePart` call is skipped. In this case we want to make sure the
+	// first call is tracked.
+	if (
+		! isSiteEditorFirstSidebarItemEditCalled &&
+		kind === 'postType' &&
+		( type === 'wp_template' || type === 'wp_template_part' )
+	) {
+		isSiteEditorFirstSidebarItemEditCalled = true;
+		return;
+	}
+
+	if ( kind === 'postType' && type === 'wp_global_styles' ) {
+		const editedEntity = select( 'core' ).getEditedEntityRecord( kind, type, id );
+		const entityContent = JSON.parse( editedEntity?.content );
+		const updatedContent = JSON.parse( updates?.content );
+
+		// Sometimes a second update is triggered corresponding to no changes since the last update.
+		// Therefore we must check if there is a change to avoid debouncing a valid update to a changeless update.
+		if ( ! isEqual( updatedContent, entityContent ) ) {
+			buildGlobalStylesContentEvents(
+				updatedContent,
+				entityContent,
+				'wpcom_block_editor_global_styles_update'
+			);
+		}
+	}
+};
+
+/**
+ * Tracks saveEditedEntityRecord for saving global styles updates.
+ *
+ * @param {string} kind Kind of the edited entity record.
+ * @param {string} type Name of the edited entity record.
+ * @param {number} id   Record ID of the edited entity record.
+ */
+const trackSaveEditedEntityRecord = ( kind, type, id ) => {
+	if ( kind === 'postType' && type === 'wp_global_styles' ) {
+		const savedEntity = select( 'core' ).getEntityRecord( kind, type, id );
+		const editedEntity = select( 'core' ).getEditedEntityRecord( kind, type, id );
+		const entityContent = JSON.parse( savedEntity?.content?.raw );
+		const updatedContent = JSON.parse( editedEntity?.content );
+
+		buildGlobalStylesContentEvents(
+			updatedContent,
+			entityContent,
+			'wpcom_block_editor_global_styles_save'
+		);
+	}
+};
+
 /**
  * Tracker can be
  * - string - which means it is an event name and should be tracked as such automatically
@@ -259,9 +656,18 @@ const REDUX_TRACKING = {
 		updateOptions: trackGlobalStyles( 'wpcom_global_styles_update' ),
 		publishOptions: trackGlobalStyles( 'wpcom_global_styles_publish' ),
 	},
+	// Post Editor is using the undo/redo from the 'core/editor' store
 	'core/editor': {
 		undo: 'wpcom_block_editor_undo_performed',
 		redo: 'wpcom_block_editor_redo_performed',
+	},
+	// Site Editor is using the undo/redo from the 'core' store
+	core: {
+		undo: 'wpcom_block_editor_undo_performed',
+		redo: 'wpcom_block_editor_redo_performed',
+		saveEntityRecord: trackSaveEntityRecord,
+		editEntityRecord: trackEditEntityRecord,
+		saveEditedEntityRecord: trackSaveEditedEntityRecord,
 	},
 	'core/block-editor': {
 		moveBlocksUp: getBlocksTracker( 'wpcom_block_moved_up' ),
@@ -277,6 +683,21 @@ const REDUX_TRACKING = {
 	},
 	'core/notices': {
 		createErrorNotice: trackErrorNotices,
+	},
+	'core/edit-site': {
+		setIsListViewOpened: trackListViewToggle,
+		openNavigationPanelToMenu: trackSiteEditorBrowsingSidebarOpen,
+		addTemplate: trackSiteEditorCreateTemplate,
+		setTemplate: trackSiteEditorChangeTemplate,
+		setTemplatePart: trackSiteEditorChangeTemplatePart,
+		setPage: trackSiteEditorChangeContent,
+	},
+	'core/edit-post': {
+		setIsListViewOpened: trackListViewToggle,
+	},
+	'core/interface': {
+		enableComplementaryArea: trackEnableComplementaryArea,
+		disableComplementaryArea: trackDisableComplementaryArea,
 	},
 };
 
@@ -300,8 +721,9 @@ if (
 	// Intercept dispatch function and add tracking for actions that need it.
 	use( ( registry ) => ( {
 		dispatch: ( namespace ) => {
-			const actions = { ...registry.dispatch( namespace ) };
-			const trackers = REDUX_TRACKING[ namespace ];
+			const namespaceName = typeof namespace === 'object' ? namespace.name : namespace;
+			const actions = { ...registry.dispatch( namespaceName ) };
+			const trackers = REDUX_TRACKING[ namespaceName ];
 
 			if ( trackers ) {
 				Object.keys( trackers ).forEach( ( actionName ) => {
@@ -309,12 +731,20 @@ if (
 					const tracker = trackers[ actionName ];
 					actions[ actionName ] = ( ...args ) => {
 						debug( 'action "%s" called with %o arguments', actionName, [ ...args ] );
-						if ( typeof tracker === 'string' ) {
-							// Simple track - just based on the event name.
-							tracksRecordEvent( tracker );
-						} else if ( typeof tracker === 'function' ) {
-							// Advanced tracking - call function.
-							tracker( ...args );
+						// We use a try-catch here to make sure the `originalAction`
+						// is always called. We don't want to break the original
+						// behaviour when our tracking throws an error.
+						try {
+							if ( typeof tracker === 'string' ) {
+								// Simple track - just based on the event name.
+								tracksRecordEvent( tracker );
+							} else if ( typeof tracker === 'function' ) {
+								// Advanced tracking - call function.
+								tracker( ...args );
+							}
+						} catch ( err ) {
+							// eslint-disable-next-line no-console
+							console.error( err );
 						}
 						return originalAction( ...args );
 					};
@@ -324,13 +754,33 @@ if (
 		},
 	} ) );
 
+	const delegateNonCaptureListener = ( event ) => {
+		delegateEventTracking( false, event );
+	};
+
+	const delegateCaptureListener = ( event ) => {
+		delegateEventTracking( true, event );
+	};
+
 	// Registers Plugin.
 	registerPlugin( 'wpcom-block-editor-tracking', {
 		render: () => {
-			EVENT_TYPES.forEach( ( eventType ) =>
-				document.addEventListener( eventType, delegateEventTracking )
-			);
+			EVENT_TYPES.forEach( ( eventType ) => {
+				document.addEventListener( eventType, delegateNonCaptureListener );
+				document.addEventListener( eventType, delegateCaptureListener, true );
+			} );
 			return null;
 		},
 	} );
+
+	registerDelegateEventSubscriber(
+		'wpcom-block-editor-template-part-detach-blocks',
+		'before',
+		( mapping, event, target ) => {
+			const item = target.querySelector( '.components-menu-item__item' );
+			if ( item?.innerText === __( 'Detach blocks from template part' ) ) {
+				ignoreNextReplaceBlocksAction = true;
+			}
+		}
+	);
 }

@@ -3,7 +3,7 @@
  */
 import closest from 'component-closest';
 import { localize } from 'i18n-calypso';
-import { defer, startsWith, identity } from 'lodash';
+import { defer, startsWith } from 'lodash';
 import page from 'page';
 import React from 'react';
 import { connect } from 'react-redux';
@@ -20,7 +20,6 @@ import QueryReaderLists from 'calypso/components/data/query-reader-lists';
 import QueryReaderTeams from 'calypso/components/data/query-reader-teams';
 import Sidebar from 'calypso/layout/sidebar';
 import SidebarFooter from 'calypso/layout/sidebar/footer';
-import SidebarHeading from 'calypso/layout/sidebar/heading';
 import SidebarItem from 'calypso/layout/sidebar/item';
 import SidebarMenu from 'calypso/layout/sidebar/menu';
 import SidebarRegion from 'calypso/layout/sidebar/region';
@@ -41,7 +40,7 @@ import QueryReaderOrganizations from 'calypso/components/data/query-reader-organ
 import { getReaderOrganizations } from 'calypso/state/reader/organizations/selectors';
 import ReaderSidebarFollowedSites from 'calypso/reader/sidebar/reader-sidebar-followed-sites';
 import SidebarSeparator from 'calypso/layout/sidebar/separator';
-import { isEnabled } from 'calypso/config';
+import { isEnabled } from '@automattic/calypso-config';
 import { recordReaderTracksEvent } from 'calypso/state/reader/analytics/actions';
 
 /**
@@ -155,7 +154,6 @@ export class ReaderSidebar extends React.Component {
 		const { path, translate } = this.props;
 		return (
 			<SidebarMenu>
-				<SidebarHeading>{ translate( 'Streams' ) }</SidebarHeading>
 				<QueryReaderLists />
 				<QueryReaderTeams />
 				<QueryReaderOrganizations />
@@ -348,10 +346,6 @@ export class ReaderSidebar extends React.Component {
 		);
 	}
 }
-
-ReaderSidebar.defaultProps = {
-	translate: identity,
-};
 
 export default connect(
 	( state ) => {

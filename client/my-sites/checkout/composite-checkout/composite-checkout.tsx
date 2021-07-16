@@ -15,10 +15,14 @@ import {
 	defaultRegistry,
 	Button,
 } from '@automattic/composite-checkout';
+import { useIsWebPayAvailable } from '@automattic/wpcom-checkout';
 import { ThemeProvider } from 'emotion-theming';
-import { useShoppingCart, ResponseCart } from '@automattic/shopping-cart';
+import { useShoppingCart } from '@automattic/shopping-cart';
+import type { ResponseCart } from '@automattic/shopping-cart';
 import colorStudio from '@automattic/color-studio';
 import { useStripe } from '@automattic/calypso-stripe';
+import type { PaymentCompleteCallbackArguments } from '@automattic/composite-checkout';
+import type { ManagedContactDetails } from '@automattic/wpcom-checkout';
 
 /**
  * Internal dependencies
@@ -29,8 +33,6 @@ import isAtomicSite from 'calypso/state/selectors/is-site-automated-transfer';
 import isPrivateSite from 'calypso/state/selectors/is-private-site';
 import { updateContactDetailsCache } from 'calypso/state/domains/management/actions';
 import QuerySitePurchases from 'calypso/components/data/query-site-purchases';
-import { StateSelect } from 'calypso/my-sites/domains/components/form';
-import { getPlan } from 'calypso/lib/plans';
 import PageViewTracker from 'calypso/lib/analytics/page-view-tracker';
 import { errorNotice, infoNotice, successNotice } from 'calypso/state/notices/actions';
 import { getProductsList } from 'calypso/state/products-list/selectors';
@@ -39,55 +41,46 @@ import QueryContactDetailsCache from 'calypso/components/data/query-contact-deta
 import QuerySitePlans from 'calypso/components/data/query-site-plans';
 import QueryPlans from 'calypso/components/data/query-plans';
 import QueryProducts from 'calypso/components/data/query-products-list';
-import QueryExperiments from 'calypso/components/data/query-experiments';
-import useIsApplePayAvailable from './hooks/use-is-apple-pay-available';
 import filterAppropriatePaymentMethods from './lib/filter-appropriate-payment-methods';
 import useStoredCards from './hooks/use-stored-cards';
 import usePrepareProductsForCart from './hooks/use-prepare-products-for-cart';
-import useCreatePaymentMethods from './use-create-payment-methods';
-import {
-	applePayProcessor,
-	freePurchaseProcessor,
-	multiPartnerCardProcessor,
-	fullCreditsProcessor,
-	payPalProcessor,
-	genericRedirectProcessor,
-	weChatProcessor,
-} from './payment-method-processors';
+import useCreatePaymentMethods from './hooks/use-create-payment-methods';
+import webPayProcessor from './lib/web-pay-processor';
+import multiPartnerCardProcessor from './lib/multi-partner-card-processor';
+import freePurchaseProcessor from './lib/free-purchase-processor';
+import fullCreditsProcessor from './lib/full-credits-processor';
+import weChatProcessor from './lib/we-chat-processor';
+import genericRedirectProcessor from './lib/generic-redirect-processor';
 import existingCardProcessor from './lib/existing-card-processor';
+import payPalProcessor from './lib/paypal-express-processor';
 import useGetThankYouUrl from './hooks/use-get-thank-you-url';
 import createAnalyticsEventHandler from './record-analytics';
-import { useProductVariants } from './hooks/product-variants';
 import { translateResponseCartToWPCOMCart } from './lib/translate-cart';
 import useCountryList from './hooks/use-country-list';
 import useCachedDomainContactDetails from './hooks/use-cached-domain-contact-details';
 import useActOnceOnStrings from './hooks/use-act-once-on-strings';
-import useRedirectIfCartEmpty from './hooks/use-redirect-if-cart-empty';
+import useRemoveFromCartAndRedirect from './hooks/use-remove-from-cart-and-redirect';
 import useRecordCheckoutLoaded from './hooks/use-record-checkout-loaded';
 import useRecordCartLoaded from './hooks/use-record-cart-loaded';
 import useAddProductsFromUrl from './hooks/use-add-products-from-url';
 import useDetectedCountryCode from './hooks/use-detected-country-code';
 import WPCheckout from './components/wp-checkout';
 import { useWpcomStore } from './hooks/wpcom-store';
-import { areDomainsInLineItems } from './hooks/has-domains';
 import {
 	emptyManagedContactDetails,
 	applyContactDetailsRequiredMask,
 	domainRequiredContactDetails,
 	taxRequiredContactDetails,
-	ManagedContactDetails,
 } from './types/wpcom-store-state';
 import { StoredCard } from './types/stored-cards';
 import { CountryListItem } from './types/country-list-item';
-import { WPCOMCartItem } from './types/checkout-cart';
 import doesValueExist from './lib/does-value-exist';
 import EmptyCart from './components/empty-cart';
 import getContactDetailsType from './lib/get-contact-details-type';
-import getDomainDetails from './lib/get-domain-details';
-import getPostalCode from './lib/get-postal-code';
-import mergeIfObjects from './lib/merge-if-objects';
 import type { ReactStandardAction } from './types/analytics';
 import useCreatePaymentCompleteCallback from './hooks/use-create-payment-complete-callback';
+import useMaybeJetpackIntroCouponCode from './hooks/use-maybe-jetpack-intro-coupon-code';
+import type { PaymentProcessorOptions } from './types/payment-processors';
 
 const { colors } = colorStudio;
 const debug = debugFactory( 'calypso:composite-checkout:composite-checkout' );
@@ -116,6 +109,12 @@ export default function CompositeCheckout( {
 	isNoSiteCart,
 	infoMessage,
 	isInEditor,
+	onAfterPaymentComplete,
+	isFocusedLaunch,
+	isJetpackCheckout,
+	jetpackSiteSlug,
+	jetpackPurchaseToken,
+	isUserComingFromLoginForm,
 }: {
 	siteSlug: string | undefined;
 	siteId: number | undefined;
@@ -132,21 +131,31 @@ export default function CompositeCheckout( {
 	isNoSiteCart?: boolean;
 	isInEditor?: boolean;
 	infoMessage?: JSX.Element;
+	onAfterPaymentComplete?: () => void;
+	isFocusedLaunch?: boolean;
+	isJetpackCheckout: boolean;
+	jetpackSiteSlug?: string;
+	jetpackPurchaseToken?: string;
+	isUserComingFromLoginForm?: boolean;
 } ): JSX.Element {
 	const translate = useTranslate();
 	const isJetpackNotAtomic =
 		useSelector(
 			( state ) => siteId && isJetpackSite( state, siteId ) && ! isAtomicSite( state, siteId )
-		) || false;
+		) ||
+		isJetpackCheckout ||
+		false;
 	const isPrivate = useSelector( ( state ) => siteId && isPrivateSite( state, siteId ) ) || false;
 	const { stripe, stripeConfiguration, isStripeLoading, stripeLoadingError } = useStripe();
-	const createUserAndSiteBeforeTransaction = Boolean( isLoggedOutCart || isNoSiteCart );
+	const createUserAndSiteBeforeTransaction =
+		Boolean( isLoggedOutCart || isNoSiteCart ) && ! isJetpackCheckout;
 	const reduxDispatch = useDispatch();
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	const recordEvent: ( action: ReactStandardAction ) => void = useCallback(
 		createAnalyticsEventHandler( reduxDispatch ),
 		[]
 	);
+	const updatedSiteSlug = isJetpackCheckout ? jetpackSiteSlug : siteSlug;
 
 	const showErrorMessage = useCallback(
 		( error ) => {
@@ -188,6 +197,18 @@ export default function CompositeCheckout( {
 		[ reduxDispatch ]
 	);
 
+	const checkoutFlow: string = useMemo( () => {
+		if ( isLoggedOutCart ) {
+			if ( isJetpackCheckout ) {
+				return isUserComingFromLoginForm
+					? 'jetpack_site_only_coming_from_login'
+					: 'jetpack_site_only';
+			}
+			return 'wpcom_registrationless';
+		}
+		return isJetpackNotAtomic ? 'jetpack_checkout' : 'wpcom_checkout';
+	}, [ isLoggedOutCart, isJetpackCheckout, isUserComingFromLoginForm, isJetpackNotAtomic ] );
+
 	const countriesList = useCountryList( overrideCountryList || [] );
 
 	const {
@@ -197,15 +218,20 @@ export default function CompositeCheckout( {
 	} = usePrepareProductsForCart( {
 		productAliasFromUrl,
 		purchaseId,
+		isInEditor,
 		isJetpackNotAtomic,
 		isPrivate,
+		siteSlug: updatedSiteSlug,
+		isLoggedOutCart,
+		isNoSiteCart,
+		isJetpackCheckout,
+		jetpackSiteSlug,
+		jetpackPurchaseToken,
 	} );
 
 	const {
-		removeProductFromCart,
 		couponStatus,
 		applyCoupon,
-		removeCoupon,
 		updateLocation,
 		replaceProductInCart,
 		isLoading: isLoadingCart,
@@ -216,12 +242,17 @@ export default function CompositeCheckout( {
 		addProductsToCart,
 	} = useShoppingCart();
 
+	const maybeJetpackIntroCouponCode = useMaybeJetpackIntroCouponCode(
+		productsForCart,
+		couponStatus === 'applied'
+	);
+
 	const isInitialCartLoading = useAddProductsFromUrl( {
 		isLoadingCart,
 		isCartPendingUpdate,
 		productsForCart,
 		areCartProductsPreparing,
-		couponCodeFromUrl,
+		couponCodeFromUrl: couponCodeFromUrl || maybeJetpackIntroCouponCode,
 		applyCoupon,
 		addProductsToCart,
 	} );
@@ -233,18 +264,13 @@ export default function CompositeCheckout( {
 		isInitialCartLoading,
 	} );
 
-	const {
-		items,
-		tax,
-		coupon: couponItem,
-		total,
-		credits,
-		subtotal,
-		allowedPaymentMethods,
-	} = useMemo( () => translateResponseCartToWPCOMCart( responseCart ), [ responseCart ] );
+	const { items, total, allowedPaymentMethods } = useMemo(
+		() => translateResponseCartToWPCOMCart( responseCart ),
+		[ responseCart ]
+	);
 
 	const getThankYouUrlBase = useGetThankYouUrl( {
-		siteSlug,
+		siteSlug: updatedSiteSlug,
 		redirectTo,
 		purchaseId,
 		feature,
@@ -253,6 +279,7 @@ export default function CompositeCheckout( {
 		productAliasFromUrl,
 		hideNudge: !! isComingFromUpsell,
 		isInEditor,
+		isJetpackCheckout,
 	} );
 	const getThankYouUrl = useCallback( () => {
 		const url = getThankYouUrlBase();
@@ -263,11 +290,13 @@ export default function CompositeCheckout( {
 		return url;
 	}, [ getThankYouUrlBase, recordEvent ] );
 
+	const contactDetailsType = getContactDetailsType( responseCart );
+
 	useWpcomStore(
 		registerStore,
 		applyContactDetailsRequiredMask(
 			emptyManagedContactDetails,
-			areDomainsInLineItems( items ) ? domainRequiredContactDetails : taxRequiredContactDetails
+			contactDetailsType === 'domain' ? domainRequiredContactDetails : taxRequiredContactDetails
 		),
 		updateContactDetailsCache
 	);
@@ -302,29 +331,17 @@ export default function CompositeCheckout( {
 		);
 	} );
 
-	const isFullCredits =
-		credits?.amount && credits.amount.value > 0 && credits.amount.value >= subtotal.amount.value;
-	const itemsForCheckout = ( items.length
-		? [ ...items, tax, couponItem, ...( isFullCredits ? [] : [ credits ] ) ]
-		: []
-	).filter( doesValueExist );
-	debug( 'items for checkout', itemsForCheckout );
-
-	let cartEmptyRedirectUrl = `/plans/${ siteSlug || '' }`;
-
-	if ( createUserAndSiteBeforeTransaction ) {
-		const siteSlugLoggedOutCart = select( 'wpcom' )?.getSiteSlug();
-		cartEmptyRedirectUrl = siteSlugLoggedOutCart ? `/plans/${ siteSlugLoggedOutCart }` : '/start';
-	}
-
 	const errors = responseCart.messages?.errors ?? [];
 	const areThereErrors =
 		[ ...errors, cartLoadingError, cartProductPrepError ].filter( doesValueExist ).length > 0;
-	const doNotRedirect = isInitialCartLoading || isCartPendingUpdate || areThereErrors;
-	const areWeRedirecting = useRedirectIfCartEmpty(
-		doNotRedirect,
-		items,
-		cartEmptyRedirectUrl,
+
+	const siteSlugLoggedOutCart: string | undefined = select( 'wpcom' )?.getSiteSlug();
+	const {
+		isRemovingProductFromCart,
+		removeProductFromCartAndMaybeRedirect,
+	} = useRemoveFromCartAndRedirect(
+		updatedSiteSlug,
+		siteSlugLoggedOutCart,
 		createUserAndSiteBeforeTransaction
 	);
 
@@ -340,9 +357,16 @@ export default function CompositeCheckout( {
 	} );
 
 	const {
-		canMakePayment: isApplePayAvailable,
-		isLoading: isApplePayLoading,
-	} = useIsApplePayAvailable( stripe, stripeConfiguration, !! stripeLoadingError, items );
+		isApplePayAvailable,
+		isGooglePayAvailable,
+		isLoading: isWebPayLoading,
+	} = useIsWebPayAvailable(
+		stripe,
+		stripeConfiguration,
+		!! stripeLoadingError,
+		responseCart.currency,
+		responseCart.total_cost_integer
+	);
 
 	const paymentMethodObjects = useCreatePaymentMethods( {
 		isStripeLoading,
@@ -350,9 +374,10 @@ export default function CompositeCheckout( {
 		stripeConfiguration,
 		stripe,
 		isApplePayAvailable,
-		isApplePayLoading,
+		isGooglePayAvailable,
+		isWebPayLoading,
 		storedCards,
-		siteSlug,
+		siteSlug: updatedSiteSlug,
 	} );
 	debug( 'created payment method objects', paymentMethodObjects );
 
@@ -360,41 +385,34 @@ export default function CompositeCheckout( {
 	// changing them because it can cause awkward UX. Here we try to wait for
 	// them to be all finished loading before we pass them along.
 	const arePaymentMethodsLoading =
-		items.length < 1 ||
+		responseCart.products.length < 1 ||
 		isInitialCartLoading ||
 		// Only wait for stored cards to load if we are using cards
 		( allowedPaymentMethods.includes( 'card' ) && isLoadingStoredCards ) ||
-		// Only wait for apple pay to load if we are using apple pay
-		( allowedPaymentMethods.includes( 'apple-pay' ) && isApplePayLoading );
+		// Only wait for web pay to load if we are using web pay
+		( allowedPaymentMethods.includes( 'web-pay' ) && isWebPayLoading );
 
-	const contactInfo: ManagedContactDetails | undefined = select( 'wpcom' )?.getContactInfo();
-	const countryCode: string = contactInfo?.countryCode?.value ?? '';
-	const subdivisionCode: string = contactInfo?.state?.value ?? '';
+	const contactDetails: ManagedContactDetails | undefined = select( 'wpcom' )?.getContactInfo();
+	const countryCode: string = contactDetails?.countryCode?.value ?? '';
 
 	const paymentMethods = arePaymentMethodsLoading
 		? []
 		: filterAppropriatePaymentMethods( {
 				paymentMethodObjects,
 				countryCode,
-				total,
-				credits,
-				subtotal,
 				allowedPaymentMethods,
 				responseCart,
 		  } );
 	debug( 'filtered payment method objects', paymentMethods );
 
-	const getItemVariants = useProductVariants( {
-		siteId,
-		productSlug: getPlanProductSlugs( items )[ 0 ],
-	} );
-
 	const { analyticsPath, analyticsProps } = getAnalyticsPath(
-		String( purchaseId ),
+		purchaseId,
 		productAliasFromUrl,
-		siteSlug,
+		updatedSiteSlug,
 		feature,
-		plan
+		plan,
+		isJetpackCheckout,
+		checkoutFlow
 	);
 
 	const products = useSelector( ( state ) => getProductsList( state ) );
@@ -427,100 +445,71 @@ export default function CompositeCheckout( {
 		[ addProductsToCart, products, recordEvent ]
 	);
 
-	const contactDetailsType = getContactDetailsType( responseCart );
 	const includeDomainDetails = contactDetailsType === 'domain';
 	const includeGSuiteDetails = contactDetailsType === 'gsuite';
-	const transactionOptions = { createUserAndSiteBeforeTransaction };
-	const dataForProcessor = useMemo(
+	const dataForProcessor: PaymentProcessorOptions = useMemo(
 		() => ( {
+			contactDetails,
+			createUserAndSiteBeforeTransaction,
+			getThankYouUrl,
 			includeDomainDetails,
 			includeGSuiteDetails,
 			recordEvent,
-			createUserAndSiteBeforeTransaction,
-			stripeConfiguration,
 			reduxDispatch,
+			responseCart,
+			siteId,
+			siteSlug: updatedSiteSlug,
+			stripeConfiguration,
 		} ),
 		[
+			contactDetails,
+			createUserAndSiteBeforeTransaction,
+			getThankYouUrl,
 			includeDomainDetails,
 			includeGSuiteDetails,
 			recordEvent,
-			createUserAndSiteBeforeTransaction,
-			stripeConfiguration,
 			reduxDispatch,
+			responseCart,
+			siteId,
+			stripeConfiguration,
+			updatedSiteSlug,
 		]
 	);
-	const dataForRedirectProcessor = useMemo(
-		() => ( {
-			...dataForProcessor,
-			getThankYouUrl,
-			siteSlug,
-		} ),
-		[ dataForProcessor, getThankYouUrl, siteSlug ]
-	);
-
-	const domainDetails = getDomainDetails( {
-		includeDomainDetails,
-		includeGSuiteDetails,
-	} );
-	const postalCode = getPostalCode();
 
 	const paymentProcessors = useMemo(
 		() => ( {
 			'apple-pay': ( transactionData: unknown ) =>
-				applePayProcessor( transactionData, dataForProcessor, transactionOptions ),
-			'free-purchase': ( transactionData: unknown ) =>
-				freePurchaseProcessor( transactionData, dataForProcessor ),
+				webPayProcessor( 'apple-pay', transactionData, dataForProcessor ),
+			'google-pay': ( transactionData: unknown ) =>
+				webPayProcessor( 'google-pay', transactionData, dataForProcessor ),
+			'free-purchase': () => freePurchaseProcessor( dataForProcessor ),
 			card: ( transactionData: unknown ) =>
-				multiPartnerCardProcessor( transactionData, dataForProcessor, transactionOptions ),
+				multiPartnerCardProcessor( transactionData, dataForProcessor ),
 			alipay: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'alipay', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'alipay', transactionData, dataForProcessor ),
 			p24: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'p24', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'p24', transactionData, dataForProcessor ),
 			bancontact: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'bancontact', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'bancontact', transactionData, dataForProcessor ),
 			giropay: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'giropay', transactionData, dataForRedirectProcessor ),
-			wechat: ( transactionData: unknown ) =>
-				weChatProcessor( transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'giropay', transactionData, dataForProcessor ),
+			wechat: ( transactionData: unknown ) => weChatProcessor( transactionData, dataForProcessor ),
 			netbanking: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'netbanking', transactionData, dataForRedirectProcessor ),
-			id_wallet: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'id_wallet', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'netbanking', transactionData, dataForProcessor ),
 			ideal: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'ideal', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'ideal', transactionData, dataForProcessor ),
 			sofort: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'sofort', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'sofort', transactionData, dataForProcessor ),
 			eps: ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'eps', transactionData, dataForRedirectProcessor ),
+				genericRedirectProcessor( 'eps', transactionData, dataForProcessor ),
 			'ebanx-tef': ( transactionData: unknown ) =>
-				genericRedirectProcessor( 'brazil-tef', transactionData, dataForRedirectProcessor ),
-			'full-credits': ( transactionData: unknown ) =>
-				fullCreditsProcessor( transactionData, dataForProcessor, transactionOptions ),
+				genericRedirectProcessor( 'brazil-tef', transactionData, dataForProcessor ),
+			'full-credits': () => fullCreditsProcessor( dataForProcessor ),
 			'existing-card': ( transactionData: unknown ) =>
-				existingCardProcessor(
-					mergeIfObjects( transactionData, {
-						country: countryCode,
-						postalCode,
-						subdivisionCode,
-						siteId: siteId ? String( siteId ) : undefined,
-						domainDetails,
-					} ),
-					dataForProcessor
-				),
-			paypal: ( transactionData: unknown ) =>
-				payPalProcessor( transactionData, { ...dataForRedirectProcessor, couponItem } ),
+				existingCardProcessor( transactionData, dataForProcessor ),
+			paypal: () => payPalProcessor( dataForProcessor ),
 		} ),
-		[
-			siteId,
-			couponItem,
-			dataForProcessor,
-			dataForRedirectProcessor,
-			transactionOptions,
-			countryCode,
-			subdivisionCode,
-			postalCode,
-			domainDetails,
-		]
+		[ dataForProcessor ]
 	);
 
 	const jetpackColors = isJetpackNotAtomic
@@ -541,13 +530,13 @@ export default function CompositeCheckout( {
 		isInitialCartLoading ||
 		arePaymentMethodsLoading ||
 		paymentMethods.length < 1 ||
-		items.length < 1;
+		responseCart.products.length < 1;
 	if ( isLoading ) {
 		debug( 'still loading because one of these is true', {
 			isInitialCartLoading,
 			paymentMethods: paymentMethods.length < 1,
 			arePaymentMethodsLoading: arePaymentMethodsLoading,
-			items: items.length < 1,
+			items: responseCart.products.length < 1,
 		} );
 	}
 
@@ -558,6 +547,7 @@ export default function CompositeCheckout( {
 		responseCart,
 		storedCards,
 		productAliasFromUrl,
+		checkoutFlow,
 	} );
 
 	const onPaymentComplete = useCreatePaymentCompleteCallback( {
@@ -568,12 +558,24 @@ export default function CompositeCheckout( {
 		feature,
 		isInEditor,
 		isComingFromUpsell,
+		isFocusedLaunch,
+		siteSlug: updatedSiteSlug,
+		isJetpackCheckout,
+		checkoutFlow,
 	} );
+
+	const handlePaymentComplete = useCallback(
+		( args: PaymentCompleteCallbackArguments ) => {
+			onPaymentComplete?.( args );
+			onAfterPaymentComplete?.();
+		},
+		[ onPaymentComplete, onAfterPaymentComplete ]
+	);
 
 	if (
 		shouldShowEmptyCartPage( {
 			responseCart,
-			areWeRedirecting,
+			areWeRedirecting: isRemovingProductFromCart,
 			areThereErrors,
 			isCartPendingUpdate,
 			isInitialCartLoading,
@@ -583,8 +585,8 @@ export default function CompositeCheckout( {
 			recordEvent( {
 				type: 'EMPTY_CART_CTA_CLICKED',
 			} );
-			if ( siteSlug ) {
-				page( `/plans/${ siteSlug }` );
+			if ( updatedSiteSlug ) {
+				page( `/plans/${ updatedSiteSlug }` );
 			} else {
 				page( '/plans' );
 			}
@@ -608,19 +610,25 @@ export default function CompositeCheckout( {
 		);
 	}
 
+	const updatedSiteId = isJetpackCheckout ? parseInt( String( responseCart.blog_id ), 10 ) : siteId;
+
 	return (
 		<React.Fragment>
-			<QuerySitePlans siteId={ siteId } />
-			<QuerySitePurchases siteId={ siteId } />
+			<QuerySitePlans siteId={ updatedSiteId } />
+			<QuerySitePurchases siteId={ updatedSiteId } />
 			<QueryPlans />
-			<QueryExperiments />
 			<QueryProducts />
 			<QueryContactDetailsCache />
-			<PageViewTracker path={ analyticsPath } title="Checkout" properties={ analyticsProps } />
+			<PageViewTracker
+				path={ analyticsPath }
+				title="Checkout"
+				properties={ analyticsProps }
+				options={ { useJetpackGoogleAnalytics: isJetpackCheckout || isJetpackNotAtomic } }
+			/>
 			<CheckoutProvider
-				items={ itemsForCheckout }
+				items={ items }
 				total={ total }
-				onPaymentComplete={ onPaymentComplete }
+				onPaymentComplete={ handlePaymentComplete }
 				showErrorMessage={ showErrorMessage }
 				showInfoMessage={ showInfoMessage }
 				showSuccessMessage={ showSuccessMessage }
@@ -634,24 +642,14 @@ export default function CompositeCheckout( {
 				initiallySelectedPaymentMethodId={ paymentMethods?.length ? paymentMethods[ 0 ].id : null }
 			>
 				<WPCheckout
-					removeProductFromCart={ removeProductFromCart }
-					updateLocation={ updateLocation }
-					applyCoupon={ applyCoupon }
-					removeCoupon={ removeCoupon }
-					couponStatus={ couponStatus }
+					removeProductFromCart={ removeProductFromCartAndMaybeRedirect }
 					changePlanLength={ changePlanLength }
-					siteId={ siteId }
-					siteUrl={ siteSlug }
+					siteId={ updatedSiteId }
+					siteUrl={ updatedSiteSlug }
 					countriesList={ countriesList }
-					StateSelect={ StateSelect }
-					getItemVariants={ getItemVariants }
-					responseCart={ responseCart }
 					addItemToCart={ addItemWithEssentialProperties }
-					subtotal={ subtotal }
-					credits={ credits }
-					isCartPendingUpdate={ isCartPendingUpdate }
 					showErrorMessageBriefly={ showErrorMessageBriefly }
-					isLoggedOutCart={ isLoggedOutCart }
+					isLoggedOutCart={ !! isLoggedOutCart }
 					createUserAndSiteBeforeTransaction={ createUserAndSiteBeforeTransaction }
 					infoMessage={ infoMessage }
 				/>
@@ -660,24 +658,27 @@ export default function CompositeCheckout( {
 	);
 }
 
-function getPlanProductSlugs( items: WPCOMCartItem[] ): string[] {
-	return items
-		.filter( ( item ) => {
-			return item.type !== 'tax' && getPlan( item.wpcom_meta.product_slug );
-		} )
-		.map( ( item ) => item.wpcom_meta.product_slug );
-}
-
 function getAnalyticsPath(
-	purchaseId: string | undefined,
+	purchaseId: number | undefined,
 	product: string | undefined,
 	selectedSiteSlug: string | undefined,
 	selectedFeature: string | undefined,
-	plan: string | undefined
+	plan: string | undefined,
+	isJetpackCheckout: boolean,
+	checkoutFlow: string
 ): { analyticsPath: string; analyticsProps: Record< string, string > } {
-	debug( 'getAnalyticsPath', { purchaseId, product, selectedSiteSlug, selectedFeature, plan } );
+	debug( 'getAnalyticsPath', {
+		purchaseId,
+		product,
+		selectedSiteSlug,
+		selectedFeature,
+		plan,
+		isJetpackCheckout,
+		checkoutFlow,
+	} );
 	let analyticsPath = '';
 	let analyticsProps = {};
+
 	if ( purchaseId && product ) {
 		analyticsPath = '/checkout/:product/renew/:purchase_id/:site';
 		analyticsProps = { product, purchase_id: purchaseId, site: selectedSiteSlug };
@@ -687,15 +688,23 @@ function getAnalyticsPath(
 	} else if ( selectedFeature && ! plan ) {
 		analyticsPath = '/checkout/features/:feature/:site';
 		analyticsProps = { feature: selectedFeature, site: selectedSiteSlug };
-	} else if ( product && ! purchaseId ) {
+	} else if ( product && selectedSiteSlug && ! purchaseId ) {
 		analyticsPath = '/checkout/:site/:product';
-		analyticsProps = { product, site: selectedSiteSlug };
+		analyticsProps = { product, site: selectedSiteSlug, checkout_flow: checkoutFlow };
 	} else if ( selectedSiteSlug ) {
 		analyticsPath = '/checkout/:site';
 		analyticsProps = { site: selectedSiteSlug };
+	} else if ( product && ! selectedSiteSlug ) {
+		analyticsPath = '/checkout/:product';
+		analyticsProps = { product, checkout_flow: checkoutFlow };
 	} else {
 		analyticsPath = '/checkout/no-site';
 	}
+
+	if ( isJetpackCheckout ) {
+		analyticsPath = analyticsPath.replace( 'checkout', 'checkout/jetpack' );
+	}
+
 	return { analyticsPath, analyticsProps };
 }
 

@@ -27,7 +27,8 @@ import {
 	prependThemeFilterKeys,
 } from 'calypso/state/themes/selectors';
 import { setThemePreviewOptions } from 'calypso/state/themes/actions';
-import config from 'calypso/config';
+import config from '@automattic/calypso-config';
+import ThemesSelectionHeader from './themes-selection-header';
 
 /**
  * Style dependencies
@@ -37,27 +38,28 @@ import './themes-selection.scss';
 class ThemesSelection extends Component {
 	static propTypes = {
 		emptyContent: PropTypes.element,
-		query: PropTypes.object.isRequired,
-		siteId: PropTypes.number,
-		onScreenshotClick: PropTypes.func,
 		getOptions: PropTypes.func,
 		getActionLabel: PropTypes.func,
 		incrementPage: PropTypes.func,
+		listLabel: PropTypes.string,
+		onScreenshotClick: PropTypes.func,
+		query: PropTypes.object.isRequired,
+		siteId: PropTypes.number,
 		// connected props
-		source: PropTypes.oneOfType( [ PropTypes.number, PropTypes.oneOf( [ 'wpcom', 'wporg' ] ) ] ),
-		themes: PropTypes.array,
-		recommendedThemes: PropTypes.array,
-		themesCount: PropTypes.number,
-		isRequesting: PropTypes.bool,
-		isLastPage: PropTypes.bool,
-		isThemeActive: PropTypes.func,
-		getPremiumThemePrice: PropTypes.func,
-		isInstallingTheme: PropTypes.func,
-		placeholderCount: PropTypes.number,
 		bookmarkRef: PropTypes.oneOfType( [
 			PropTypes.func,
 			PropTypes.shape( { current: PropTypes.any } ),
 		] ),
+		getPremiumThemePrice: PropTypes.func,
+		isInstallingTheme: PropTypes.func,
+		isLastPage: PropTypes.bool,
+		isRequesting: PropTypes.bool,
+		isThemeActive: PropTypes.func,
+		placeholderCount: PropTypes.number,
+		recommendedThemes: PropTypes.array,
+		source: PropTypes.oneOfType( [ PropTypes.number, PropTypes.oneOf( [ 'wpcom', 'wporg' ] ) ] ),
+		themes: PropTypes.array,
+		themesCount: PropTypes.number,
 	};
 
 	static defaultProps = {
@@ -157,11 +159,17 @@ class ThemesSelection extends Component {
 	};
 
 	render() {
-		const { source, query, upsellUrl } = this.props;
+		const { source, query, upsellUrl, listLabel, noMarginBeforeHeader } = this.props;
 
 		return (
 			<div className="themes__selection">
 				<QueryThemes query={ query } siteId={ source } />
+				{ this.props.isLoggedIn && (
+					<ThemesSelectionHeader
+						label={ listLabel }
+						noMarginBeforeHeader={ noMarginBeforeHeader }
+					/>
+				) }
 				<ThemesList
 					upsellUrl={ upsellUrl }
 					themes={ this.props.recommendedThemes || this.props.themes }

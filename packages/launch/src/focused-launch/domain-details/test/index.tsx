@@ -1,13 +1,6 @@
-/**
- * External dependencies
- */
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter as Router } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
-
-/**
- * Internal dependencies
- */
 import DomainStep from '../';
 
 describe( 'DomainStep', () => {
@@ -19,7 +12,9 @@ describe( 'DomainStep', () => {
 		);
 
 		expect( screen.queryByText( /Choose a domain/i ) ).toBeTruthy();
-		expect( screen.queryByText( /Free for the first year with any paid plan/i ) ).toBeTruthy();
+		expect(
+			screen.queryByText( /Free for the first year with any (paid|annual) plan/i )
+		).toBeTruthy();
 	} );
 
 	test( 'Has domain search input', () => {

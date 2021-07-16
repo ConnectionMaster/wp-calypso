@@ -4,7 +4,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import { connect } from 'react-redux';
-import { noop } from 'lodash';
 import Gridicon from 'calypso/components/gridicon';
 import { localize } from 'i18n-calypso';
 
@@ -16,6 +15,9 @@ import DropZone from 'calypso/components/drop-zone';
 import { userCan } from 'calypso/lib/site/utils';
 import { clearMediaItemErrors } from 'calypso/state/media/actions';
 import { addMedia } from 'calypso/state/media/thunks';
+import { getEditorPostId } from 'calypso/state/editor/selectors';
+
+const noop = () => {};
 
 class MediaLibraryDropZone extends React.Component {
 	static displayName = 'MediaLibraryDropZone';
@@ -40,7 +42,7 @@ class MediaLibraryDropZone extends React.Component {
 		}
 
 		this.props.clearMediaItemErrors( this.props.site.ID );
-		this.props.addMedia( files, this.props.site );
+		this.props.addMedia( files, this.props.site, this.props.postId );
 		this.props.onAddMedia();
 
 		if ( this.props.trackStats ) {
@@ -94,6 +96,9 @@ class MediaLibraryDropZone extends React.Component {
 	}
 }
 
-export default connect( null, { addMedia, clearMediaItemErrors } )(
-	localize( MediaLibraryDropZone )
-);
+export default connect(
+	( state ) => ( {
+		postId: getEditorPostId( state ),
+	} ),
+	{ addMedia, clearMediaItemErrors }
+)( localize( MediaLibraryDropZone ) );

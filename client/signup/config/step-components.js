@@ -51,7 +51,6 @@ const stepNameToModuleName = {
 	themes: 'theme-selection',
 	'themes-site-selected': 'theme-selection',
 	'template-first-themes': 'theme-selection',
-	'fse-themes': 'theme-selection',
 	user: 'user',
 	'user-new': 'user',
 	'oauth2-user': 'user',
@@ -66,7 +65,11 @@ const stepNameToModuleName = {
 	passwordless: 'passwordless',
 	'p2-details': 'p2-details',
 	'p2-site': 'p2-site',
-	'domain-upsell': 'domain-upsell',
+	'plans-business-monthly': 'plans',
+	'plans-ecommerce-monthly': 'plans',
+	'plans-personal-monthly': 'plans',
+	'plans-premium-monthly': 'plans',
+	design: 'design-picker',
 };
 
 export function getStepModuleName( stepName ) {

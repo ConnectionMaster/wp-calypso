@@ -4,7 +4,7 @@
 import React from 'react';
 import debugFactory from 'debug';
 import { sprintf } from '@wordpress/i18n';
-import { useI18n } from '@automattic/react-i18n';
+import { useI18n } from '@wordpress/react-i18n';
 import {
 	Button,
 	FormStatus,
@@ -104,6 +104,7 @@ function ButtonContents( { formStatus, total, activeButtonText = undefined } ) {
 		return __( 'Processing…' );
 	}
 	if ( formStatus === FormStatus.READY ) {
+		/* translators: %s is the total to be paid in localized currency */
 		return activeButtonText || sprintf( __( 'Pay %s' ), total.amount.displayValue );
 	}
 	return __( 'Please wait…' );
@@ -155,7 +156,8 @@ function isCreditCardFormValid( store, paymentPartner, __ ) {
 				} ).reduce( ( accum, [ key, managedValue ] ) => {
 					accum[ key ] = managedValue?.value;
 					return accum;
-				}, {} )
+				}, {} ),
+				'ebanx'
 			);
 			Object.entries( validationResults.errors ).map( ( [ key, errors ] ) => {
 				errors.map( ( error ) => {

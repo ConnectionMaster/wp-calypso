@@ -29,6 +29,7 @@ import {
 	isRequestingSiteStatsForQuery,
 } from 'calypso/state/stats/lists/selectors';
 import { getSelectedSiteId, getSelectedSiteSlug } from 'calypso/state/ui/selectors';
+import classnames from 'classnames';
 
 /**
  * Style dependencies
@@ -74,7 +75,13 @@ export const StatsV2 = ( {
 	const siteOlderThanAWeek = Date.now() - new Date( siteCreatedAt ).getTime() > WEEK_IN_MS;
 	const statsPlaceholderMessage = siteOlderThanAWeek
 		? translate( "No traffic this week, but don't give up!" )
-		: translate( "No traffic yet, but you'll get there!" );
+		: preventWidows(
+				translate(
+					'No stats to display yet. Publish or share a post to get some traffic to your site.'
+				),
+				4
+		  );
+	const renderChart = ! isSiteUnlaunched && ! isLoading && views > 0;
 
 	return (
 		<div className="stats">
@@ -84,8 +91,8 @@ export const StatsV2 = ( {
 					<QuerySiteStats siteId={ siteId } statType="statsTopPosts" query={ topPostsQuery } />
 				</>
 			) }
-
-			<Card>
+			{ /* eslint-disable-next-line wpcalypso/jsx-classname-namespace */ }
+			<Card className={ classnames( 'customer-home__card', { 'stats__with-chart': renderChart } ) }>
 				{ isSiteUnlaunched && (
 					<Chart data={ placeholderChartData } isPlaceholder>
 						<div>
@@ -130,7 +137,7 @@ export const StatsV2 = ( {
 						</div>
 					</div>
 				) }
-				{ ! isSiteUnlaunched && ! isLoading && views > 0 && (
+				{ renderChart && (
 					<>
 						<CardHeading>{ translate( 'Views' ) }</CardHeading>
 						<Chart data={ chartData } />
@@ -168,9 +175,11 @@ export const StatsV2 = ( {
 								</div>
 							) }
 						</div>
-						<a href={ `/stats/day/${ siteSlug }` } className="stats__all">
-							{ translate( 'See all stats' ) }
-						</a>
+						<div className="stats__all">
+							<a href={ `/stats/day/${ siteSlug }` } className="stats__all-link">
+								{ translate( 'See all stats' ) }
+							</a>
+						</div>
 					</>
 				) }
 			</Card>
