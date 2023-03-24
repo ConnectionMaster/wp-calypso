@@ -33,10 +33,10 @@
 		"watch": "tsc --build ./tsconfig.json --watch"
 	},
 	"dependencies": {
-		"@wordpress/api-fetch": "^3.21.1",
-		"@wordpress/data-controls": "^1.20.1",
-		"@wordpress/deprecated": "^2.11.0",
-		"@wordpress/url": "^2.21.0",
+		"@wordpress/api-fetch": "^6.26.0",
+		"@wordpress/data-controls": "^2.29.0",
+		"@wordpress/deprecated": "^3.29.0",
+		"@wordpress/url": "^3.30.0",
 		"fast-json-stable-stringify": "^2.1.0",
 		"i18n-calypso": "^5.0.0",
 		"qs": "^6.9.1",
@@ -46,7 +46,7 @@
 		"wpcom-proxy-request": "^6.0.0"
 	},
 	"peerDependencies": {
-		"@wordpress/data": "^4",
+		"@wordpress/data": "^8.6.0",
 		"react": "^16.8"
 	},
 	"devDependencies": {

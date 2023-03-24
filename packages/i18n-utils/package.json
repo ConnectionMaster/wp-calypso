@@ -23,7 +23,7 @@
 		"test": "yarn jest"
 	},
 	"dependencies": {
-		"@wordpress/compose": "^3.23.1",
+		"@wordpress/compose": "^6.6.0",
 		"react": "^16.12.0"
 	},
 	"devDependencies": {
