@@ -1,18 +1,1 @@
-<svg width="202" height="140" viewBox="0 0 202 140" fill="none"
-    xmlns="http://www.w3.org/2000/svg">
-    <rect width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect y="40" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect x="71" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect x="71" y="40" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect x="142" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect x="142" y="40" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect y="51" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect y="91" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect x="71" y="51" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect x="71" y="91" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect x="142" y="51" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect x="142" y="91" width="27.7255" height="3" rx="1.5" fill="#E9EFF5"/>
-    <rect y="102" width="59.4118" height="38" fill="#E9EFF5"/>
-    <rect x="71" y="102" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-    <rect x="142" y="102" width="59.4118" height="38" rx="2" fill="#E9EFF5"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="202" height="140" fill="none" viewBox="0 0 202 140"><rect width="59.412" height="38" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" y="40" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" x="71" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" x="71" y="40" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" x="142" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" x="142" y="40" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" y="51" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" y="91" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" x="71" y="51" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" x="71" y="91" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" x="142" y="51" fill="#E9EFF5" rx="2"/><rect width="27.726" height="3" x="142" y="91" fill="#E9EFF5" rx="1.5"/><rect width="59.412" height="38" y="102" fill="#E9EFF5"/><rect width="59.412" height="38" x="71" y="102" fill="#E9EFF5" rx="2"/><rect width="59.412" height="38" x="142" y="102" fill="#E9EFF5" rx="2"/></svg>
